@@ -1,0 +1,33 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+.fvm/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# Mac
+.DS_Store
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Secrets
+.env
+.env.local
+*.keystore
+android/key.properties
+ios/Runner/GoogleService-Info.plist
+
+# Quran data (large bundled assets - we'll decide later)
+# assets/audio/full/
