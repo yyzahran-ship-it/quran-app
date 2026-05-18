@@ -36,6 +36,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate code (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Build debug APK (with full log)
         run: flutter build apk --debug --split-per-abi -v 2>&1 | tee build_log.txt; exit ${PIPESTATUS[0]}
 
