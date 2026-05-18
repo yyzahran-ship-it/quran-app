@@ -10,11 +10,18 @@ import 'features/onboarding/onboarding_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.quranapp.audio',
-    androidNotificationChannelName: 'Quran Audio',
-    androidNotificationOngoing: true,
-  );
+  // Init background audio. Wrapped in try-catch + timeout so a service
+  // binding failure (seen on some Android versions) cannot block app launch.
+  // Audio still plays in-app; lock-screen controls may be unavailable.
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.quranapp.audio',
+      androidNotificationChannelName: 'Quran Audio',
+      androidNotificationOngoing: true,
+    ).timeout(const Duration(seconds: 5));
+  } catch (_) {
+    // Background audio unavailable — continue launching.
+  }
 
   runApp(
     const ProviderScope(
@@ -58,17 +65,22 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
   }
 
   Future<void> _init() async {
-    final db = ref.read(quranDatabaseProvider);
-    // Seed DB and check onboarding status in parallel.
-    final results = await Future.wait([
-      QuranSeeder(db).seedIfNeeded(),
-      hasSeenOnboarding(),
-    ]);
-    if (mounted) {
-      setState(() {
-        _showOnboarding = !(results[1] as bool);
-        _ready = true;
-      });
+    try {
+      final db = ref.read(quranDatabaseProvider);
+      // Seed DB and check onboarding status in parallel.
+      final results = await Future.wait([
+        QuranSeeder(db).seedIfNeeded(),
+        hasSeenOnboarding(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _showOnboarding = !(results[1] as bool);
+          _ready = true;
+        });
+      }
+    } catch (_) {
+      // On any error, still proceed to the app so it doesn't stay stuck.
+      if (mounted) setState(() => _ready = true);
     }
   }
 
