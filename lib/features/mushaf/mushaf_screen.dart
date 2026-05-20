@@ -121,8 +121,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                   : Icons.translate_outlined,
             ),
             tooltip: state.showTranslation
-                ? 'Hide translation'
-                : 'Show translation',
+                ? 'Hide all translations'
+                : 'Show all translations',
             onPressed: () =>
                 ref.read(mushafProvider.notifier).toggleTranslation(),
           ),
@@ -182,7 +182,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 translations: state.showTranslation
                     ? state.translations
                     : const {},
-                onAyahTap: (ayah) => _showAyahMenu(context, ayah),
+                onAyahMenu: (ayah) => _showAyahMenu(context, ayah),
                 playingSurahNumber: audio.surahNumber,
                 playingAyahNumber: audio.currentAyahNumber,
               ),
@@ -381,14 +381,14 @@ class _BismillahLine extends StatelessWidget {
   }
 }
 
-// ─── Continuous Mushaf text ───────────────────────────────────────────────────
+// ─── Per-ayah text with inline translation toggle ─────────────────────────────
 
-class _ContinuousText extends StatelessWidget {
+class _ContinuousText extends StatefulWidget {
   const _ContinuousText({
     required this.ayahs,
     required this.fontSize,
     required this.translations,
-    required this.onAyahTap,
+    required this.onAyahMenu,
     this.playingSurahNumber,
     this.playingAyahNumber,
   });
@@ -396,98 +396,139 @@ class _ContinuousText extends StatelessWidget {
   final List<Ayah> ayahs;
   final double fontSize;
   final Map<int, String> translations;
-  final void Function(Ayah) onAyahTap;
+  final void Function(Ayah) onAyahMenu;
   final int? playingSurahNumber;
   final int? playingAyahNumber;
 
   @override
+  State<_ContinuousText> createState() => _ContinuousTextState();
+}
+
+class _ContinuousTextState extends State<_ContinuousText> {
+  // Which ayah IDs have translation currently revealed.
+  final _expanded = <int>{};
+
+  @override
+  void didUpdateWidget(_ContinuousText old) {
+    super.didUpdateWidget(old);
+    final hadTx = old.translations.isNotEmpty;
+    final hasTx = widget.translations.isNotEmpty;
+    // Global toggle turned ON → expand all.
+    if (hasTx && !hadTx) {
+      setState(() => _expanded.addAll(widget.ayahs.map((a) => a.id)));
+    }
+    // Global toggle turned OFF → collapse all.
+    if (!hasTx && hadTx) {
+      setState(() => _expanded.clear());
+    }
+    // Page changed → reset to match global state.
+    if (widget.ayahs.isNotEmpty &&
+        old.ayahs.isNotEmpty &&
+        widget.ayahs.first.id != old.ayahs.first.id) {
+      setState(() {
+        _expanded.clear();
+        if (hasTx) _expanded.addAll(widget.ayahs.map((a) => a.id));
+      });
+    }
+  }
+
+  void _toggle(int ayahId) => setState(() {
+        _expanded.contains(ayahId)
+            ? _expanded.remove(ayahId)
+            : _expanded.add(ayahId);
+      });
+
+  @override
   Widget build(BuildContext context) {
-    if (ayahs.isEmpty) return const SizedBox.shrink();
+    if (widget.ayahs.isEmpty) return const SizedBox.shrink();
 
     const textColor = Color(0xFF1A1A1A);
-    const playingColor = Color(0xFF1B6B3A); // Islamic green
-
-    final spans = <InlineSpan>[];
-    for (final ayah in ayahs) {
-      final isPlaying = playingSurahNumber != null &&
-          ayah.surahNumber == playingSurahNumber &&
-          ayah.ayahNumber == playingAyahNumber;
-      spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: GestureDetector(
-            onTap: () => onAyahTap(ayah),
-            child: Text.rich(
-              TextSpan(
-                text: '${ayah.textUthmani} ',
-                style: TextStyle(
-                  fontFamily: kArabicFont,
-                  fontSize: fontSize,
-                  height: 2.2,
-                  color: isPlaying ? playingColor : textColor,
-                  fontWeight: isPlaying ? FontWeight.w700 : FontWeight.normal,
-                ),
-              ),
-              textDirection: TextDirection.rtl,
-            ),
-          ),
-        ),
-      );
-      spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: _AyahEndMarker(
-            number: ayah.ayahNumber,
-            onTap: () => onAyahTap(ayah),
-            isPlaying: isPlaying,
-          ),
-        ),
-      );
-      spans.add(const TextSpan(text: ' '));
-    }
+    const playingColor = Color(0xFF1B6B3A);
+    final hasTx = widget.translations.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text.rich(
-          TextSpan(children: spans),
+        for (final ayah in widget.ayahs) ...[
+          _buildAyahRow(ayah, textColor, playingColor, hasTx),
+          if (_expanded.contains(ayah.id) &&
+              widget.translations[ayah.id] != null)
+            _buildTranslation(widget.translations[ayah.id]!),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAyahRow(
+    Ayah ayah,
+    Color textColor,
+    Color playingColor,
+    bool hasTx,
+  ) {
+    final isPlaying = widget.playingSurahNumber != null &&
+        ayah.surahNumber == widget.playingSurahNumber &&
+        ayah.ayahNumber == widget.playingAyahNumber;
+
+    return GestureDetector(
+      // Tap toggles translation when translations are loaded;
+      // falls back to action sheet when translation mode is off.
+      onTap: hasTx
+          ? () => _toggle(ayah.id)
+          : () => widget.onAyahMenu(ayah),
+      onLongPress: () => widget.onAyahMenu(ayah),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: '${ayah.textUthmani} ',
+                style: TextStyle(
+                  fontFamily: kArabicFont,
+                  fontSize: widget.fontSize,
+                  height: 2.2,
+                  color: isPlaying ? playingColor : textColor,
+                  fontWeight:
+                      isPlaying ? FontWeight.w700 : FontWeight.normal,
+                ),
+              ),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: _AyahEndMarker(
+                  number: ayah.ayahNumber,
+                  // End marker always opens the action sheet directly.
+                  onTap: () => widget.onAyahMenu(ayah),
+                  isPlaying: isPlaying,
+                ),
+              ),
+            ],
+          ),
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.justify,
         ),
-        if (translations.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          const Divider(color: Color(0xFFCCCCCC)),
-          const SizedBox(height: 8),
-          for (final ayah in ayahs)
-            if (translations[ayah.id] != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${ayah.ayahNumber}. ',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF555555),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        translations[ayah.id]!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.6,
-                          color: Color(0xFF444444),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-        ],
-      ],
+      ),
+    );
+  }
+
+  Widget _buildTranslation(String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 2, 0, 10),
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(
+            left: BorderSide(color: Color(0xFF1B6B3A), width: 2),
+          ),
+        ),
+        padding: const EdgeInsets.only(left: 10),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.6,
+            color: Color(0xFF555555),
+          ),
+        ),
+      ),
     );
   }
 }
