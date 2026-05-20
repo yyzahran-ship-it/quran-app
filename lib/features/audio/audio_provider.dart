@@ -101,21 +101,25 @@ class AudioNotifier extends Notifier<AudioState> {
     await _player.stop();
     state = state.copyWith(isLoading: true);
 
-    final surah = await _repo.getSurah(surahNumber);
-    final count = surah.versesCount;
-    final index = (startAyah - 1).clamp(0, count - 1);
+    try {
+      final surah = await _repo.getSurah(surahNumber);
+      final count = surah.versesCount;
+      final index = (startAyah - 1).clamp(0, count - 1);
 
-    state = AudioState(
-      surahNumber: surahNumber,
-      currentAyahIndex: index,
-      ayahCount: count,
-      isLoading: false,
-      reciter: state.reciter,
-      speed: state.speed,
-    );
+      state = AudioState(
+        surahNumber: surahNumber,
+        currentAyahIndex: index,
+        ayahCount: count,
+        isLoading: false,
+        reciter: state.reciter,
+        speed: state.speed,
+      );
 
-    ref.read(mushafProvider.notifier).navigateToSurah(surahNumber);
-    await _playCurrentAyah();
+      ref.read(mushafProvider.notifier).navigateToSurah(surahNumber);
+      await _playCurrentAyah();
+    } catch (_) {
+      state = state.copyWith(isLoading: false, hasError: true);
+    }
   }
 
   Future<void> playAyah(int surahNumber, int ayahNumber) async {
@@ -208,17 +212,24 @@ class AudioNotifier extends Notifier<AudioState> {
       reciter: state.reciter,
     );
     try {
-      await _player.setAudioSource(
-        AudioSource.uri(
-          Uri.parse(url),
-          tag: MediaItem(
-            id: url,
-            title: 'Surah ${state.surahNumber}, Ayah $ayahNumber',
-            album: 'Quran',
-            artist: AudioRepository.reciters[state.reciter] ?? state.reciter,
+      // Try with MediaItem tag first (enables lock-screen controls via
+      // just_audio_background). If the background service isn't running on
+      // this device, fall back to a plain URL load — audio still plays in-app.
+      try {
+        await _player.setAudioSource(
+          AudioSource.uri(
+            Uri.parse(url),
+            tag: MediaItem(
+              id: url,
+              title: 'Surah ${state.surahNumber}, Ayah $ayahNumber',
+              album: 'Quran',
+              artist: AudioRepository.reciters[state.reciter] ?? state.reciter,
+            ),
           ),
-        ),
-      );
+        );
+      } catch (_) {
+        await _player.setUrl(url);
+      }
       // Apply current speed before playing — setSpeed is idempotent.
       await _player.setSpeed(state.speed);
       await _player.play();

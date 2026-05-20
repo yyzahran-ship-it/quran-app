@@ -498,11 +498,12 @@ class _AyahActionSheet extends ConsumerWidget {
         ref.watch(inHifzProvider(ayahId)).valueOrNull ?? false;
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Padding(
               padding: const EdgeInsets.all(12),
               child: Text(
@@ -598,6 +599,7 @@ class _AyahActionSheet extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
