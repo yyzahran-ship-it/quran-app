@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_constants.dart';
+import '../../domain/entities/ayah.dart';
+import '../../domain/entities/surah.dart';
 import '../audio/audio_player_bar.dart';
 import '../audio/audio_provider.dart';
 import '../bookmarks/bookmarks_provider.dart';
-import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
 import '../../data/repositories/quran_repository.dart';
-import '../memorization/hifz_dashboard.dart';
 import '../memorization/hifz_provider.dart';
-import '../settings/settings_screen.dart';
-import 'widgets/juz_jump_dialog.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
-import 'widgets/ayah_tile.dart';
-import 'widgets/surah_header.dart';
-import 'widgets/surah_index_drawer.dart';
-
-enum _MenuAction { hifz, bookmarks, settings }
+import 'widgets/juz_jump_dialog.dart';
 
 class MushafScreen extends ConsumerStatefulWidget {
   const MushafScreen({super.key});
@@ -34,30 +29,33 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     super.dispose();
   }
 
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mushafProvider);
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      drawer: const SurahIndexDrawer(),
+      backgroundColor: colors.surface,
       appBar: AppBar(
         title: state.currentSurah == null
             ? const Text('Quran')
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    state.currentSurah!.nameSimple,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    state.currentSurah!.nameEnglish,
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ],
+            : _SurahJuzTitle(
+                surah: state.currentSurah!,
+                juzNumber: state.ayahs.isNotEmpty
+                    ? state.ayahs.first.juzNumber
+                    : null,
               ),
         actions: [
-          // Search
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Search',
@@ -66,13 +64,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
               MaterialPageRoute(builder: (_) => const SearchScreen()),
             ),
           ),
-          // Juz jump
           IconButton(
             icon: const Icon(Icons.format_list_numbered_outlined),
             tooltip: 'Jump to Juz',
             onPressed: () => showJuzJumpDialog(context),
           ),
-          // Translation toggle
           IconButton(
             icon: Icon(
               state.showTranslation
@@ -84,50 +80,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 : 'Show translation',
             onPressed: () =>
                 ref.read(mushafProvider.notifier).toggleTranslation(),
-          ),
-          // Overflow menu: Hifz, Bookmarks, Settings
-          PopupMenuButton<_MenuAction>(
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'More',
-            onSelected: (action) {
-              switch (action) {
-                case _MenuAction.hifz:
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const HifzDashboard()));
-                case _MenuAction.bookmarks:
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const BookmarksScreen()));
-                case _MenuAction.settings:
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()));
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: _MenuAction.hifz,
-                child: ListTile(
-                  leading: Icon(Icons.psychology_outlined),
-                  title: Text('Hifz'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: _MenuAction.bookmarks,
-                child: ListTile(
-                  leading: Icon(Icons.bookmarks_outlined),
-                  title: Text('Bookmarks'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem(
-                value: _MenuAction.settings,
-                child: ListTile(
-                  leading: Icon(Icons.settings_outlined),
-                  title: Text('Settings'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -153,28 +105,52 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   }
 
   Widget _buildReader(MushafState state) {
-    final fontSize = ref.watch(fontSizeProvider);
     final surah = state.currentSurah!;
+    final fontSize = ref.watch(fontSizeProvider);
+    final page = kSurahStartPages[surah.id - 1];
 
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: state.ayahs.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) return SurahHeader(surah: surah);
-        final ayah = state.ayahs[index - 1];
-
-        // RepaintBoundary isolates each tile's repaint from its neighbours.
-        return RepaintBoundary(
-          child: AyahTile(
-            ayah: ayah,
-            arabicFontSize: fontSize,
-            translationText: state.showTranslation
-                ? state.translations[ayah.id]
-                : null,
-            onTap: () => _showAyahMenu(context, ayah),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                // Decorative surah banner
+                _SurahBanner(surah: surah),
+                // Bismillah — shown between banner and text for all surahs
+                // except Al-Fatihah (where it is verse 1) and At-Tawbah (9).
+                if (surah.bismillahPre && surah.id != 1) ...[
+                  const SizedBox(height: 8),
+                  _BismillahLine(),
+                ],
+                const SizedBox(height: 16),
+                // Continuous ayah text with inline end-markers
+                _ContinuousText(
+                  ayahs: state.ayahs,
+                  fontSize: fontSize,
+                  translations: state.showTranslation
+                      ? state.translations
+                      : const {},
+                  onAyahTap: (ayah) => _showAyahMenu(context, ayah),
+                ),
+                const SizedBox(height: 32),
+                // Page number
+                Text(
+                  '$page',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -188,18 +164,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           children: [
             Icon(Icons.error_outline, size: 64, color: colors.error),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Could not load Quran data',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'The database may not have finished setting up. Tap Retry.',
-              textAlign: TextAlign.center,
+              'Tap Retry to try again.',
               style: TextStyle(color: colors.outline),
             ),
             const SizedBox(height: 24),
@@ -214,17 +185,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     );
   }
 
-  void _scrollToTop() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
-  void _showAyahMenu(BuildContext context, dynamic ayah) {
+  void _showAyahMenu(BuildContext context, Ayah ayah) {
     showModalBottomSheet(
       context: context,
       builder: (_) => _AyahActionSheet(
@@ -232,6 +193,249 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         surahNumber: ayah.surahNumber,
         ayahNumber: ayah.ayahNumber,
         ayahId: ayah.id,
+      ),
+    );
+  }
+}
+
+// ─── AppBar title: "Surah Name | Juz' N" ─────────────────────────────────────
+
+class _SurahJuzTitle extends StatelessWidget {
+  const _SurahJuzTitle({required this.surah, required this.juzNumber});
+
+  final Surah surah;
+  final int? juzNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            surah.nameSimple,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (juzNumber != null)
+          Text(
+            "Juz' $juzNumber",
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+          ),
+      ],
+    );
+  }
+}
+
+// ─── Decorative surah banner ──────────────────────────────────────────────────
+
+class _SurahBanner extends StatelessWidget {
+  const _SurahBanner({required this.surah});
+
+  final Surah surah;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? Colors.white60 : Colors.black54;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 1.5),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor.withValues(alpha: 0.5), width: 0.5),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Text(
+          surah.nameArabic,
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: kArabicFont,
+            fontSize: 26,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Bismillah line ───────────────────────────────────────────────────────────
+
+class _BismillahLine extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Text(
+      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
+      textDirection: TextDirection.rtl,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontFamily: kArabicFont,
+        fontSize: 22,
+        height: 2.2,
+        color: colors.onSurface,
+      ),
+    );
+  }
+}
+
+// ─── Continuous Mushaf text ───────────────────────────────────────────────────
+
+class _ContinuousText extends ConsumerWidget {
+  const _ContinuousText({
+    required this.ayahs,
+    required this.fontSize,
+    required this.translations,
+    required this.onAyahTap,
+  });
+
+  final List<Ayah> ayahs;
+  final double fontSize;
+  final Map<int, String> translations;
+  final void Function(Ayah) onAyahTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ayahs.isEmpty) return const SizedBox.shrink();
+
+    final colors = Theme.of(context).colorScheme;
+
+    // Build a single RichText with all ayahs flowing continuously.
+    // Each ayah text is followed by a circular end-marker (WidgetSpan).
+    // GestureDetector on each segment lets the user tap to get the action sheet.
+    final spans = <InlineSpan>[];
+    for (final ayah in ayahs) {
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: GestureDetector(
+            onTap: () => onAyahTap(ayah),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${ayah.textUthmani} ',
+                    style: TextStyle(
+                      fontFamily: kArabicFont,
+                      fontSize: fontSize,
+                      height: 2.2,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+        ),
+      );
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: _AyahEndMarker(
+            number: ayah.ayahNumber,
+            colors: colors,
+            onTap: () => onAyahTap(ayah),
+          ),
+        ),
+      );
+      spans.add(const TextSpan(text: ' '));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text.rich(
+          TextSpan(children: spans),
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.justify,
+        ),
+        // Translation block — shown below the Arabic text when enabled.
+        if (translations.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          for (final ayah in ayahs)
+            if (translations[ayah.id] != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${ayah.ayahNumber}. ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: colors.primary,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        translations[ayah.id]!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.6,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── Circular ayah end marker ─────────────────────────────────────────────────
+
+class _AyahEndMarker extends StatelessWidget {
+  const _AyahEndMarker({
+    required this.number,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final int number;
+  final ColorScheme colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 30,
+        height: 30,
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: colors.onSurface.withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          '$number',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: colors.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
       ),
     );
   }
@@ -274,19 +478,17 @@ class _AyahActionSheet extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               child: Text(
                 'Ayah $ayahKey',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             const Divider(height: 1),
-            // Play / pause
             ListTile(
-              leading: Icon(
-                isThisAyahPlaying
-                    ? Icons.pause_circle_outline
-                    : Icons.play_circle_outline,
-              ),
+              leading: Icon(isThisAyahPlaying
+                  ? Icons.pause_circle_outline
+                  : Icons.play_circle_outline),
               title: Text(isThisAyahPlaying ? 'Pause' : 'Play audio'),
               onTap: () {
                 Navigator.pop(context);
@@ -299,12 +501,11 @@ class _AyahActionSheet extends ConsumerWidget {
                 }
               },
             ),
-            // Bookmark toggle
             ListTile(
               leading: Icon(
-                isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-              ),
-              title: Text(isBookmarked ? 'Remove bookmark' : 'Bookmark'),
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border),
+              title: Text(
+                  isBookmarked ? 'Remove bookmark' : 'Bookmark'),
               onTap: () {
                 Navigator.pop(context);
                 ref.read(bookmarksProvider.notifier).toggle(
@@ -314,7 +515,6 @@ class _AyahActionSheet extends ConsumerWidget {
                     );
               },
             ),
-            // Note
             ListTile(
               leading: const Icon(Icons.note_add_outlined),
               title: const Text('Add / edit note'),
@@ -329,13 +529,9 @@ class _AyahActionSheet extends ConsumerWidget {
                 );
               },
             ),
-            // Hifz
             ListTile(
               leading: Icon(
-                isInHifz
-                    ? Icons.psychology
-                    : Icons.psychology_outlined,
-              ),
+                  isInHifz ? Icons.psychology : Icons.psychology_outlined),
               title: Text(isInHifz ? 'Remove from Hifz' : 'Add to Hifz'),
               subtitle: isInHifz
                   ? null
@@ -348,12 +544,10 @@ class _AyahActionSheet extends ConsumerWidget {
                 } else {
                   await repo.addToHifz(ayahId, surahNumber, ayahNumber);
                 }
-                // Invalidate so inHifzProvider refreshes.
                 ref.invalidate(inHifzProvider(ayahId));
                 ref.invalidate(hifzStatsProvider);
               },
             ),
-            // Share
             ListTile(
               leading: const Icon(Icons.share_outlined),
               title: const Text('Share'),
@@ -385,7 +579,7 @@ class _BottomArea extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const AudioPlayerBar(),
-        _BottomSurahNav(
+        _SurahNav(
           surahId: surahId,
           onPrevious: onPrevious,
           onNext: onNext,
@@ -395,10 +589,8 @@ class _BottomArea extends StatelessWidget {
   }
 }
 
-// ─── Bottom surah navigation ──────────────────────────────────────────────────
-
-class _BottomSurahNav extends StatelessWidget {
-  const _BottomSurahNav({
+class _SurahNav extends StatelessWidget {
+  const _SurahNav({
     required this.surahId,
     required this.onPrevious,
     required this.onNext,
@@ -411,7 +603,6 @@ class _BottomSurahNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-
     return Container(
       height: 52,
       decoration: BoxDecoration(
