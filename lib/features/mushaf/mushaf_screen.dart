@@ -12,6 +12,7 @@ import '../memorization/hifz_provider.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
 import 'widgets/juz_jump_dialog.dart';
+import '../settings/settings_screen.dart';
 
 class MushafScreen extends ConsumerStatefulWidget {
   const MushafScreen({super.key});
