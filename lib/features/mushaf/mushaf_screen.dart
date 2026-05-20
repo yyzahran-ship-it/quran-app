@@ -133,7 +133,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildReader(state),
+          : state.currentSurah == null
+              ? _buildErrorState()
+              : _buildReader(state),
       bottomNavigationBar: state.currentSurah == null
           ? null
           : _BottomArea(
@@ -173,6 +175,42 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildErrorState() {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: colors.error),
+            const SizedBox(height: 16),
+            Text(
+              'Could not load Quran data',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The database may not have finished setting up. Tap Retry.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: colors.outline),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => ref.invalidate(mushafProvider),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

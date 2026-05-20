@@ -53,38 +53,52 @@ class MushafNotifier extends Notifier<MushafState> {
   QuranRepository get _repo => ref.read(quranRepositoryProvider);
 
   Future<void> _init() async {
-    // Load surah list and first surah's ayahs in parallel.
-    final results = await Future.wait<dynamic>([
-      _repo.getAllSurahs(),
-      _repo.getSurahAyahs(1),
-    ]);
-    final surahs = results[0] as List<Surah>;
-    final ayahs = results[1] as List<Ayah>;
-    state = MushafState(
-      surahs: surahs,
-      currentSurah: surahs.first,
-      ayahs: ayahs,
-      isLoading: false,
-    );
+    try {
+      // Load surah list and first surah's ayahs in parallel.
+      final results = await Future.wait<dynamic>([
+        _repo.getAllSurahs(),
+        _repo.getSurahAyahs(1),
+      ]);
+      final surahs = results[0] as List<Surah>;
+      final ayahs = results[1] as List<Ayah>;
+      if (surahs.isEmpty) {
+        // DB not seeded yet — show error state so user can retry.
+        state = const MushafState(surahs: [], currentSurah: null, ayahs: [], isLoading: false);
+        return;
+      }
+      state = MushafState(
+        surahs: surahs,
+        currentSurah: surahs.first,
+        ayahs: ayahs,
+        isLoading: false,
+      );
+    } catch (_) {
+      state = const MushafState(surahs: [], currentSurah: null, ayahs: [], isLoading: false);
+    }
   }
 
   Future<void> navigateToSurah(int surahNumber) async {
     state = state.copyWith(isLoading: true);
-    // Load surah metadata, ayahs, and (if visible) translations in parallel.
-    final results = await Future.wait<dynamic>([
-      _repo.getSurah(surahNumber),
-      _repo.getSurahAyahs(surahNumber),
-      if (state.showTranslation)
-        _repo.getSurahTranslations(surahNumber)
-      else
-        Future<Map<int, String>>.value({}),
-    ]);
-    state = state.copyWith(
-      currentSurah: results[0] as Surah,
-      ayahs: results[1] as List<Ayah>,
-      translations: results[2] as Map<int, String>,
-      isLoading: false,
-    );
+    try {
+      // Load surah metadata, ayahs, and (if visible) translations in parallel.
+      final showTx = state.showTranslation;
+      final results = await Future.wait<dynamic>([
+        _repo.getSurah(surahNumber),
+        _repo.getSurahAyahs(surahNumber),
+        if (showTx)
+          _repo.getSurahTranslations(surahNumber)
+        else
+          Future<Map<int, String>>.value({}),
+      ]);
+      state = state.copyWith(
+        currentSurah: results[0] as Surah,
+        ayahs: results[1] as List<Ayah>,
+        translations: results[2] as Map<int, String>,
+        isLoading: false,
+      );
+    } catch (_) {
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   Future<void> toggleTranslation() async {
