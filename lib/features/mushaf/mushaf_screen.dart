@@ -89,7 +89,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       final targetPage =
           _ayahGlobalPage(next.surahNumber!, next.currentAyahNumber!);
       if (targetPage != ref.read(mushafProvider).currentPage) {
-        ref.read(mushafProvider.notifier).navigateToPage(targetPage);
+        ref
+            .read(mushafProvider.notifier)
+            .navigateToAyah(next.surahNumber!, next.currentAyahNumber!);
         _scrollToTop();
       }
     });

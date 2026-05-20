@@ -118,6 +118,17 @@ class MushafNotifier extends Notifier<MushafState> {
     await navigateToPage(page);
   }
 
+  /// Navigate to the page containing a specific ayah.
+  Future<void> navigateToAyah(int surahNumber, int ayahNumber) async {
+    int globalId = 1;
+    for (int i = 0; i < surahNumber - 1; i++) {
+      globalId += kSurahVerseCounts[i];
+    }
+    globalId += ayahNumber - 1;
+    if (globalId < 1 || globalId > kTotalAyahs) return;
+    await navigateToPage(kAyahPages[globalId - 1]);
+  }
+
   /// Navigate to the page where a juz starts.
   Future<void> navigateToJuz(int juzNumber) async {
     final page = kJuzStartPages[juzNumber - 1];
