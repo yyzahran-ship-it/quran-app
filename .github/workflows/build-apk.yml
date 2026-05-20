@@ -36,6 +36,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate app icons
+        run: dart run flutter_launcher_icons
+
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
