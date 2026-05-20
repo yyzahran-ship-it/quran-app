@@ -46,7 +46,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colors.surface,
+      backgroundColor: const Color(0xFFD6D0C0),
       appBar: AppBar(
         title: state.currentSurah == null
             ? const Text('Quran')
@@ -109,49 +109,64 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final surah = state.currentSurah!;
     final fontSize = ref.watch(fontSizeProvider);
     final page = kSurahStartPages[surah.id - 1];
+    final juzNumber =
+        state.ayahs.isNotEmpty ? state.ayahs.first.juzNumber : null;
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                // Decorative surah banner
-                _SurahBanner(surah: surah),
-                // Bismillah — shown between banner and text for all surahs
-                // except Al-Fatihah (where it is verse 1) and At-Tawbah (9).
-                if (surah.bismillahPre && surah.id != 1) ...[
-                  const SizedBox(height: 8),
-                  _BismillahLine(),
-                ],
-                const SizedBox(height: 16),
-                // Continuous ayah text with inline end-markers
-                _ContinuousText(
-                  ayahs: state.ayahs,
-                  fontSize: fontSize,
-                  translations: state.showTranslation
-                      ? state.translations
-                      : const {},
-                  onAyahTap: (ayah) => _showAyahMenu(context, ayah),
-                ),
-                const SizedBox(height: 32),
-                // Page number
-                Text(
-                  '$page',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
+    return SingleChildScrollView(
+      controller: _scrollController,
+      // Warm parchment backdrop — visible in the gap around the page card.
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      child: Container(
+        // The white Mushaf "page".
+        decoration: const BoxDecoration(
+          color: Color(0xFFF9F7F2),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x44000000),
+              blurRadius: 8,
+              offset: Offset(0, 3),
             ),
-          ),
+          ],
         ),
-      ],
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Running header: "Surah Name | Juz' N"
+            _PageHeader(surah: surah, juzNumber: juzNumber),
+            const SizedBox(height: 20),
+            _SurahBanner(surah: surah),
+            if (surah.bismillahPre && surah.id != 1) ...[
+              const SizedBox(height: 4),
+              const _BismillahLine(),
+            ],
+            const SizedBox(height: 12),
+            _ContinuousText(
+              ayahs: state.ayahs,
+              fontSize: fontSize,
+              translations: state.showTranslation
+                  ? state.translations
+                  : const {},
+              onAyahTap: (ayah) => _showAyahMenu(context, ayah),
+            ),
+            const SizedBox(height: 28),
+            const Center(
+              child: _PageDivider(),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                '$page',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF888888),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -199,7 +214,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   }
 }
 
-// ─── AppBar title: "Surah Name | Juz' N" ─────────────────────────────────────
+// ─── AppBar title ─────────────────────────────────────────────────────────────
 
 class _SurahJuzTitle extends StatelessWidget {
   const _SurahJuzTitle({required this.surah, required this.juzNumber});
@@ -228,6 +243,45 @@ class _SurahJuzTitle extends StatelessWidget {
   }
 }
 
+// ─── In-page running header (mirrors reference image top line) ─────────────────
+
+class _PageHeader extends StatelessWidget {
+  const _PageHeader({required this.surah, required this.juzNumber});
+
+  final Surah surah;
+  final int? juzNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 13,
+      color: Color(0xFF666666),
+      fontStyle: FontStyle.italic,
+    );
+    return Row(
+      children: [
+        Text(surah.nameSimple, style: style),
+        const Spacer(),
+        if (juzNumber != null) Text("Juz' $juzNumber", style: style),
+      ],
+    );
+  }
+}
+
+// ─── Thin decorative divider above page number ────────────────────────────────
+
+class _PageDivider extends StatelessWidget {
+  const _PageDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 80,
+      child: Divider(thickness: 0.5, color: Colors.black38),
+    );
+  }
+}
+
 // ─── Decorative surah banner ──────────────────────────────────────────────────
 
 class _SurahBanner extends StatelessWidget {
@@ -237,32 +291,29 @@ class _SurahBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? Colors.white60 : Colors.black54;
-    final textColor = isDark ? Colors.white : Colors.black87;
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        border: Border.all(color: borderColor, width: 1.5),
-        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0xFF2C2C2C), width: 1.5),
+        borderRadius: BorderRadius.circular(3),
       ),
       child: Container(
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          border: Border.all(color: borderColor.withValues(alpha: 0.5), width: 0.5),
-          borderRadius: BorderRadius.circular(2),
+          border:
+              Border.all(color: const Color(0xFF2C2C2C).withValues(alpha: 0.4), width: 0.5),
+          borderRadius: BorderRadius.circular(1),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         child: Text(
           surah.nameArabic,
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: kArabicFont,
             fontSize: 26,
             fontWeight: FontWeight.w600,
-            color: textColor,
+            color: Color(0xFF1A1A1A),
           ),
         ),
       ),
@@ -273,10 +324,11 @@ class _SurahBanner extends StatelessWidget {
 // ─── Bismillah line ───────────────────────────────────────────────────────────
 
 class _BismillahLine extends StatelessWidget {
+  const _BismillahLine();
+
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Text(
+    return const Text(
       'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
@@ -284,7 +336,7 @@ class _BismillahLine extends StatelessWidget {
         fontFamily: kArabicFont,
         fontSize: 22,
         height: 2.2,
-        color: colors.onSurface,
+        color: Color(0xFF1A1A1A),
       ),
     );
   }
@@ -309,11 +361,10 @@ class _ContinuousText extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (ayahs.isEmpty) return const SizedBox.shrink();
 
-    final colors = Theme.of(context).colorScheme;
+    // Page content is always on a white/cream background — use hardcoded
+    // dark colours so text is readable regardless of the app theme.
+    const textColor = Color(0xFF1A1A1A);
 
-    // Build a single RichText with all ayahs flowing continuously.
-    // Each ayah text is followed by a circular end-marker (WidgetSpan).
-    // GestureDetector on each segment lets the user tap to get the action sheet.
     final spans = <InlineSpan>[];
     for (final ayah in ayahs) {
       spans.add(
@@ -323,17 +374,13 @@ class _ContinuousText extends ConsumerWidget {
             onTap: () => onAyahTap(ayah),
             child: Text.rich(
               TextSpan(
-                children: [
-                  TextSpan(
-                    text: '${ayah.textUthmani} ',
-                    style: TextStyle(
-                      fontFamily: kArabicFont,
-                      fontSize: fontSize,
-                      height: 2.2,
-                      color: colors.onSurface,
-                    ),
-                  ),
-                ],
+                text: '${ayah.textUthmani} ',
+                style: TextStyle(
+                  fontFamily: kArabicFont,
+                  fontSize: fontSize,
+                  height: 2.2,
+                  color: textColor,
+                ),
               ),
               textDirection: TextDirection.rtl,
             ),
@@ -345,7 +392,6 @@ class _ContinuousText extends ConsumerWidget {
           alignment: PlaceholderAlignment.middle,
           child: _AyahEndMarker(
             number: ayah.ayahNumber,
-            colors: colors,
             onTap: () => onAyahTap(ayah),
           ),
         ),
@@ -364,7 +410,7 @@ class _ContinuousText extends ConsumerWidget {
         // Translation block — shown below the Arabic text when enabled.
         if (translations.isNotEmpty) ...[
           const SizedBox(height: 16),
-          const Divider(),
+          const Divider(color: Color(0xFFCCCCCC)),
           const SizedBox(height: 8),
           for (final ayah in ayahs)
             if (translations[ayah.id] != null)
@@ -375,19 +421,19 @@ class _ContinuousText extends ConsumerWidget {
                   children: [
                     Text(
                       '${ayah.ayahNumber}. ',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: colors.primary,
+                        color: Color(0xFF555555),
                       ),
                     ),
                     Expanded(
                       child: Text(
                         translations[ayah.id]!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13,
                           height: 1.6,
-                          color: colors.onSurfaceVariant,
+                          color: Color(0xFF444444),
                         ),
                       ),
                     ),
@@ -403,14 +449,9 @@ class _ContinuousText extends ConsumerWidget {
 // ─── Circular ayah end marker ─────────────────────────────────────────────────
 
 class _AyahEndMarker extends StatelessWidget {
-  const _AyahEndMarker({
-    required this.number,
-    required this.colors,
-    required this.onTap,
-  });
+  const _AyahEndMarker({required this.number, required this.onTap});
 
   final int number;
-  final ColorScheme colors;
   final VoidCallback onTap;
 
   @override
@@ -418,23 +459,20 @@ class _AyahEndMarker extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 30,
-        height: 30,
-        margin: const EdgeInsets.symmetric(horizontal: 3),
+        width: 28,
+        height: 28,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(
-            color: colors.onSurface.withValues(alpha: 0.4),
-            width: 1,
-          ),
+          border: Border.all(color: const Color(0xFF444444), width: 0.8),
         ),
         alignment: Alignment.center,
         child: Text(
           '$number',
-          style: TextStyle(
-            fontSize: 10,
+          style: const TextStyle(
+            fontSize: 9,
             fontWeight: FontWeight.w600,
-            color: colors.onSurface.withValues(alpha: 0.7),
+            color: Color(0xFF333333),
           ),
         ),
       ),
