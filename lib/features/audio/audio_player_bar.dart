@@ -75,12 +75,13 @@ class AudioPlayerBar extends ConsumerWidget {
               ),
             )
           else if (audio.hasError)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Tooltip(
-                message: 'Playback failed — check internet connection',
-                child: Icon(Icons.wifi_off,
-                    size: 24, color: colors.onPrimaryContainer),
+            Tooltip(
+              message: 'Network error — tap to retry',
+              child: IconButton(
+                icon: const Icon(Icons.wifi_off),
+                color: colors.onPrimaryContainer,
+                iconSize: 24,
+                onPressed: () => notifier.retryCurrentAyah(),
               ),
             )
           else

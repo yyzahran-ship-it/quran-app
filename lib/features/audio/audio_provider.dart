@@ -164,6 +164,13 @@ class AudioNotifier extends Notifier<AudioState> {
     state = const AudioState();
   }
 
+  /// Retry the current ayah after a network error.
+  Future<void> retryCurrentAyah() async {
+    if (!state.hasAudio) return;
+    state = state.copyWith(isLoading: true, hasError: false);
+    await _playCurrentAyah();
+  }
+
   Future<void> setReciter(String reciterSlug) async {
     final wasPlaying = state.isPlaying;
     await _player.stop();
@@ -206,31 +213,57 @@ class AudioNotifier extends Notifier<AudioState> {
   Future<void> _playCurrentAyah() async {
     if (state.surahNumber == null) return;
     final ayahNumber = state.currentAyahIndex + 1;
-    final url = _audioRepo.ayahUrl(
+    final primaryUrl = _audioRepo.ayahUrl(
       state.surahNumber!,
       ayahNumber,
       reciter: state.reciter,
     );
+    final fallbackUrl = _audioRepo.ayahFallbackUrl(
+      state.surahNumber!,
+      ayahNumber,
+      reciter: state.reciter,
+    );
+
     try {
-      // Try with MediaItem tag first (enables lock-screen controls via
-      // just_audio_background). If the background service isn't running on
-      // this device, fall back to a plain URL load — audio still plays in-app.
-      try {
-        await _player.setAudioSource(
-          AudioSource.uri(
-            Uri.parse(url),
-            tag: MediaItem(
-              id: url,
-              title: 'Surah ${state.surahNumber}, Ayah $ayahNumber',
-              album: 'Quran',
-              artist: AudioRepository.reciters[state.reciter] ?? state.reciter,
+      // Attempt 1: primary CDN (audio.qurancdn.com) with MediaItem tag for
+      //            lock-screen controls via just_audio_background.
+      // Attempt 2: primary CDN without MediaItem (background service may be
+      //            unavailable on this device).
+      // Attempt 3: fallback CDN (everyayah.com) without MediaItem.
+      // All three are tried before giving up and setting hasError.
+      bool loaded = false;
+      for (final url in [primaryUrl, fallbackUrl]) {
+        if (loaded) break;
+        try {
+          await _player.setAudioSource(
+            AudioSource.uri(
+              Uri.parse(url),
+              tag: MediaItem(
+                id: url,
+                title: 'Surah ${state.surahNumber}, Ayah $ayahNumber',
+                album: 'Quran',
+                artist:
+                    AudioRepository.reciters[state.reciter] ?? state.reciter,
+              ),
             ),
-          ),
-        );
-      } catch (_) {
-        await _player.setUrl(url);
+          );
+          loaded = true;
+        } catch (_) {
+          try {
+            await _player.setUrl(url);
+            loaded = true;
+          } catch (_) {
+            // Try next URL
+          }
+        }
       }
-      // Apply current speed before playing — setSpeed is idempotent.
+
+      if (!loaded) {
+        state =
+            state.copyWith(isPlaying: false, isLoading: false, hasError: true);
+        return;
+      }
+
       await _player.setSpeed(state.speed);
       await _player.play();
       state =
