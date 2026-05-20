@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/theme_provider.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
+import '../mushaf/tafsir_repository.dart';
 
 // ─── Font size persistence ────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ class SettingsScreen extends ConsumerWidget {
     final theme = ref.watch(themeProvider);
     final fontSize = ref.watch(fontSizeProvider);
     final audio = ref.watch(audioProvider);
+    final tafsirId = ref.watch(tafsirIdProvider);
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -86,6 +88,28 @@ class SettingsScreen extends ConsumerWidget {
               '${fontSize.round()}',
               style: TextStyle(
                   fontWeight: FontWeight.bold, color: colors.primary),
+            ),
+          ),
+          // ── Reading ───────────────────────────────────────────────────────
+          _SectionHeader(title: 'Reading', colors: colors),
+          ListTile(
+            leading: const Icon(Icons.book_outlined),
+            title: const Text('Tafsir'),
+            trailing: DropdownButton<int>(
+              value: tafsirId,
+              underline: const SizedBox.shrink(),
+              items: kTafsirs
+                  .map((t) => DropdownMenuItem(
+                        value: t.id,
+                        child: Text(
+                          '${t.name} (${t.language})',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) ref.read(tafsirIdProvider.notifier).set(v);
+              },
             ),
           ),
           // ── Audio ─────────────────────────────────────────────────────────

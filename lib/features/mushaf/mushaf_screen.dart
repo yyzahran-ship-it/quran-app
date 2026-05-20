@@ -11,6 +11,7 @@ import '../../data/repositories/quran_repository.dart';
 import '../memorization/hifz_provider.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
+import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 
@@ -585,6 +586,20 @@ class _AyahActionSheet extends ConsumerWidget {
                 }
                 ref.invalidate(inHifzProvider(ayahId));
                 ref.invalidate(hifzStatsProvider);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.menu_book_outlined),
+              title: const Text('Read Tafsir'),
+              subtitle: const Text('Ibn Kathir · Al-Muyassar · Al-Jalalayn'),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => TafsirSheet(verseKey: ayahKey),
+                );
               },
             ),
             ListTile(
