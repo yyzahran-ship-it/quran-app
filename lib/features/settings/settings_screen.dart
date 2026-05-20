@@ -150,7 +150,7 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.headphones_outlined),
             title: const Text('Audio'),
             subtitle: const Text(
-                'Streamed from everyayah.com — requires internet'),
+                'Streamed from audio.qurancdn.com — requires internet'),
           ),
           ListTile(
             leading: const Icon(Icons.font_download_outlined),
@@ -165,15 +165,6 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text(
               'No analytics, no crash reporters, no third-party SDKs. '
               'Your reading habits stay on your device.',
-            ),
-            isThreeLine: true,
-          ),
-          ListTile(
-            leading: Icon(Icons.wifi_off_outlined, color: colors.primary),
-            title: const Text('Offline first'),
-            subtitle: const Text(
-              'The Quran text and translations are bundled in the app. '
-              'Internet is only used for audio streaming.',
             ),
             isThreeLine: true,
           ),

@@ -15,6 +15,30 @@ import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 
+// ─── Helper: group page ayahs by surah ───────────────────────────────────────
+
+class _SurahSection {
+  _SurahSection(this.surah);
+  final Surah surah;
+  final List<Ayah> ayahs = [];
+}
+
+List<_SurahSection> _groupBySurah(List<Ayah> ayahs, MushafState state) {
+  final sections = <_SurahSection>[];
+  for (final ayah in ayahs) {
+    final surah = state.surahFor(ayah.surahNumber);
+    if (surah == null) continue;
+    if (sections.isEmpty || sections.last.surah.id != ayah.surahNumber) {
+      sections.add(_SurahSection(surah)..ayahs.add(ayah));
+    } else {
+      sections.last.ayahs.add(ayah);
+    }
+  }
+  return sections;
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 class MushafScreen extends ConsumerStatefulWidget {
   const MushafScreen({super.key});
 
@@ -44,19 +68,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mushafProvider);
-    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: state.currentSurah == null
-            ? const Text('Quran')
-            : _SurahJuzTitle(
-                surah: state.currentSurah!,
-                juzNumber: state.ayahs.isNotEmpty
-                    ? state.ayahs.first.juzNumber
-                    : null,
-              ),
+        title: _AppBarTitle(state: state),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -87,19 +103,19 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : state.currentSurah == null
+          : state.ayahs.isEmpty
               ? _buildErrorState()
               : _buildReader(state),
-      bottomNavigationBar: state.currentSurah == null
+      bottomNavigationBar: state.ayahs.isEmpty
           ? null
           : _BottomArea(
-              surahId: state.currentSurah!.id,
+              currentPage: state.currentPage,
               onPrevious: () {
-                ref.read(mushafProvider.notifier).previousSurah();
+                ref.read(mushafProvider.notifier).previousPage();
                 _scrollToTop();
               },
               onNext: () {
-                ref.read(mushafProvider.notifier).nextSurah();
+                ref.read(mushafProvider.notifier).nextPage();
                 _scrollToTop();
               },
             ),
@@ -107,9 +123,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   }
 
   Widget _buildReader(MushafState state) {
-    final surah = state.currentSurah!;
     final fontSize = ref.watch(fontSizeProvider);
-    final page = kSurahStartPages[surah.id - 1];
+    final sections = _groupBySurah(state.ayahs, state);
+    final firstSurah = sections.isNotEmpty ? sections.first.surah : null;
     final juzNumber =
         state.ayahs.isNotEmpty ? state.ayahs.first.juzNumber : null;
 
@@ -122,31 +138,32 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Running header: "Surah Name | Juz' N"
-            _PageHeader(surah: surah, juzNumber: juzNumber),
+            if (firstSurah != null)
+              _PageHeader(surah: firstSurah, juzNumber: juzNumber),
             const SizedBox(height: 20),
-            _SurahBanner(surah: surah),
-            if (surah.bismillahPre && surah.id != 1) ...[
-              const SizedBox(height: 4),
-              const _BismillahLine(),
+            for (final section in sections) ...[
+              _SurahBanner(surah: section.surah),
+              if (section.surah.bismillahPre && section.surah.id != 1) ...[
+                const SizedBox(height: 4),
+                const _BismillahLine(),
+              ],
+              const SizedBox(height: 12),
+              _ContinuousText(
+                ayahs: section.ayahs,
+                fontSize: fontSize,
+                translations: state.showTranslation
+                    ? state.translations
+                    : const {},
+                onAyahTap: (ayah) => _showAyahMenu(context, ayah),
+              ),
+              const SizedBox(height: 20),
             ],
-            const SizedBox(height: 12),
-            _ContinuousText(
-              ayahs: state.ayahs,
-              fontSize: fontSize,
-              translations: state.showTranslation
-                  ? state.translations
-                  : const {},
-              onAyahTap: (ayah) => _showAyahMenu(context, ayah),
-            ),
-            const SizedBox(height: 28),
-            const Center(
-              child: _PageDivider(),
-            ),
+            const SizedBox(height: 8),
+            const Center(child: _PageDivider()),
             const SizedBox(height: 8),
             Center(
               child: Text(
-                '$page',
+                '${state.currentPage}',
                 style: const TextStyle(
                   fontSize: 13,
                   color: Color(0xFF888888),
@@ -206,34 +223,35 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
 // ─── AppBar title ─────────────────────────────────────────────────────────────
 
-class _SurahJuzTitle extends StatelessWidget {
-  const _SurahJuzTitle({required this.surah, required this.juzNumber});
+class _AppBarTitle extends StatelessWidget {
+  const _AppBarTitle({required this.state});
 
-  final Surah surah;
-  final int? juzNumber;
+  final MushafState state;
 
   @override
   Widget build(BuildContext context) {
+    if (state.ayahs.isEmpty) return const Text('Quran');
+    final firstSurah = state.surahFor(state.ayahs.first.surahNumber);
+    final juzNumber = state.ayahs.first.juzNumber;
     return Row(
       children: [
         Expanded(
           child: Text(
-            surah.nameSimple,
+            firstSurah?.nameSimple ?? 'Page ${state.currentPage}',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (juzNumber != null)
-          Text(
-            "Juz' $juzNumber",
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
-          ),
+        Text(
+          "Juz' $juzNumber",
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+        ),
       ],
     );
   }
 }
 
-// ─── In-page running header (mirrors reference image top line) ─────────────────
+// ─── In-page running header ───────────────────────────────────────────────────
 
 class _PageHeader extends StatelessWidget {
   const _PageHeader({required this.surah, required this.juzNumber});
@@ -265,7 +283,7 @@ class _PageDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return const SizedBox(
       width: 80,
       child: Divider(thickness: 0.5, color: Colors.black38),
     );
@@ -290,8 +308,9 @@ class _SurahBanner extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          border:
-              Border.all(color: const Color(0xFF2C2C2C).withValues(alpha: 0.4), width: 0.5),
+          border: Border.all(
+              color: const Color(0xFF2C2C2C).withValues(alpha: 0.4),
+              width: 0.5),
           borderRadius: BorderRadius.circular(1),
         ),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -351,8 +370,6 @@ class _ContinuousText extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (ayahs.isEmpty) return const SizedBox.shrink();
 
-    // Page content is always on a white/cream background — use hardcoded
-    // dark colours so text is readable regardless of the app theme.
     const textColor = Color(0xFF1A1A1A);
 
     final spans = <InlineSpan>[];
@@ -397,7 +414,6 @@ class _ContinuousText extends ConsumerWidget {
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.justify,
         ),
-        // Translation block — shown below the Arabic text when enabled.
         if (translations.isNotEmpty) ...[
           const SizedBox(height: 16),
           const Divider(color: Color(0xFFCCCCCC)),
@@ -504,117 +520,118 @@ class _AyahActionSheet extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                'Ayah $ayahKey',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'Ayah $ayahKey',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: Icon(isThisAyahPlaying
-                  ? Icons.pause_circle_outline
-                  : Icons.play_circle_outline),
-              title: Text(isThisAyahPlaying ? 'Pause' : 'Play audio'),
-              onTap: () {
-                Navigator.pop(context);
-                if (isThisAyahPlaying) {
-                  ref.read(audioProvider.notifier).togglePlayPause();
-                } else {
-                  ref
-                      .read(audioProvider.notifier)
-                      .playAyah(surahNumber, ayahNumber);
-                }
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                  isBookmarked ? Icons.bookmark : Icons.bookmark_border),
-              title: Text(
-                  isBookmarked ? 'Remove bookmark' : 'Bookmark'),
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(bookmarksProvider.notifier).toggle(
-                      ayahId: ayahId,
-                      surahNumber: surahNumber,
-                      ayahNumber: ayahNumber,
-                    );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.note_add_outlined),
-              title: const Text('Add / edit note'),
-              onTap: () {
-                Navigator.pop(context);
-                showNoteEditor(
-                  context,
-                  ayahId: ayahId,
-                  surahNumber: surahNumber,
-                  ayahNumber: ayahNumber,
-                  verseKey: ayahKey,
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                  isInHifz ? Icons.psychology : Icons.psychology_outlined),
-              title: Text(isInHifz ? 'Remove from Hifz' : 'Add to Hifz'),
-              subtitle: isInHifz
-                  ? null
-                  : const Text('Schedule for spaced-repetition review'),
-              onTap: () async {
-                Navigator.pop(context);
-                final repo = ref.read(quranRepositoryProvider);
-                if (isInHifz) {
-                  await repo.removeFromHifz(ayahId);
-                } else {
-                  await repo.addToHifz(ayahId, surahNumber, ayahNumber);
-                }
-                ref.invalidate(inHifzProvider(ayahId));
-                ref.invalidate(hifzStatsProvider);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
-              title: const Text('Read Tafsir'),
-              subtitle: const Text('Ibn Kathir · Al-Muyassar · Al-Jalalayn'),
-              onTap: () {
-                Navigator.pop(context);
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  builder: (_) => TafsirSheet(verseKey: ayahKey),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_outlined),
-              title: const Text('Share'),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(isThisAyahPlaying
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline),
+                title: Text(isThisAyahPlaying ? 'Pause' : 'Play audio'),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (isThisAyahPlaying) {
+                    ref.read(audioProvider.notifier).togglePlayPause();
+                  } else {
+                    ref
+                        .read(audioProvider.notifier)
+                        .playAyah(surahNumber, ayahNumber);
+                  }
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                    isBookmarked ? Icons.bookmark : Icons.bookmark_border),
+                title:
+                    Text(isBookmarked ? 'Remove bookmark' : 'Bookmark'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(bookmarksProvider.notifier).toggle(
+                        ayahId: ayahId,
+                        surahNumber: surahNumber,
+                        ayahNumber: ayahNumber,
+                      );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.note_add_outlined),
+                title: const Text('Add / edit note'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showNoteEditor(
+                    context,
+                    ayahId: ayahId,
+                    surahNumber: surahNumber,
+                    ayahNumber: ayahNumber,
+                    verseKey: ayahKey,
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                    isInHifz ? Icons.psychology : Icons.psychology_outlined),
+                title: Text(isInHifz ? 'Remove from Hifz' : 'Add to Hifz'),
+                subtitle: isInHifz
+                    ? null
+                    : const Text('Schedule for spaced-repetition review'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final repo = ref.read(quranRepositoryProvider);
+                  if (isInHifz) {
+                    await repo.removeFromHifz(ayahId);
+                  } else {
+                    await repo.addToHifz(ayahId, surahNumber, ayahNumber);
+                  }
+                  ref.invalidate(inHifzProvider(ayahId));
+                  ref.invalidate(hifzStatsProvider);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.menu_book_outlined),
+                title: const Text('Read Tafsir'),
+                subtitle:
+                    const Text('Ibn Kathir · Al-Muyassar · Al-Jalalayn'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    builder: (_) => TafsirSheet(verseKey: ayahKey),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Share'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 }
 
-// ─── Bottom area: audio bar + surah navigation ────────────────────────────────
+// ─── Bottom area: audio bar + page navigation ─────────────────────────────────
 
 class _BottomArea extends StatelessWidget {
   const _BottomArea({
-    required this.surahId,
+    required this.currentPage,
     required this.onPrevious,
     required this.onNext,
   });
 
-  final int surahId;
+  final int currentPage;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
 
@@ -624,8 +641,8 @@ class _BottomArea extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const AudioPlayerBar(),
-        _SurahNav(
-          surahId: surahId,
+        _PageNav(
+          currentPage: currentPage,
           onPrevious: onPrevious,
           onNext: onNext,
         ),
@@ -634,14 +651,14 @@ class _BottomArea extends StatelessWidget {
   }
 }
 
-class _SurahNav extends StatelessWidget {
-  const _SurahNav({
-    required this.surahId,
+class _PageNav extends StatelessWidget {
+  const _PageNav({
+    required this.currentPage,
     required this.onPrevious,
     required this.onNext,
   });
 
-  final int surahId;
+  final int currentPage;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
 
@@ -659,15 +676,22 @@ class _SurahNav extends StatelessWidget {
         children: [
           Expanded(
             child: TextButton.icon(
-              onPressed: surahId > 1 ? onPrevious : null,
+              onPressed: currentPage > 1 ? onPrevious : null,
               icon: const Icon(Icons.chevron_left),
               label: const Text('Previous'),
             ),
           ),
-          Container(width: 0.5, color: colors.outlineVariant),
+          Text(
+            '$currentPage / $kTotalPages',
+            style: TextStyle(
+              fontSize: 12,
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           Expanded(
             child: TextButton.icon(
-              onPressed: surahId < 114 ? onNext : null,
+              onPressed: currentPage < kTotalPages ? onNext : null,
               icon: const Icon(Icons.chevron_right),
               label: const Text('Next'),
               iconAlignment: IconAlignment.end,
