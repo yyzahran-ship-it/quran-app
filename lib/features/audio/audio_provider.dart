@@ -16,6 +16,9 @@ class AudioState {
     this.isLoading = false,
     this.hasError = false,
     this.reciter = AudioRepository.defaultReciter,
+    this.speed = 1.0,
+    this.loopStart,
+    this.loopEnd,
   });
 
   final int? surahNumber;
@@ -25,11 +28,20 @@ class AudioState {
   final bool isLoading;
   final bool hasError;
   final String reciter;
+  final double speed;
+  final int? loopStart; // 0-based; A point of A-B repeat
+  final int? loopEnd; // 0-based; B point of A-B repeat
 
   int? get currentAyahNumber =>
       surahNumber != null ? currentAyahIndex + 1 : null;
 
   bool get hasAudio => surahNumber != null && ayahCount > 0;
+
+  // A is set, waiting for B.
+  bool get loopASet => loopStart != null && loopEnd == null;
+
+  // Both A and B are set — loop is running.
+  bool get loopActive => loopStart != null && loopEnd != null;
 
   AudioState copyWith({
     int? surahNumber,
@@ -39,6 +51,11 @@ class AudioState {
     bool? isLoading,
     bool? hasError,
     String? reciter,
+    double? speed,
+    // Pass clearLoop: true to reset both loop points to null.
+    bool clearLoop = false,
+    int? loopStart,
+    int? loopEnd,
   }) =>
       AudioState(
         surahNumber: surahNumber ?? this.surahNumber,
@@ -48,6 +65,9 @@ class AudioState {
         isLoading: isLoading ?? this.isLoading,
         hasError: hasError ?? this.hasError,
         reciter: reciter ?? this.reciter,
+        speed: speed ?? this.speed,
+        loopStart: clearLoop ? null : (loopStart ?? this.loopStart),
+        loopEnd: clearLoop ? null : (loopEnd ?? this.loopEnd),
       );
 }
 
@@ -60,7 +80,7 @@ class AudioNotifier extends Notifier<AudioState> {
   AudioState build() {
     _player = AudioPlayer();
 
-    // Advance to next ayah when current one finishes.
+    // Advance to next ayah (or loop back to A) when the current one finishes.
     _player.playerStateStream.listen((ps) {
       if (ps.processingState == ProcessingState.completed) {
         _onAyahComplete();
@@ -77,8 +97,6 @@ class AudioNotifier extends Notifier<AudioState> {
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  /// Start playing the surah from a given ayah (1-based). Navigates the
-  /// Mushaf reader to the surah as well.
   Future<void> playSurah(int surahNumber, {int startAyah = 1}) async {
     await _player.stop();
     state = state.copyWith(isLoading: true);
@@ -93,11 +111,10 @@ class AudioNotifier extends Notifier<AudioState> {
       ayahCount: count,
       isLoading: false,
       reciter: state.reciter,
+      speed: state.speed,
     );
 
-    // Also navigate the reader to this surah.
     ref.read(mushafProvider.notifier).navigateToSurah(surahNumber);
-
     await _playCurrentAyah();
   }
 
@@ -152,6 +169,34 @@ class AudioNotifier extends Notifier<AudioState> {
     }
   }
 
+  /// Cycle through 0.75 → 1.0 → 1.25 → 1.5 → 0.75…
+  Future<void> cycleSpeed() async {
+    const steps = [0.75, 1.0, 1.25, 1.5];
+    final idx = steps.indexWhere((s) => (s - state.speed).abs() < 0.01);
+    final next = steps[(idx + 1) % steps.length];
+    state = state.copyWith(speed: next);
+    await _player.setSpeed(next);
+  }
+
+  /// Three-tap A-B loop cycle:
+  ///   No loop → set A → set B (loop active) → clear
+  void tapLoopButton() {
+    if (state.loopActive) {
+      // Clear the loop.
+      state = state.copyWith(clearLoop: true);
+    } else if (state.loopASet) {
+      // Set B to current ayah; if B < A, swap so A is always ≤ B.
+      final b = state.currentAyahIndex;
+      final a = state.loopStart!;
+      state = a <= b
+          ? state.copyWith(loopEnd: b)
+          : state.copyWith(loopStart: b, loopEnd: a);
+    } else {
+      // Set A to current ayah.
+      state = state.copyWith(loopStart: state.currentAyahIndex);
+    }
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   Future<void> _playCurrentAyah() async {
@@ -163,8 +208,6 @@ class AudioNotifier extends Notifier<AudioState> {
       reciter: state.reciter,
     );
     try {
-      // just_audio_background requires a MediaItem tag on every audio source
-      // so it can display the track in the lock-screen notification.
       await _player.setAudioSource(
         AudioSource.uri(
           Uri.parse(url),
@@ -176,21 +219,29 @@ class AudioNotifier extends Notifier<AudioState> {
           ),
         ),
       );
+      // Apply current speed before playing — setSpeed is idempotent.
+      await _player.setSpeed(state.speed);
       await _player.play();
-      state = state.copyWith(isPlaying: true, isLoading: false, hasError: false);
+      state =
+          state.copyWith(isPlaying: true, isLoading: false, hasError: false);
     } catch (_) {
-      state = state.copyWith(isPlaying: false, isLoading: false, hasError: true);
+      state =
+          state.copyWith(isPlaying: false, isLoading: false, hasError: true);
     }
   }
 
   Future<void> _seekToAyah(int index) async {
-    state = state.copyWith(
-      currentAyahIndex: index,
-      isPlaying: false,
-    );
+    state = state.copyWith(currentAyahIndex: index, isPlaying: false);
   }
 
   void _onAyahComplete() {
+    if (state.loopActive) {
+      // When the loop-end ayah finishes, jump back to loop-start.
+      if (state.currentAyahIndex >= state.loopEnd!) {
+        _seekToAyah(state.loopStart!).then((_) => _playCurrentAyah());
+        return;
+      }
+    }
     final next = state.currentAyahIndex + 1;
     if (next < state.ayahCount) {
       _seekToAyah(next).then((_) => _playCurrentAyah());
@@ -200,4 +251,5 @@ class AudioNotifier extends Notifier<AudioState> {
   }
 }
 
-final audioProvider = NotifierProvider<AudioNotifier, AudioState>(AudioNotifier.new);
+final audioProvider =
+    NotifierProvider<AudioNotifier, AudioState>(AudioNotifier.new);
