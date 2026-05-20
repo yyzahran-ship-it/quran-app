@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../data/repositories/quran_repository.dart';
@@ -155,13 +156,26 @@ class AudioNotifier extends Notifier<AudioState> {
 
   Future<void> _playCurrentAyah() async {
     if (state.surahNumber == null) return;
+    final ayahNumber = state.currentAyahIndex + 1;
     final url = _audioRepo.ayahUrl(
       state.surahNumber!,
-      state.currentAyahIndex + 1,
+      ayahNumber,
       reciter: state.reciter,
     );
     try {
-      await _player.setUrl(url);
+      // just_audio_background requires a MediaItem tag on every audio source
+      // so it can display the track in the lock-screen notification.
+      await _player.setAudioSource(
+        AudioSource.uri(
+          Uri.parse(url),
+          tag: MediaItem(
+            id: url,
+            title: 'Surah ${state.surahNumber}, Ayah $ayahNumber',
+            album: 'Quran',
+            artist: AudioRepository.reciters[state.reciter] ?? state.reciter,
+          ),
+        ),
+      );
       await _player.play();
       state = state.copyWith(isPlaying: true, isLoading: false, hasError: false);
     } catch (_) {

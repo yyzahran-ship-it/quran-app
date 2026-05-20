@@ -42,6 +42,7 @@ dependencies:
   # Audio playback + lock-screen controls
   just_audio: ^0.9.46
   just_audio_background: ^0.0.1-beta.12
+  audio_service: ^0.18.15
 
   # HTTP client with retry + caching
   dio: ^5.8.0+1
