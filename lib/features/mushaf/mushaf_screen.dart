@@ -15,6 +15,18 @@ import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 
+// ─── Helper: page number for a given surah + ayah ────────────────────────────
+
+int _ayahGlobalPage(int surahNumber, int ayahNumber) {
+  int globalId = 1;
+  for (int i = 0; i < surahNumber - 1; i++) {
+    globalId += kSurahVerseCounts[i];
+  }
+  globalId += ayahNumber - 1;
+  if (globalId < 1 || globalId > kTotalAyahs) return 1;
+  return kAyahPages[globalId - 1];
+}
+
 // ─── Helper: group page ayahs by surah ───────────────────────────────────────
 
 class _SurahSection {
@@ -68,6 +80,19 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mushafProvider);
+
+    // Auto-navigate to the page that contains the currently playing ayah.
+    ref.listen<AudioState>(audioProvider, (prev, next) {
+      if (next.surahNumber == null || next.currentAyahNumber == null) return;
+      if (prev?.surahNumber == next.surahNumber &&
+          prev?.currentAyahIndex == next.currentAyahIndex) return;
+      final targetPage =
+          _ayahGlobalPage(next.surahNumber!, next.currentAyahNumber!);
+      if (targetPage != ref.read(mushafProvider).currentPage) {
+        ref.read(mushafProvider.notifier).navigateToPage(targetPage);
+        _scrollToTop();
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -124,6 +149,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   Widget _buildReader(MushafState state) {
     final fontSize = ref.watch(fontSizeProvider);
+    final audio = ref.watch(audioProvider);
     final sections = _groupBySurah(state.ayahs, state);
     final firstSurah = sections.isNotEmpty ? sections.first.surah : null;
     final juzNumber =
@@ -155,6 +181,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                     ? state.translations
                     : const {},
                 onAyahTap: (ayah) => _showAyahMenu(context, ayah),
+                playingSurahNumber: audio.surahNumber,
+                playingAyahNumber: audio.currentAyahNumber,
               ),
               const SizedBox(height: 20),
             ],
@@ -353,27 +381,35 @@ class _BismillahLine extends StatelessWidget {
 
 // ─── Continuous Mushaf text ───────────────────────────────────────────────────
 
-class _ContinuousText extends ConsumerWidget {
+class _ContinuousText extends StatelessWidget {
   const _ContinuousText({
     required this.ayahs,
     required this.fontSize,
     required this.translations,
     required this.onAyahTap,
+    this.playingSurahNumber,
+    this.playingAyahNumber,
   });
 
   final List<Ayah> ayahs;
   final double fontSize;
   final Map<int, String> translations;
   final void Function(Ayah) onAyahTap;
+  final int? playingSurahNumber;
+  final int? playingAyahNumber;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     if (ayahs.isEmpty) return const SizedBox.shrink();
 
     const textColor = Color(0xFF1A1A1A);
+    const playingColor = Color(0xFF1B6B3A); // Islamic green
 
     final spans = <InlineSpan>[];
     for (final ayah in ayahs) {
+      final isPlaying = playingSurahNumber != null &&
+          ayah.surahNumber == playingSurahNumber &&
+          ayah.ayahNumber == playingAyahNumber;
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
@@ -386,7 +422,8 @@ class _ContinuousText extends ConsumerWidget {
                   fontFamily: kArabicFont,
                   fontSize: fontSize,
                   height: 2.2,
-                  color: textColor,
+                  color: isPlaying ? playingColor : textColor,
+                  fontWeight: isPlaying ? FontWeight.w700 : FontWeight.normal,
                 ),
               ),
               textDirection: TextDirection.rtl,
@@ -400,6 +437,7 @@ class _ContinuousText extends ConsumerWidget {
           child: _AyahEndMarker(
             number: ayah.ayahNumber,
             onTap: () => onAyahTap(ayah),
+            isPlaying: isPlaying,
           ),
         ),
       );
@@ -455,10 +493,15 @@ class _ContinuousText extends ConsumerWidget {
 // ─── Circular ayah end marker ─────────────────────────────────────────────────
 
 class _AyahEndMarker extends StatelessWidget {
-  const _AyahEndMarker({required this.number, required this.onTap});
+  const _AyahEndMarker({
+    required this.number,
+    required this.onTap,
+    this.isPlaying = false,
+  });
 
   final int number;
   final VoidCallback onTap;
+  final bool isPlaying;
 
   @override
   Widget build(BuildContext context) {
@@ -470,15 +513,18 @@ class _AyahEndMarker extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF444444), width: 0.8),
+          color: isPlaying ? const Color(0xFF1B6B3A) : null,
+          border: isPlaying
+              ? null
+              : Border.all(color: const Color(0xFF444444), width: 0.8),
         ),
         alignment: Alignment.center,
         child: Text(
           '$number',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF333333),
+            color: isPlaying ? Colors.white : const Color(0xFF333333),
           ),
         ),
       ),
