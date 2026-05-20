@@ -47,7 +47,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFD6D0C0),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: state.currentSurah == null
             ? const Text('Quran')
@@ -115,20 +115,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
     return SingleChildScrollView(
       controller: _scrollController,
-      // Warm parchment backdrop — visible in the gap around the page card.
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      padding: EdgeInsets.zero,
       child: Container(
-        // The white Mushaf "page".
-        decoration: const BoxDecoration(
-          color: Color(0xFFF9F7F2),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x44000000),
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
+        color: Colors.white,
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
