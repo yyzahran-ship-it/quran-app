@@ -97,7 +97,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     });
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: _AppBarTitle(state: state),
         actions: [
@@ -161,7 +160,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       controller: _scrollController,
       padding: EdgeInsets.zero,
       child: Container(
-        color: Colors.white,
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -194,9 +192,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
             Center(
               child: Text(
                 '${state.currentPage}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF888888),
+                  color: Theme.of(context).colorScheme.outline,
                 ),
               ),
             ),
@@ -291,9 +289,9 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(
+    final style = TextStyle(
       fontSize: 13,
-      color: Color(0xFF666666),
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
       fontStyle: FontStyle.italic,
     );
     return Row(
@@ -313,9 +311,12 @@ class _PageDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       width: 80,
-      child: Divider(thickness: 0.5, color: Colors.black38),
+      child: Divider(
+        thickness: 0.5,
+        color: Theme.of(context).colorScheme.outlineVariant,
+      ),
     );
   }
 }
@@ -329,18 +330,18 @@ class _SurahBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF2C2C2C), width: 1.5),
+        border: Border.all(color: colors.outline, width: 1.5),
         borderRadius: BorderRadius.circular(3),
       ),
       child: Container(
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           border: Border.all(
-              color: const Color(0xFF2C2C2C).withValues(alpha: 0.4),
-              width: 0.5),
+              color: colors.outline.withValues(alpha: 0.4), width: 0.5),
           borderRadius: BorderRadius.circular(1),
         ),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -348,11 +349,11 @@ class _SurahBanner extends StatelessWidget {
           surah.nameArabic,
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: kArabicFont,
             fontSize: 26,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: colors.onSurface,
           ),
         ),
       ),
@@ -367,7 +368,7 @@ class _BismillahLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
+    return Text(
       'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
@@ -375,7 +376,7 @@ class _BismillahLine extends StatelessWidget {
         fontFamily: kArabicFont,
         fontSize: 22,
         height: 2.2,
-        color: Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -442,7 +443,8 @@ class _ContinuousTextState extends State<_ContinuousText> {
   Widget build(BuildContext context) {
     if (widget.ayahs.isEmpty) return const SizedBox.shrink();
 
-    const textColor = Color(0xFF1A1A1A);
+    final colors = Theme.of(context).colorScheme;
+    final textColor = colors.onSurface;
     const playingColor = Color(0xFF1B6B3A);
     final hasTx = widget.translations.isNotEmpty;
 
@@ -453,7 +455,7 @@ class _ContinuousTextState extends State<_ContinuousText> {
           _buildAyahRow(ayah, textColor, playingColor, hasTx),
           if (_expanded.contains(ayah.id) &&
               widget.translations[ayah.id] != null)
-            _buildTranslation(widget.translations[ayah.id]!),
+            _buildTranslation(widget.translations[ayah.id]!, colors),
         ],
       ],
     );
@@ -510,22 +512,22 @@ class _ContinuousTextState extends State<_ContinuousText> {
     );
   }
 
-  Widget _buildTranslation(String text) {
+  Widget _buildTranslation(String text, ColorScheme colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 2, 0, 10),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            left: BorderSide(color: Color(0xFF1B6B3A), width: 2),
+            left: BorderSide(color: colors.primary, width: 2),
           ),
         ),
         padding: const EdgeInsets.only(left: 10),
         child: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             height: 1.6,
-            color: Color(0xFF555555),
+            color: colors.onSurfaceVariant,
           ),
         ),
       ),
@@ -548,6 +550,7 @@ class _AyahEndMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -559,7 +562,7 @@ class _AyahEndMarker extends StatelessWidget {
           color: isPlaying ? const Color(0xFF1B6B3A) : null,
           border: isPlaying
               ? null
-              : Border.all(color: const Color(0xFF444444), width: 0.8),
+              : Border.all(color: colors.outline, width: 0.8),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -567,7 +570,7 @@ class _AyahEndMarker extends StatelessWidget {
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w600,
-            color: isPlaying ? Colors.white : const Color(0xFF333333),
+            color: isPlaying ? Colors.white : colors.onSurface,
           ),
         ),
       ),
