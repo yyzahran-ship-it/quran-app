@@ -16,7 +16,7 @@ Future<void> main() async {
   try {
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.quranapp.audio',
-      androidNotificationChannelName: 'Quran Audio',
+      androidNotificationChannelName: 'The Holy Quran Audio',
       androidNotificationOngoing: true,
     ).timeout(const Duration(seconds: 5));
   } catch (_) {
@@ -38,7 +38,7 @@ class QuranApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Quran',
+      title: 'The Holy Quran',
       debugShowCheckedModeBanner: false,
       theme: themeDataFor(themeMode),
       home: const _AppStartup(),
@@ -108,35 +108,36 @@ class _SplashScreen extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0a0a0a),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.primaryContainer,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.asset(
+                'assets/icon/icon.png',
+                width: 120,
+                height: 120,
               ),
-              child: Icon(Icons.menu_book, size: 44, color: colors.primary),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Quran',
+            const SizedBox(height: 24),
+            const Text(
+              'The Holy Quran',
               style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFD4A017),
+                letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: 28,
-              height: 28,
+            const SizedBox(height: 36),
+            const SizedBox(
+              width: 24,
+              height: 24,
               child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: colors.primary,
+                strokeWidth: 2,
+                color: Color(0xFFD4A017),
               ),
             ),
           ],

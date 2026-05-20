@@ -70,6 +70,7 @@ flutter:
 
   assets:
     - assets/quran/      # Tanzil Quran text
+    - assets/icon/       # App icon (used in splash screen)
     - assets/fonts/      # Arabic Quran font
 
   fonts:
