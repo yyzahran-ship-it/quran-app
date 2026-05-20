@@ -80,6 +80,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mushafProvider);
+    final audio = ref.watch(audioProvider);
 
     // Auto-navigate to the page that contains the currently playing ayah.
     ref.listen<AudioState>(audioProvider, (prev, next) {
@@ -100,6 +101,35 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       appBar: AppBar(
         title: _AppBarTitle(state: state),
         actions: [
+          // Play / pause button — most discoverable audio entry point.
+          if (audio.isLoading)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: Icon(
+                audio.isPlaying
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+              ),
+              tooltip: audio.isPlaying ? 'Pause' : 'Play page audio',
+              onPressed: () {
+                if (audio.isPlaying) {
+                  ref.read(audioProvider.notifier).togglePlayPause();
+                } else if (state.ayahs.isNotEmpty) {
+                  ref.read(audioProvider.notifier).playSurah(
+                        state.ayahs.first.surahNumber,
+                        startAyah: state.ayahs.first.ayahNumber,
+                      );
+                }
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Search',
@@ -131,7 +161,22 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           ? const Center(child: CircularProgressIndicator())
           : state.ayahs.isEmpty
               ? _buildErrorState()
-              : _buildReader(state),
+              : GestureDetector(
+                  // Swipe left → next page, swipe right → previous page.
+                  // The vertical scroll inside handles its own axis independently.
+                  onHorizontalDragEnd: (details) {
+                    final v = details.primaryVelocity;
+                    if (v == null) return;
+                    if (v < -300) {
+                      ref.read(mushafProvider.notifier).nextPage();
+                      _scrollToTop();
+                    } else if (v > 300) {
+                      ref.read(mushafProvider.notifier).previousPage();
+                      _scrollToTop();
+                    }
+                  },
+                  child: _buildReader(state),
+                ),
       bottomNavigationBar: state.ayahs.isEmpty
           ? null
           : _BottomArea(
