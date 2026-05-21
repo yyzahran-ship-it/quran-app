@@ -31,6 +31,25 @@ int _ayahGlobalPage(int surahNumber, int ayahNumber) {
   return kAyahPages[globalId - 1];
 }
 
+// ─── Helper: hizb number (1–60) for a given Mushaf page ──────────────────────
+// The Quran has 60 hizbs (2 per juz). The second hizb of each juz starts at
+// the midpoint of that juz's page range.
+
+int _pageHizb(int page) {
+  int juz = 30;
+  for (int i = 0; i < kJuzStartPages.length - 1; i++) {
+    if (page < kJuzStartPages[i + 1]) {
+      juz = i + 1;
+      break;
+    }
+  }
+  final juzStart = kJuzStartPages[juz - 1];
+  final juzEnd =
+      juz < kJuzStartPages.length ? kJuzStartPages[juz] - 1 : kTotalPages;
+  final isSecondHizb = page >= (juzStart + juzEnd + 1) ~/ 2;
+  return (juz - 1) * 2 + (isSecondHizb ? 2 : 1);
+}
+
 // ─── Helper: group page ayahs by surah ───────────────────────────────────────
 
 class _SurahSection {
@@ -144,6 +163,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
+        toolbarHeight: 44,
         title: _AppBarTitle(state: state),
         titleSpacing: 16,
         actions: [
@@ -405,9 +425,11 @@ class _AppBarTitle extends StatelessWidget {
     if (state.ayahs.isEmpty) return const Text('Quran');
     final firstSurah = state.surahFor(state.ayahs.first.surahNumber);
     final juzNumber = state.ayahs.first.juzNumber;
+    final hizbNumber = _pageHizb(state.currentPage);
     final colors = Theme.of(context).colorScheme;
     return Row(
       children: [
+        // Surah name (English) — left
         Expanded(
           child: Text(
             firstSurah?.nameSimple ?? 'Page ${state.currentPage}',
@@ -419,10 +441,25 @@ class _AppBarTitle extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        // Arabic surah name — center, RTL
+        if (firstSurah != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              firstSurah.nameArabic,
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                fontFamily: kArabicFont,
+                fontSize: 14,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        // Juz + Hizb — right
         Text(
-          "Juz' $juzNumber",
+          "Juz' $juzNumber · Hizb $hizbNumber",
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w400,
             color: colors.outline,
           ),
