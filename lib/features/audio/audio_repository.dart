@@ -35,10 +35,10 @@ class AudioRepository {
   };
 
   // Candidate folder names on verses.quran.foundation (CDN 4), tried in
-  // order. Both casings are included because we can't verify from the build
-  // environment which one the CDN uses.
+  // order. The CDN uses PascalCase concatenated names (Alafasy, AbdulBaset)
+  // so BandarBaleela is the most likely — the others are fallbacks.
   static const Map<String, List<String>> _versesQfFolders = {
-    'Bandar_Baleela': ['bandar_baleela', 'Bandar_Baleela'],
+    'Bandar_Baleela': ['BandarBaleela', 'bandar_baleela', 'Bandar_Baleela'],
   };
 
   static const defaultReciter = 'Alafasy_128kbps';
