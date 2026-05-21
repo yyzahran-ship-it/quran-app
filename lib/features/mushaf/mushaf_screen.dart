@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/theme_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/surah.dart';
@@ -194,7 +196,68 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     );
   }
 
+  // ── King Fahad page image view ──────────────────────────────────────────────
+
   Widget _buildReader(MushafState state) {
+    final themeMode = ref.watch(themeProvider);
+    final isDark = themeMode == AppThemeMode.dark ||
+        themeMode == AppThemeMode.inverted;
+    final pageNum = state.currentPage.toString().padLeft(3, '0');
+    final imageUrl =
+        'https://cdn.qurancdn.com/images/quran/pages/page$pageNum.png';
+
+    // The page image is white-on-dark in the printed Mushaf; invert for
+    // dark/inverted themes so the background matches the app theme.
+    Widget pageImg = CachedNetworkImage(
+      imageUrl: imageUrl,
+      width: double.infinity,
+      fit: BoxFit.fitWidth,
+      placeholder: (context, url) => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      errorWidget: (context, url, error) => _buildTextFallback(state),
+    );
+
+    if (isDark) {
+      pageImg = ColorFiltered(
+        colorFilter: const ColorFilter.matrix([
+          -1,  0,  0, 0, 255,
+           0, -1,  0, 0, 255,
+           0,  0, -1, 0, 255,
+           0,  0,  0, 1,   0,
+        ]),
+        child: pageImg,
+      );
+    }
+
+    // Translations shown as numbered list below the page image when enabled.
+    final showTx = state.showTranslation && state.translations.isNotEmpty;
+
+    return SingleChildScrollView(
+      controller: _scrollController,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          pageImg,
+          if (showTx) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: _PageTranslations(
+                ayahs: state.ayahs,
+                translations: state.translations,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Text fallback (used when CDN is unreachable) ──────────────────────────
+
+  Widget _buildTextFallback(MushafState state) {
     final fontSize = ref.watch(fontSizeProvider);
     final audio = ref.watch(audioProvider);
     final sections = _groupBySurah(state.ayahs, state);
@@ -202,51 +265,47 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final juzNumber =
         state.ayahs.isNotEmpty ? state.ayahs.first.juzNumber : null;
 
-    return SingleChildScrollView(
-      controller: _scrollController,
-      padding: EdgeInsets.zero,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (firstSurah != null)
-              _PageHeader(surah: firstSurah, juzNumber: juzNumber),
-            const SizedBox(height: 20),
-            for (final section in sections) ...[
-              _SurahBanner(surah: section.surah),
-              if (section.surah.bismillahPre && section.surah.id != 1) ...[
-                const SizedBox(height: 4),
-                const _BismillahLine(),
-              ],
-              const SizedBox(height: 12),
-              _ContinuousText(
-                ayahs: section.ayahs,
-                fontSize: fontSize,
-                translations: state.showTranslation
-                    ? state.translations
-                    : const {},
-                onAyahMenu: (ayah) => _showAyahMenu(context, ayah),
-                playingSurahNumber: audio.surahNumber,
-                playingAyahNumber: audio.currentAyahNumber,
-              ),
-              const SizedBox(height: 20),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (firstSurah != null)
+            _PageHeader(surah: firstSurah, juzNumber: juzNumber),
+          const SizedBox(height: 20),
+          for (final section in sections) ...[
+            _SurahBanner(surah: section.surah),
+            if (section.surah.bismillahPre && section.surah.id != 1) ...[
+              const SizedBox(height: 4),
+              const _BismillahLine(),
             ],
-            const SizedBox(height: 8),
-            const Center(child: _PageDivider()),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                '${state.currentPage}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+            const SizedBox(height: 12),
+            _ContinuousText(
+              ayahs: section.ayahs,
+              fontSize: fontSize,
+              translations: state.showTranslation
+                  ? state.translations
+                  : const {},
+              onAyahMenu: (ayah) => _showAyahMenu(context, ayah),
+              playingSurahNumber: audio.surahNumber,
+              playingAyahNumber: audio.currentAyahNumber,
+            ),
+            const SizedBox(height: 20),
+          ],
+          const SizedBox(height: 8),
+          const Center(child: _PageDivider()),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              '${state.currentPage}',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.outline,
               ),
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
@@ -345,6 +404,58 @@ class _PageHeader extends StatelessWidget {
         Text(surah.nameSimple, style: style),
         const Spacer(),
         if (juzNumber != null) Text("Juz' $juzNumber", style: style),
+      ],
+    );
+  }
+}
+
+// ─── Translation list below King Fahad page image ────────────────────────────
+
+class _PageTranslations extends StatelessWidget {
+  const _PageTranslations({
+    required this.ayahs,
+    required this.translations,
+  });
+
+  final List<Ayah> ayahs;
+  final Map<int, String> translations;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Divider(color: colors.outlineVariant),
+        const SizedBox(height: 4),
+        for (final ayah in ayahs)
+          if (translations[ayah.id] != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${ayah.verseKey}  ',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: colors.primary,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      translations[ayah.id]!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.6,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
       ],
     );
   }
