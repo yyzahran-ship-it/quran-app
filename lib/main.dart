@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'core/theme/theme_provider.dart';
 import 'data/repositories/quran_repository.dart';
 import 'data/sources/local/quran_seeder.dart';
@@ -9,19 +8,6 @@ import 'features/onboarding/onboarding_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Init background audio. Wrapped in try-catch + timeout so a service
-  // binding failure (seen on some Android versions) cannot block app launch.
-  // Audio still plays in-app; lock-screen controls may be unavailable.
-  try {
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.quranapp.audio',
-      androidNotificationChannelName: 'The Holy Quran Audio',
-      androidNotificationOngoing: true,
-    ).timeout(const Duration(seconds: 5));
-  } catch (_) {
-    // Background audio unavailable — continue launching.
-  }
 
   runApp(
     const ProviderScope(

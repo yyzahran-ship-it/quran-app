@@ -1,4 +1,3 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../core/constants/app_constants.dart';
@@ -230,49 +229,30 @@ class AudioNotifier extends Notifier<AudioState> {
       _audioRepo.ayahFallbackUrl(surah, ayahNumber, reciter: state.reciter),
     ];
 
+    state = state.copyWith(isLoading: true, hasError: false);
+
+    bool loaded = false;
+    for (final url in urls) {
+      if (loaded) break;
+      try {
+        await _player.setUrl(url);
+        loaded = true;
+      } catch (_) {
+        // This CDN failed — try next.
+      }
+    }
+
+    if (!loaded) {
+      state = state.copyWith(isPlaying: false, isLoading: false, hasError: true);
+      return;
+    }
+
     try {
-      bool loaded = false;
-      for (final url in urls) {
-        if (loaded) break;
-        // Try with MediaItem tag first (enables lock-screen controls).
-        try {
-          await _player.setAudioSource(
-            AudioSource.uri(
-              Uri.parse(url),
-              tag: MediaItem(
-                id: url,
-                title: 'Surah $surah, Ayah $ayahNumber',
-                album: 'The Holy Quran',
-                artist:
-                    AudioRepository.reciters[state.reciter] ?? state.reciter,
-              ),
-            ),
-          );
-          loaded = true;
-        } catch (_) {
-          // MediaItem failed (background service unavailable) — try plain URL.
-          try {
-            await _player.setUrl(url);
-            loaded = true;
-          } catch (_) {
-            // This CDN failed — try next.
-          }
-        }
-      }
-
-      if (!loaded) {
-        state =
-            state.copyWith(isPlaying: false, isLoading: false, hasError: true);
-        return;
-      }
-
       await _player.setSpeed(state.speed);
       await _player.play();
-      state =
-          state.copyWith(isPlaying: true, isLoading: false, hasError: false);
+      state = state.copyWith(isPlaying: true, isLoading: false, hasError: false);
     } catch (_) {
-      state =
-          state.copyWith(isPlaying: false, isLoading: false, hasError: true);
+      state = state.copyWith(isPlaying: false, isLoading: false, hasError: true);
     }
   }
 
