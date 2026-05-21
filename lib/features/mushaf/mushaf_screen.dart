@@ -522,12 +522,10 @@ class _ContinuousTextState extends State<_ContinuousText> {
       ));
       spans.add(WidgetSpan(
         alignment: PlaceholderAlignment.middle,
-        child: GestureDetector(
+        child: _AyahEndMarker(
+          number: ayah.ayahNumber,
           onTap: () => widget.onAyahMenu(ayah),
-          child: _AyahEndMarker(
-            number: ayah.ayahNumber,
-            isPlaying: isPlaying,
-          ),
+          isPlaying: isPlaying,
         ),
       ));
     }
