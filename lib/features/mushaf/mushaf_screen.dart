@@ -908,7 +908,7 @@ class _AyahActionSheet extends ConsumerWidget {
                   }
                   buffer.writeln();
                   buffer.write('— Quran $ayahKey');
-                  SharePlus.instance.share(ShareParams(text: buffer.toString()));
+                  Share.share(buffer.toString());
                 },
               ),
             ],
