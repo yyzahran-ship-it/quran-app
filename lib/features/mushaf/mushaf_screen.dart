@@ -19,6 +19,15 @@ import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 
+// ─── Helper: convert Western numerals to Arabic-Indic numerals ───────────────
+// The King Fahad Mushaf uses Arabic-Indic numerals (١٢٣) for verse numbers
+// inside the decorative end markers, matching the printed Mushaf exactly.
+
+String _toArabicNumerals(int n) {
+  const digits = '٠١٢٣٤٥٦٧٨٩';
+  return n.toString().split('').map((c) => digits[int.parse(c)]).join();
+}
+
 // ─── Helper: page number for a given surah + ayah ────────────────────────────
 
 int _ayahGlobalPage(int surahNumber, int ayahNumber) {
@@ -617,7 +626,7 @@ class _BismillahLine extends StatelessWidget {
       style: TextStyle(
         fontFamily: kArabicFont,
         fontSize: 22,
-        height: 2.2,
+        height: 2.0,
         color: Theme.of(context).colorScheme.onSurface,
       ),
     );
@@ -737,7 +746,7 @@ class _ContinuousTextState extends State<_ContinuousText> {
             style: TextStyle(
               fontFamily: kArabicFont,
               fontSize: widget.fontSize,
-              height: 2.2,
+              height: 2.0, // KFGQPC has tall ascenders that contain diacritic space
               color: textColor,
             ),
           ),
@@ -814,6 +823,8 @@ class _TranslationBlock extends StatelessWidget {
 }
 
 // ─── Circular ayah end marker ─────────────────────────────────────────────────
+// Uses Arabic-Indic numerals (١٢٣) with the Uthmanic font inside a decorative
+// circle, matching the printed King Fahad Mushaf verse-end marker style.
 
 class _AyahEndMarker extends StatelessWidget {
   const _AyahEndMarker({
@@ -829,26 +840,30 @@ class _AyahEndMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    const activeColor = Color(0xFF1B6B3A);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 28,
-        height: 28,
+        width: 30,
+        height: 30,
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isPlaying ? const Color(0xFF1B6B3A) : null,
-          border: isPlaying
-              ? null
-              : Border.all(color: colors.outline, width: 0.8),
+          color: isPlaying ? activeColor : colors.primary.withValues(alpha: 0.08),
+          border: Border.all(
+            color: isPlaying ? activeColor : colors.primary.withValues(alpha: 0.5),
+            width: 0.8,
+          ),
         ),
         alignment: Alignment.center,
         child: Text(
-          '$number',
+          _toArabicNumerals(number),
+          textDirection: TextDirection.rtl,
           style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            color: isPlaying ? Colors.white : colors.onSurface,
+            fontFamily: kArabicFont,
+            fontSize: 10,
+            height: 1.0,
+            color: isPlaying ? Colors.white : colors.primary,
           ),
         ),
       ),

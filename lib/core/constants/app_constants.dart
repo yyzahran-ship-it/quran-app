@@ -7,9 +7,10 @@ const int kTotalJuzs = 30;
 const int kTotalPages = 604; // standard Madinah Mushaf page count
 
 // Arabic font family name (matches pubspec.yaml declaration).
-// Using Amiri Quran — open-source, excellent Uthmani script rendering.
-// Swap to 'UthmanicHafs' once KFGQPC font is licensed and bundled.
-const String kArabicFont = 'AmiriQuran';
+// UthmanicHafs = KFGQPC Uthmanic Script HAFS — the official King Fahad
+// Quran Printing Complex font used in the printed Madinah Mushaf.
+// Run scripts/setup_fonts.sh to download it locally; CI fetches it automatically.
+const String kArabicFont = 'UthmanicHafs';
 
 // Font scale limits (CLAUDE.md accessibility requirement).
 const double kMinFontScale = 0.5;

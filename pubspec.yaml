@@ -76,6 +76,13 @@ flutter:
     - family: AmiriQuran
       fonts:
         - asset: assets/fonts/AmiriQuran.ttf
+    # KFGQPC Uthmanic Script HAFS — the official King Fahad Quran Printing Complex
+    # font. Run scripts/setup_fonts.sh locally to download it, or it is fetched
+    # automatically by the GitHub Actions workflow. Falls back to AmiriQuran if
+    # the file is absent (CI copies AmiriQuran → UthmanicHafs.ttf when unavailable).
+    - family: UthmanicHafs
+      fonts:
+        - asset: assets/fonts/UthmanicHafs.ttf
 
 flutter_launcher_icons:
   android: true
