@@ -45,11 +45,6 @@ dependencies:
   # HTTP client with retry + caching
   dio: ^5.8.0+1
 
-  # Image caching for King Fahad page images
-  cached_network_image: ^3.4.1
-
-  # Sharing ayah text via OS share sheet
-  share_plus: ^9.0.0
 
   # Utilities
   path_provider: ^2.1.5

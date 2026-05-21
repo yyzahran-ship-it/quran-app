@@ -1,7 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/constants/app_constants.dart';
@@ -209,15 +208,18 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
     // The page image is white-on-dark in the printed Mushaf; invert for
     // dark/inverted themes so the background matches the app theme.
-    Widget pageImg = CachedNetworkImage(
-      imageUrl: imageUrl,
+    Widget pageImg = Image.network(
+      imageUrl,
       width: double.infinity,
       fit: BoxFit.fitWidth,
-      placeholder: (context, url) => const SizedBox(
-        height: 200,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      errorWidget: (context, url, error) => _buildTextFallback(state),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return const SizedBox(
+          height: 200,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      },
+      errorBuilder: (context, error, _) => _buildTextFallback(state),
     );
 
     if (isDark) {
@@ -894,8 +896,8 @@ class _AyahActionSheet extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.share_outlined),
-                title: const Text('Share'),
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('Copy verse'),
                 onTap: () {
                   Navigator.pop(context);
                   final mushafState = ref.read(mushafProvider);
@@ -908,7 +910,13 @@ class _AyahActionSheet extends ConsumerWidget {
                   }
                   buffer.writeln();
                   buffer.write('— Quran $ayahKey');
-                  Share.share(buffer.toString());
+                  Clipboard.setData(ClipboardData(text: buffer.toString()));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Verse copied — paste into WhatsApp or any app'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
                 },
               ),
             ],
