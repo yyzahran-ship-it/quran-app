@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../mushaf/mushaf_provider.dart';
 import 'audio_repository.dart';
@@ -212,36 +213,36 @@ class AudioNotifier extends Notifier<AudioState> {
 
   Future<void> _playCurrentAyah() async {
     if (state.surahNumber == null) return;
+    final surah = state.surahNumber!;
     final ayahNumber = state.currentAyahIndex + 1;
-    final primaryUrl = _audioRepo.ayahUrl(
-      state.surahNumber!,
-      ayahNumber,
-      reciter: state.reciter,
-    );
-    final fallbackUrl = _audioRepo.ayahFallbackUrl(
-      state.surahNumber!,
-      ayahNumber,
-      reciter: state.reciter,
-    );
+
+    // Compute global ayah ID (1-indexed, 1-6236) for cdn.islamic.network.
+    int globalId = 0;
+    for (int i = 0; i < surah - 1; i++) {
+      globalId += kSurahVerseCounts[i];
+    }
+    globalId += ayahNumber;
+
+    // Three CDNs tried in order — first success wins.
+    final urls = [
+      _audioRepo.ayahUrlIslamicNet(globalId, reciter: state.reciter),
+      _audioRepo.ayahUrl(surah, ayahNumber, reciter: state.reciter),
+      _audioRepo.ayahFallbackUrl(surah, ayahNumber, reciter: state.reciter),
+    ];
 
     try {
-      // Attempt 1: primary CDN (audio.qurancdn.com) with MediaItem tag for
-      //            lock-screen controls via just_audio_background.
-      // Attempt 2: primary CDN without MediaItem (background service may be
-      //            unavailable on this device).
-      // Attempt 3: fallback CDN (everyayah.com) without MediaItem.
-      // All three are tried before giving up and setting hasError.
       bool loaded = false;
-      for (final url in [primaryUrl, fallbackUrl]) {
+      for (final url in urls) {
         if (loaded) break;
+        // Try with MediaItem tag first (enables lock-screen controls).
         try {
           await _player.setAudioSource(
             AudioSource.uri(
               Uri.parse(url),
               tag: MediaItem(
                 id: url,
-                title: 'Surah ${state.surahNumber}, Ayah $ayahNumber',
-                album: 'Quran',
+                title: 'Surah $surah, Ayah $ayahNumber',
+                album: 'The Holy Quran',
                 artist:
                     AudioRepository.reciters[state.reciter] ?? state.reciter,
               ),
@@ -249,11 +250,12 @@ class AudioNotifier extends Notifier<AudioState> {
           );
           loaded = true;
         } catch (_) {
+          // MediaItem failed (background service unavailable) — try plain URL.
           try {
             await _player.setUrl(url);
             loaded = true;
           } catch (_) {
-            // Try next URL
+            // This CDN failed — try next.
           }
         }
       }
