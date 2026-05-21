@@ -55,11 +55,11 @@
 - [ ] Export bookmarks as JSON/PDF
 
 ### Phase 1 — Accessibility (Week 5-6)
-- [ ] Font scaling 50%-200% on Arabic AND translation independently
+- [x] Font scaling 50%-200% on Arabic AND translation independently
 - [ ] True inverted night mode (white-on-black)
 - [ ] Dyslexia-friendly font option for translation
 - [ ] High-contrast mode
-- [ ] VoiceOver/TalkBack labels on all interactive elements
+- [x] VoiceOver/TalkBack labels on key interactive elements (reciter strip, audio bar, progress bars)
 
 ### Phase 4 — Memorization engine (Week 6-9)
 - [x] FSRS-4.5 algorithm (pure Dart — stability, difficulty, retrievability, intervals)
@@ -68,8 +68,8 @@
 - [x] Hifz dashboard with Start Review CTA
 - [x] "Add to Hifz" / "Remove from Hifz" in ayah action sheet
 - [ ] Audio-only recall mode
-- [ ] Khatma planner (input goal date → daily verse count)
-- [ ] Hifz streak / progress charts
+- [x] Khatma planner (set goal date → pages/day + ayahs/day calculation, banner on dashboard)
+- [x] Hifz streak / progress charts
 
 ### Phase 1 — Polish (Week 9-10)
 - [x] Onboarding flow (3 skip-able screens, shown once on first launch)

@@ -984,7 +984,10 @@ class _ReciterStrip extends ConsumerWidget {
     final reciterName =
         AudioRepository.reciters[reciterSlug] ?? reciterSlug;
 
-    return InkWell(
+    return Semantics(
+      label: 'Reciter: $reciterName. Tap to change reciter.',
+      button: true,
+      child: InkWell(
       onTap: () => _showPicker(context),
       child: Container(
         height: 44,
@@ -1021,6 +1024,7 @@ class _ReciterStrip extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

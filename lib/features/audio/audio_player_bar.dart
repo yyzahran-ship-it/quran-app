@@ -63,14 +63,17 @@ class AudioPlayerBar extends ConsumerWidget {
           ),
           // Play / Pause / Loading / Error
           if (audio.isLoading)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colors.onPrimaryContainer,
+            Semantics(
+              label: 'Loading audio',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.onPrimaryContainer,
+                  ),
                 ),
               ),
             )

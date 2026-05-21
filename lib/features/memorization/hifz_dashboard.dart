@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import 'hifz_provider.dart';
 import 'hifz_review_screen.dart';
+import 'khatma_planner.dart';
 
 class HifzDashboard extends ConsumerWidget {
   const HifzDashboard({super.key});
@@ -22,6 +23,18 @@ class HifzDashboard extends ConsumerWidget {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.calendar_month_outlined),
+        label: const Text('Khatma planner'),
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => KhatmaPlannerSheet(ref: ref),
+        ),
+      ),
       body: statsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -35,6 +48,9 @@ class HifzDashboard extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        // Khatma goal banner (visible when a goal is set).
+        const KhatmaGoalBanner(),
+        const SizedBox(height: 16),
         // Due card — main CTA.
         _DueCard(stats: stats, colors: colors, context: context),
         const SizedBox(height: 16),
@@ -329,13 +345,16 @@ class _ProgressRow extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: value / total,
-            minHeight: 8,
-            backgroundColor: colors.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
+        Semantics(
+          label: '$label: $value of $total ($pct%)',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value / total,
+              minHeight: 8,
+              backgroundColor: colors.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
           ),
         ),
       ],
