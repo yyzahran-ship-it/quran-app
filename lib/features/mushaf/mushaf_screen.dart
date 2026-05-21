@@ -53,6 +53,10 @@ List<_SurahSection> _groupBySurah(List<Ayah> ayahs, MushafState state) {
   return sections;
 }
 
+// ─── Screen actions (overflow menu) ──────────────────────────────────────────
+
+enum _AppAction { playPause, search, juzJump, toggleTranslation, settings }
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 class MushafScreen extends ConsumerStatefulWidget {
@@ -81,6 +85,32 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     }
   }
 
+  void _handleAction(_AppAction action) {
+    switch (action) {
+      case _AppAction.playPause:
+        final s = ref.read(mushafProvider);
+        final a = ref.read(audioProvider);
+        if (a.isPlaying) {
+          ref.read(audioProvider.notifier).togglePlayPause();
+        } else if (s.ayahs.isNotEmpty) {
+          ref.read(audioProvider.notifier).playSurah(
+                s.ayahs.first.surahNumber,
+                startAyah: s.ayahs.first.ayahNumber,
+              );
+        }
+      case _AppAction.search:
+        Navigator.push(
+            context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+      case _AppAction.juzJump:
+        showJuzJumpDialog(context);
+      case _AppAction.toggleTranslation:
+        ref.read(mushafProvider.notifier).toggleTranslation();
+      case _AppAction.settings:
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mushafProvider);
@@ -101,64 +131,77 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       }
     });
 
+    final themeMode = ref.watch(themeProvider);
+    final isLight = themeMode != AppThemeMode.dark &&
+        themeMode != AppThemeMode.inverted;
+    const offWhite = Color(0xFFFAF8F5);
+    final bgColor = isLight ? offWhite : null;
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
+        backgroundColor: bgColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: _AppBarTitle(state: state),
+        titleSpacing: 16,
         actions: [
-          // Play / pause button — most discoverable audio entry point.
-          if (audio.isLoading)
-            const Padding(
-              padding: EdgeInsets.all(14),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+          PopupMenuButton<_AppAction>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'More options',
+            onSelected: _handleAction,
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: _AppAction.playPause,
+                child: Row(children: [
+                  Icon(audio.isPlaying
+                      ? Icons.pause_circle_outline
+                      : Icons.play_circle_outline),
+                  const SizedBox(width: 12),
+                  Text(audio.isPlaying ? 'Pause' : 'Play page audio'),
+                ]),
               ),
-            )
-          else
-            IconButton(
-              icon: Icon(
-                audio.isPlaying
-                    ? Icons.pause_circle_outline
-                    : Icons.play_circle_outline,
+              const PopupMenuItem(
+                value: _AppAction.search,
+                child: Row(children: [
+                  Icon(Icons.search),
+                  SizedBox(width: 12),
+                  Text('Search'),
+                ]),
               ),
-              tooltip: audio.isPlaying ? 'Pause' : 'Play page audio',
-              onPressed: () {
-                if (audio.isPlaying) {
-                  ref.read(audioProvider.notifier).togglePlayPause();
-                } else if (state.ayahs.isNotEmpty) {
-                  ref.read(audioProvider.notifier).playSurah(
-                        state.ayahs.first.surahNumber,
-                        startAyah: state.ayahs.first.ayahNumber,
-                      );
-                }
-              },
-            ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Search',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchScreen()),
-            ),
+              const PopupMenuItem(
+                value: _AppAction.juzJump,
+                child: Row(children: [
+                  Icon(Icons.format_list_numbered_outlined),
+                  SizedBox(width: 12),
+                  Text('Jump to Juz'),
+                ]),
+              ),
+              PopupMenuItem(
+                value: _AppAction.toggleTranslation,
+                child: Row(children: [
+                  Icon(state.showTranslation
+                      ? Icons.translate
+                      : Icons.translate_outlined),
+                  const SizedBox(width: 12),
+                  Text(state.showTranslation
+                      ? 'Hide translation'
+                      : 'Show translation'),
+                ]),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: _AppAction.settings,
+                child: Row(children: [
+                  Icon(Icons.settings_outlined),
+                  SizedBox(width: 12),
+                  Text('Settings'),
+                ]),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.format_list_numbered_outlined),
-            tooltip: 'Jump to Juz',
-            onPressed: () => showJuzJumpDialog(context),
-          ),
-          IconButton(
-            icon: Icon(
-              state.showTranslation
-                  ? Icons.translate
-                  : Icons.translate_outlined,
-            ),
-            tooltip: state.showTranslation
-                ? 'Hide all translations'
-                : 'Show all translations',
-            onPressed: () =>
-                ref.read(mushafProvider.notifier).toggleTranslation(),
-          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: state.isLoading
@@ -167,7 +210,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
               ? _buildErrorState()
               : GestureDetector(
                   // Swipe left → next page, swipe right → previous page.
-                  // The vertical scroll inside handles its own axis independently.
                   onHorizontalDragEnd: (details) {
                     final v = details.primaryVelocity;
                     if (v == null) return;
@@ -183,17 +225,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 ),
       bottomNavigationBar: state.ayahs.isEmpty
           ? null
-          : _BottomArea(
-              currentPage: state.currentPage,
-              onPrevious: () {
-                ref.read(mushafProvider.notifier).previousPage();
-                _scrollToTop();
-              },
-              onNext: () {
-                ref.read(mushafProvider.notifier).nextPage();
-                _scrollToTop();
-              },
-            ),
+          : _BottomArea(currentPage: state.currentPage),
     );
   }
 
@@ -373,18 +405,27 @@ class _AppBarTitle extends StatelessWidget {
     if (state.ayahs.isEmpty) return const Text('Quran');
     final firstSurah = state.surahFor(state.ayahs.first.surahNumber);
     final juzNumber = state.ayahs.first.juzNumber;
+    final colors = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
           child: Text(
             firstSurah?.nameSimple ?? 'Page ${state.currentPage}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: colors.onSurfaceVariant,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
         Text(
           "Juz' $juzNumber",
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: colors.outline,
+          ),
         ),
       ],
     );
@@ -930,18 +971,12 @@ class _AyahActionSheet extends ConsumerWidget {
   }
 }
 
-// ─── Bottom area: audio bar + reciter strip + page navigation ─────────────────
+// ─── Bottom area: audio bar + reciter strip + page number ─────────────────────
 
 class _BottomArea extends ConsumerWidget {
-  const _BottomArea({
-    required this.currentPage,
-    required this.onPrevious,
-    required this.onNext,
-  });
+  const _BottomArea({required this.currentPage});
 
   final int currentPage;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -950,11 +985,7 @@ class _BottomArea extends ConsumerWidget {
       children: [
         const AudioPlayerBar(),
         const _ReciterStrip(),
-        _PageNav(
-          currentPage: currentPage,
-          onPrevious: onPrevious,
-          onNext: onNext,
-        ),
+        _PageNav(currentPage: currentPage),
       ],
     );
   }
@@ -1077,52 +1108,23 @@ class _ReciterPickerSheet extends ConsumerWidget {
 }
 
 class _PageNav extends StatelessWidget {
-  const _PageNav({
-    required this.currentPage,
-    required this.onPrevious,
-    required this.onNext,
-  });
+  const _PageNav({required this.currentPage});
 
   final int currentPage;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        border:
-            Border(top: BorderSide(color: colors.outlineVariant, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextButton.icon(
-              onPressed: currentPage > 1 ? onPrevious : null,
-              icon: const Icon(Icons.chevron_left),
-              label: const Text('Previous'),
-            ),
-          ),
-          Text(
-            '$currentPage / $kTotalPages',
-            style: TextStyle(
-              fontSize: 12,
-              color: colors.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Expanded(
-            child: TextButton.icon(
-              onPressed: currentPage < kTotalPages ? onNext : null,
-              icon: const Icon(Icons.chevron_right),
-              label: const Text('Next'),
-              iconAlignment: IconAlignment.end,
-            ),
-          ),
-        ],
+      height: 36,
+      alignment: Alignment.center,
+      child: Text(
+        '$currentPage',
+        style: TextStyle(
+          fontSize: 12,
+          color: colors.outline,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
