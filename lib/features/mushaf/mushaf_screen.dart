@@ -263,6 +263,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   Widget _buildTextFallback(MushafState state) {
     final fontSize = ref.watch(fontSizeProvider);
+    final translationFontSize = ref.watch(translationFontSizeProvider);
     final audio = ref.watch(audioProvider);
     final sections = _groupBySurah(state.ayahs, state);
     final firstSurah = sections.isNotEmpty ? sections.first.surah : null;
@@ -287,6 +288,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
             _ContinuousText(
               ayahs: section.ayahs,
               fontSize: fontSize,
+              translationFontSize: translationFontSize,
               translations: state.showTranslation
                   ? state.translations
                   : const {},
@@ -553,6 +555,7 @@ class _ContinuousText extends StatefulWidget {
   const _ContinuousText({
     required this.ayahs,
     required this.fontSize,
+    required this.translationFontSize,
     required this.translations,
     required this.onAyahMenu,
     this.playingSurahNumber,
@@ -561,6 +564,7 @@ class _ContinuousText extends StatefulWidget {
 
   final List<Ayah> ayahs;
   final double fontSize;
+  final double translationFontSize;
   final Map<int, String> translations;
   final void Function(Ayah) onAyahMenu;
   final int? playingSurahNumber;
@@ -668,6 +672,7 @@ class _ContinuousTextState extends State<_ContinuousText> {
           _TranslationBlock(
             ayahs: widget.ayahs,
             translations: widget.translations,
+            fontSize: widget.translationFontSize,
             colors: colors,
           ),
         ],
@@ -682,11 +687,13 @@ class _TranslationBlock extends StatelessWidget {
   const _TranslationBlock({
     required this.ayahs,
     required this.translations,
+    required this.fontSize,
     required this.colors,
   });
 
   final List<Ayah> ayahs;
   final Map<int, String> translations;
+  final double fontSize;
   final ColorScheme colors;
 
   @override
@@ -714,7 +721,7 @@ class _TranslationBlock extends StatelessWidget {
                     child: Text(
                       translations[ayah.id]!,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: fontSize,
                         height: 1.6,
                         color: colors.onSurfaceVariant,
                       ),
