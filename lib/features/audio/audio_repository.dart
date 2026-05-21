@@ -3,20 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Builds streaming audio URLs for verse-level recitation.
 ///
 /// CDN priority order tried by AudioNotifier:
-///   1. cdn.islamic.network  — uses global ayah ID (1-6236), very reliable
-///   2. audio.qurancdn.com   — uses surah+ayah padding, same folder names
-///   3. everyayah.com        — same path format, fallback
+///   1. cdn.islamic.network  — uses global ayah ID (1-6236)
+///   2. audio.qurancdn.com   — uses surah+ayah padded path
+///   3. everyayah.com        — same padded path, fallback
+///   4. verses.quran.foundation — quran.com CDN (Bandar Baleela only)
 class AudioRepository {
   const AudioRepository();
 
   static const _islamicNetBase = 'https://cdn.islamic.network/quran/audio/128';
   static const _primaryBase = 'https://audio.qurancdn.com';
   static const _fallbackBase = 'https://everyayah.com/data';
+  static const _versesQfBase = 'https://verses.quran.foundation';
 
-  // Available reciters — slug must match CDN folder names on CDN 2 & 3,
-  // and the _islamicNetIds key on CDN 1.
+  // Available reciters.
+  // For CDNs 1-3 the key is also the folder name used in the URL path.
+  // For verses.quran.foundation reciters see _versesQfFolders below.
   static const Map<String, String> reciters = {
     'Alafasy_128kbps': 'Mishary Alafasy',
+    'Bandar_Baleela': 'Bandar Baleela',
     'Abdul_Basit_Murattal_192kbps': 'Abdul Basit (Murattal)',
     'Minshawi_Murattal_128kbps': 'Mohamed Siddiq El-Minshawi',
     'Husary_128kbps': 'Mahmoud Al-Husary',
@@ -28,6 +32,13 @@ class AudioRepository {
     'Abdul_Basit_Murattal_192kbps': 'ar.abdulbasitmurattal',
     'Minshawi_Murattal_128kbps': 'ar.minshawi',
     'Husary_128kbps': 'ar.husary',
+  };
+
+  // Candidate folder names on verses.quran.foundation (CDN 4), tried in
+  // order. Both casings are included because we can't verify from the build
+  // environment which one the CDN uses.
+  static const Map<String, List<String>> _versesQfFolders = {
+    'Bandar_Baleela': ['bandar_baleela', 'Bandar_Baleela'],
   };
 
   static const defaultReciter = 'Alafasy_128kbps';
@@ -57,6 +68,20 @@ class AudioRepository {
   String ayahFallbackUrl(int surahNumber, int ayahNumber, {String? reciter}) {
     final r = reciter ?? defaultReciter;
     return '$_fallbackBase${_path(surahNumber, ayahNumber, r)}';
+  }
+
+  /// CDN 4 — verses.quran.foundation (quran.com's verse CDN).
+  /// Returns candidate URLs for reciters hosted there, or empty list.
+  List<String> ayahUrlsVersesQf(int surahNumber, int ayahNumber,
+      {String? reciter}) {
+    final r = reciter ?? defaultReciter;
+    final folders = _versesQfFolders[r];
+    if (folders == null) return const [];
+    final s = surahNumber.toString().padLeft(3, '0');
+    final a = ayahNumber.toString().padLeft(3, '0');
+    return folders
+        .map((f) => '$_versesQfBase/$f/mp3/$s$a.mp3')
+        .toList();
   }
 }
 

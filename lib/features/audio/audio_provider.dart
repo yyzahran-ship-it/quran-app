@@ -222,11 +222,13 @@ class AudioNotifier extends Notifier<AudioState> {
     }
     globalId += ayahNumber;
 
-    // Three CDNs tried in order — first success wins.
+    // CDNs tried in order — first success wins.
+    // CDN 4 (verses.quran.foundation) is non-empty only for Bandar Baleela.
     final candidates = [
       _audioRepo.ayahUrlIslamicNet(globalId, reciter: state.reciter),
       _audioRepo.ayahUrl(surah, ayahNumber, reciter: state.reciter),
       _audioRepo.ayahFallbackUrl(surah, ayahNumber, reciter: state.reciter),
+      ..._audioRepo.ayahUrlsVersesQf(surah, ayahNumber, reciter: state.reciter),
     ];
 
     state = state.copyWith(isLoading: true, hasError: false);
