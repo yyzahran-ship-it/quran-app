@@ -6,9 +6,11 @@ import '../bookmarks/bookmarks_provider.dart';
 import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
 import '../../data/repositories/quran_repository.dart';
+import '../../domain/entities/ayah.dart';
 import '../memorization/hifz_dashboard.dart';
 import '../memorization/hifz_provider.dart';
 import '../settings/settings_screen.dart';
+import 'notebooklm_dialog.dart';
 import 'widgets/juz_jump_dialog.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
@@ -16,7 +18,7 @@ import 'widgets/ayah_tile.dart';
 import 'widgets/surah_header.dart';
 import 'widgets/surah_index_drawer.dart';
 
-enum _MenuAction { hifz, bookmarks, settings }
+enum _MenuAction { hifz, bookmarks, settings, notebooklm }
 
 class MushafScreen extends ConsumerStatefulWidget {
   const MushafScreen({super.key});
@@ -85,7 +87,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
             onPressed: () =>
                 ref.read(mushafProvider.notifier).toggleTranslation(),
           ),
-          // Overflow menu: Hifz, Bookmarks, Settings
+          // Overflow menu
           PopupMenuButton<_MenuAction>(
             icon: const Icon(Icons.more_vert),
             tooltip: 'More',
@@ -100,6 +102,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 case _MenuAction.settings:
                   Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                case _MenuAction.notebooklm:
+                  _shareSurahToNotebookLm(context);
               }
             },
             itemBuilder: (_) => const [
@@ -124,6 +128,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 child: ListTile(
                   leading: Icon(Icons.settings_outlined),
                   title: Text('Settings'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuDivider(),
+              PopupMenuItem(
+                value: _MenuAction.notebooklm,
+                child: ListTile(
+                  leading: Icon(Icons.science_outlined),
+                  title: Text('Share surah to NotebookLM'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -169,7 +182,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
             translationText: state.showTranslation
                 ? state.translations[ayah.id]
                 : null,
-            onTap: () => _showAyahMenu(context, ayah),
+            onTap: () => _showAyahMenu(context, state, ayah),
           ),
         );
       },
@@ -186,7 +199,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     }
   }
 
-  void _showAyahMenu(BuildContext context, dynamic ayah) {
+  void _showAyahMenu(BuildContext context, MushafState state, Ayah ayah) {
     showModalBottomSheet(
       context: context,
       builder: (_) => _AyahActionSheet(
@@ -194,7 +207,34 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         surahNumber: ayah.surahNumber,
         ayahNumber: ayah.ayahNumber,
         ayahId: ayah.id,
+        arabicText: ayah.textUthmani,
+        surahName: state.currentSurah?.nameSimple ?? '',
+        translationText: state.showTranslation
+            ? state.translations[ayah.id]
+            : null,
       ),
+    );
+  }
+
+  void _shareSurahToNotebookLm(BuildContext context) {
+    final state = ref.read(mushafProvider);
+    if (state.currentSurah == null) return;
+    final surah = state.currentSurah!;
+    final content = formatSurahForNotebookLm(
+      surahNumber: surah.id,
+      surahName: surah.nameSimple,
+      surahNameEnglish: surah.nameEnglish,
+      revelationPlace: surah.revelationPlace,
+      ayahs: state.ayahs.map((a) => (
+            verseKey: a.verseKey,
+            arabic: a.textUthmani,
+            translation: state.translations[a.id],
+          )).toList(),
+    );
+    showShareToNotebookLm(
+      context,
+      content: content,
+      label: 'Surah ${surah.id}: ${surah.nameSimple} · ${surah.versesCount} verses',
     );
   }
 }
@@ -207,12 +247,18 @@ class _AyahActionSheet extends ConsumerWidget {
     required this.surahNumber,
     required this.ayahNumber,
     required this.ayahId,
+    required this.arabicText,
+    required this.surahName,
+    this.translationText,
   });
 
   final String ayahKey;
   final int surahNumber;
   final int ayahNumber;
   final int ayahId;
+  final String arabicText;
+  final String surahName;
+  final String? translationText;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -225,6 +271,10 @@ class _AyahActionSheet extends ConsumerWidget {
         ref.watch(bookmarkedAyahProvider(ayahId)).valueOrNull ?? false;
     final isInHifz =
         ref.watch(inHifzProvider(ayahId)).valueOrNull ?? false;
+
+    // Pull note from the already-loaded notes list (no extra async fetch).
+    final notes = ref.watch(notesProvider);
+    final note = notes.where((n) => n.ayahId == ayahId).firstOrNull;
 
     return SafeArea(
       child: Padding(
@@ -294,9 +344,7 @@ class _AyahActionSheet extends ConsumerWidget {
             // Hifz
             ListTile(
               leading: Icon(
-                isInHifz
-                    ? Icons.psychology
-                    : Icons.psychology_outlined,
+                isInHifz ? Icons.psychology : Icons.psychology_outlined,
               ),
               title: Text(isInHifz ? 'Remove from Hifz' : 'Add to Hifz'),
               subtitle: isInHifz
@@ -313,6 +361,27 @@ class _AyahActionSheet extends ConsumerWidget {
                 // Invalidate so inHifzProvider refreshes.
                 ref.invalidate(inHifzProvider(ayahId));
                 ref.invalidate(hifzStatsProvider);
+              },
+            ),
+            // Share to NotebookLM
+            ListTile(
+              leading: const Icon(Icons.science_outlined),
+              title: const Text('Share to NotebookLM'),
+              subtitle: const Text('Study this ayah with AI'),
+              onTap: () {
+                final content = formatAyahForNotebookLm(
+                  verseKey: ayahKey,
+                  surahName: surahName,
+                  arabicText: arabicText,
+                  translation: translationText,
+                  note: note?.body,
+                );
+                Navigator.pop(context);
+                showShareToNotebookLm(
+                  context,
+                  content: content,
+                  label: 'Ayah $ayahKey — $surahName',
+                );
               },
             ),
             // Share
