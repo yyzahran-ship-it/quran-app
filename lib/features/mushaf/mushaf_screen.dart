@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/constants/app_constants.dart';
@@ -896,8 +896,8 @@ class _AyahActionSheet extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.copy_outlined),
-                title: const Text('Copy verse'),
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Share'),
                 onTap: () {
                   Navigator.pop(context);
                   final mushafState = ref.read(mushafProvider);
@@ -910,13 +910,8 @@ class _AyahActionSheet extends ConsumerWidget {
                   }
                   buffer.writeln();
                   buffer.write('— Quran $ayahKey');
-                  Clipboard.setData(ClipboardData(text: buffer.toString()));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Verse copied — paste into WhatsApp or any app'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  const MethodChannel('com.quranapp.quran_app/share')
+                      .invokeMethod('share', {'text': buffer.toString()});
                 },
               ),
             ],
