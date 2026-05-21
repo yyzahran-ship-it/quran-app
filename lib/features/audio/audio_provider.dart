@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../core/constants/app_constants.dart';
@@ -75,6 +76,8 @@ class AudioState {
 
 class AudioNotifier extends Notifier<AudioState> {
   late final AudioPlayer _player;
+  // Cache for Quran Foundation verse URLs: "reciter:surah" → {ayahNumber: url}
+  final Map<String, Map<int, String>> _qfUrlCache = {};
 
   @override
   AudioState build() {
@@ -215,30 +218,45 @@ class AudioNotifier extends Notifier<AudioState> {
     final surah = state.surahNumber!;
     final ayahNumber = state.currentAyahIndex + 1;
 
-    // Compute global ayah ID (1-indexed, 1-6236) for cdn.islamic.network.
-    int globalId = 0;
-    for (int i = 0; i < surah - 1; i++) {
-      globalId += kSurahVerseCounts[i];
-    }
-    globalId += ayahNumber;
-
-    // Three CDNs tried in order — first success wins.
-    final urls = [
-      _audioRepo.ayahUrlIslamicNet(globalId, reciter: state.reciter),
-      _audioRepo.ayahUrl(surah, ayahNumber, reciter: state.reciter),
-      _audioRepo.ayahFallbackUrl(surah, ayahNumber, reciter: state.reciter),
-    ];
-
     state = state.copyWith(isLoading: true, hasError: false);
 
     bool loaded = false;
-    for (final url in urls) {
-      if (loaded) break;
-      try {
-        await _player.setUrl(url);
-        loaded = true;
-      } catch (_) {
-        // This CDN failed — try next.
+
+    if (_audioRepo.isQuranFoundationReciter(state.reciter)) {
+      // Reciters like Bandar Baleela are only available via the Quran
+      // Foundation API (api.quran.com). Fetch chapter-level URLs once and cache.
+      final url = await _fetchQuranFoundationUrl(surah, ayahNumber, state.reciter);
+      if (url != null) {
+        try {
+          await _player.setUrl(url);
+          loaded = true;
+        } catch (_) {
+          // URL from API failed — will fall through to hasError below.
+        }
+      }
+    } else {
+      // Compute global ayah ID (1-indexed, 1-6236) for cdn.islamic.network.
+      int globalId = 0;
+      for (int i = 0; i < surah - 1; i++) {
+        globalId += kSurahVerseCounts[i];
+      }
+      globalId += ayahNumber;
+
+      // Three CDNs tried in order — first success wins.
+      final candidates = [
+        _audioRepo.ayahUrlIslamicNet(globalId, reciter: state.reciter),
+        _audioRepo.ayahUrl(surah, ayahNumber, reciter: state.reciter),
+        _audioRepo.ayahFallbackUrl(surah, ayahNumber, reciter: state.reciter),
+      ];
+      for (final url in candidates) {
+        if (loaded) break;
+        if (url == null) continue;
+        try {
+          await _player.setUrl(url);
+          loaded = true;
+        } catch (_) {
+          // This CDN failed — try next.
+        }
       }
     }
 
@@ -254,6 +272,43 @@ class AudioNotifier extends Notifier<AudioState> {
     } catch (_) {
       state = state.copyWith(isPlaying: false, isLoading: false, hasError: true);
     }
+  }
+
+  /// Fetches verse-level audio URL from the Quran Foundation API.
+  /// Results are cached per reciter+surah to avoid repeated API calls.
+  Future<String?> _fetchQuranFoundationUrl(
+      int surah, int ayah, String reciter) async {
+    final cacheKey = '$reciter:$surah';
+    if (!_qfUrlCache.containsKey(cacheKey)) {
+      final id = _audioRepo.quranFoundationRecitationId(reciter);
+      if (id == null) return null;
+      try {
+        final dio = Dio();
+        final response = await dio.get<Map<String, dynamic>>(
+          'https://api.quran.com/api/v4/recitations/$id/by_chapter/$surah',
+        );
+        final files = response.data?['audio_files'] as List? ?? [];
+        final urlMap = <int, String>{};
+        for (final f in files) {
+          final key = f['verse_key'] as String? ?? '';
+          var url = f['url'] as String? ?? '';
+          if (url.isNotEmpty && !url.startsWith('http')) {
+            url = 'https://$url';
+          }
+          final parts = key.split(':');
+          if (parts.length == 2) {
+            final ayahNum = int.tryParse(parts[1]);
+            if (ayahNum != null && url.isNotEmpty) {
+              urlMap[ayahNum] = url;
+            }
+          }
+        }
+        _qfUrlCache[cacheKey] = urlMap;
+      } catch (_) {
+        return null;
+      }
+    }
+    return _qfUrlCache[cacheKey]?[ayah];
   }
 
   Future<void> _seekToAyah(int index) async {

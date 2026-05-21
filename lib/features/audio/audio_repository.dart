@@ -2,10 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Builds streaming audio URLs for verse-level recitation.
 ///
-/// CDN priority order tried by AudioNotifier:
+/// CDN priority order tried by AudioNotifier for most reciters:
 ///   1. cdn.islamic.network  — uses global ayah ID (1-6236), very reliable
 ///   2. audio.qurancdn.com   — uses surah+ayah padding, same folder names
 ///   3. everyayah.com        — same path format, fallback
+///
+/// Reciters with [quranFoundationRecitationId] != null use the Quran
+/// Foundation API instead (api.quran.com), which returns per-verse URLs.
 class AudioRepository {
   const AudioRepository();
 
@@ -13,23 +16,39 @@ class AudioRepository {
   static const _primaryBase = 'https://audio.qurancdn.com';
   static const _fallbackBase = 'https://everyayah.com/data';
 
-  // Available reciters — slug must match CDN folder names (CDN 2 & 3).
+  // Available reciters — slug must match CDN folder names (CDN 2 & 3) unless
+  // the reciter has a Quran Foundation recitation ID (see below).
   static const Map<String, String> reciters = {
     'Alafasy_128kbps': 'Mishary Alafasy',
-    'Bandar_Balilah_128kbps': 'Bandar Balilah',
+    'Bandar_Baleela': 'Bandar Baleela',
     'Abdul_Basit_Murattal_192kbps': 'Abdul Basit (Murattal)',
     'Minshawi_Murattal_128kbps': 'Mohamed Siddiq El-Minshawi',
   };
 
-  // cdn.islamic.network identifiers (CDN 1).
+  // cdn.islamic.network identifiers (CDN 1) — only for reciters that are
+  // hosted there (Bandar Baleela is NOT on this CDN).
   static const Map<String, String> _islamicNetIds = {
     'Alafasy_128kbps': 'ar.alafasy',
-    'Bandar_Balilah_128kbps': 'ar.bandarbalilah',
     'Abdul_Basit_Murattal_192kbps': 'ar.abdulbasitmurattal',
     'Minshawi_Murattal_128kbps': 'ar.minshawi',
   };
 
+  // Reciters served via the Quran Foundation API (api.quran.com).
+  // Value = recitation_id used by that API.
+  static const Map<String, int> _quranFoundationIds = {
+    'Bandar_Baleela': 160,
+  };
+
   static const defaultReciter = 'Alafasy_128kbps';
+
+  /// Returns true if this reciter must be fetched from the Quran Foundation
+  /// API rather than the standard CDNs.
+  bool isQuranFoundationReciter(String reciter) =>
+      _quranFoundationIds.containsKey(reciter);
+
+  /// Returns the Quran Foundation recitation ID for [reciter], or null.
+  int? quranFoundationRecitationId(String reciter) =>
+      _quranFoundationIds[reciter];
 
   String _path(int surahNumber, int ayahNumber, String reciter) {
     final s = surahNumber.toString().padLeft(3, '0');
@@ -38,9 +57,11 @@ class AudioRepository {
   }
 
   /// CDN 1 — cdn.islamic.network (global ayah ID 1-6236).
-  String ayahUrlIslamicNet(int globalAyahId, {String? reciter}) {
+  /// Returns null for reciters not hosted on this CDN.
+  String? ayahUrlIslamicNet(int globalAyahId, {String? reciter}) {
     final r = reciter ?? defaultReciter;
-    final id = _islamicNetIds[r] ?? 'ar.alafasy';
+    final id = _islamicNetIds[r];
+    if (id == null) return null;
     return '$_islamicNetBase/$id/$globalAyahId.mp3';
   }
 
