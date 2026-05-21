@@ -16,6 +16,7 @@ class AudioRepository {
   // Available reciters — slug must match CDN folder names (CDN 2 & 3).
   static const Map<String, String> reciters = {
     'Alafasy_128kbps': 'Mishary Alafasy',
+    'Bandar_Balilah_128kbps': 'Bandar Balilah',
     'Abdul_Basit_Murattal_192kbps': 'Abdul Basit (Murattal)',
     'Minshawi_Murattal_128kbps': 'Mohamed Siddiq El-Minshawi',
   };
@@ -23,6 +24,7 @@ class AudioRepository {
   // cdn.islamic.network identifiers (CDN 1).
   static const Map<String, String> _islamicNetIds = {
     'Alafasy_128kbps': 'ar.alafasy',
+    'Bandar_Balilah_128kbps': 'ar.bandarbalilah',
     'Abdul_Basit_Murattal_192kbps': 'ar.abdulbasitmurattal',
     'Minshawi_Murattal_128kbps': 'ar.minshawi',
   };
