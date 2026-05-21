@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/theme_provider.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
+import '../mushaf/mushaf_provider.dart';
 import '../mushaf/tafsir_repository.dart';
 
 // ─── Font size persistence ────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ class SettingsScreen extends ConsumerWidget {
     final translationFontSize = ref.watch(translationFontSizeProvider);
     final audio = ref.watch(audioProvider);
     final tafsirId = ref.watch(tafsirIdProvider);
+    final mushaf = ref.watch(mushafProvider);
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -127,6 +129,34 @@ class SettingsScreen extends ConsumerWidget {
           ),
           // ── Reading ───────────────────────────────────────────────────────
           _SectionHeader(title: 'Reading', colors: colors),
+          ListTile(
+            leading: const Icon(Icons.translate_outlined),
+            title: const Text('Translation language'),
+            subtitle: mushaf.availableTranslationKeys.length <= 1
+                ? const Text(
+                    'Only Sahih International available — see README to add more',
+                    style: TextStyle(fontSize: 11),
+                  )
+                : null,
+            trailing: DropdownButton<String>(
+              value: mushaf.activeTranslationKey,
+              underline: const SizedBox.shrink(),
+              items: mushaf.availableTranslationKeys
+                  .map((k) => DropdownMenuItem(
+                        value: k,
+                        child: Text(
+                          kTranslationNames[k] ?? k,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(mushafProvider.notifier).setTranslationKey(v);
+                }
+              },
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.book_outlined),
             title: const Text('Tafsir'),

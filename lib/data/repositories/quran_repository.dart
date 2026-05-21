@@ -82,6 +82,17 @@ class QuranRepository {
     return {for (final r in txRows) r.ayahId: r.body};
   }
 
+  /// Returns all translation keys currently seeded in the database.
+  Future<List<String>> getAvailableTranslationKeys() async {
+    final result = await (_db.selectOnly(_db.translations)
+          ..addColumns([_db.translations.translationKey])
+          ..groupBy([_db.translations.translationKey]))
+        .get();
+    return result
+        .map((r) => r.read(_db.translations.translationKey)!)
+        .toList();
+  }
+
   Future<List<Ayah>> getJuzAyahs(int juzNumber) async {
     final rows = await (_db.select(_db.ayahs)
           ..where((t) => t.juzNumber.equals(juzNumber))

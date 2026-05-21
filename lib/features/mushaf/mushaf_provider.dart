@@ -1,8 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/surah.dart';
+
+// Human-readable names for each bundled translation key.
+const kTranslationNames = <String, String>{
+  'en_sahih': 'Sahih International (English)',
+  'ur_jalandhry': 'Jalandhry (Urdu)',
+  'id_indonesian': 'Kemenag (Indonesian)',
+};
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +21,8 @@ class MushafState {
     required this.ayahs,
     this.translations = const {},
     this.showTranslation = false,
+    this.activeTranslationKey = 'en_sahih',
+    this.availableTranslationKeys = const ['en_sahih'],
     this.isLoading = false,
   });
 
@@ -21,6 +31,8 @@ class MushafState {
   final List<Ayah> ayahs;          // ayahs on currentPage (may span surahs)
   final Map<int, String> translations; // ayahId → text
   final bool showTranslation;
+  final String activeTranslationKey;
+  final List<String> availableTranslationKeys;
   final bool isLoading;
 
   // Convenience: surah metadata for any surah number
@@ -37,6 +49,8 @@ class MushafState {
     List<Ayah>? ayahs,
     Map<int, String>? translations,
     bool? showTranslation,
+    String? activeTranslationKey,
+    List<String>? availableTranslationKeys,
     bool? isLoading,
   }) =>
       MushafState(
@@ -45,6 +59,9 @@ class MushafState {
         ayahs: ayahs ?? this.ayahs,
         translations: translations ?? this.translations,
         showTranslation: showTranslation ?? this.showTranslation,
+        activeTranslationKey: activeTranslationKey ?? this.activeTranslationKey,
+        availableTranslationKeys:
+            availableTranslationKeys ?? this.availableTranslationKeys,
         isLoading: isLoading ?? this.isLoading,
       );
 }
@@ -61,14 +78,26 @@ class MushafNotifier extends Notifier<MushafState> {
 
   QuranRepository get _repo => ref.read(quranRepositoryProvider);
 
+  static const _txKeyPref = 'active_translation_key';
+
   Future<void> _init() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedKey = prefs.getString(_txKeyPref) ?? 'en_sahih';
+
       final results = await Future.wait<dynamic>([
         _repo.getAllSurahs(),
         _repo.getPageAyahs(1),
+        _repo.getAvailableTranslationKeys(),
       ]);
       final surahs = results[0] as List<Surah>;
       final ayahs = results[1] as List<Ayah>;
+      final available = results[2] as List<String>;
+
+      // Fall back to en_sahih if saved key was removed from DB.
+      final activeKey =
+          available.contains(savedKey) ? savedKey : 'en_sahih';
+
       if (surahs.isEmpty) {
         state = const MushafState(
             surahs: [], currentPage: 1, ayahs: [], isLoading: false);
@@ -78,6 +107,8 @@ class MushafNotifier extends Notifier<MushafState> {
         surahs: surahs,
         currentPage: 1,
         ayahs: ayahs,
+        activeTranslationKey: activeKey,
+        availableTranslationKeys: available,
         isLoading: false,
       );
     } catch (_) {
@@ -97,7 +128,8 @@ class MushafNotifier extends Notifier<MushafState> {
       final results = await Future.wait<dynamic>([
         _repo.getPageAyahs(p),
         if (showTx)
-          _repo.getPageTranslations(firstId, lastId)
+          _repo.getPageTranslations(firstId, lastId,
+              translationKey: state.activeTranslationKey)
         else
           Future<Map<int, String>>.value({}),
       ]);
@@ -147,14 +179,31 @@ class MushafNotifier extends Notifier<MushafState> {
     }
   }
 
+  Future<void> setTranslationKey(String key) async {
+    if (!state.availableTranslationKeys.contains(key)) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_txKeyPref, key);
+    if (state.showTranslation && state.ayahs.isNotEmpty) {
+      final idx = state.currentPage - 1;
+      final firstId = kPageFirstAyah[idx];
+      final lastId = kPageLastAyah[idx];
+      final translations = await _repo.getPageTranslations(firstId, lastId,
+          translationKey: key);
+      state = state.copyWith(
+          activeTranslationKey: key, translations: translations);
+    } else {
+      state = state.copyWith(activeTranslationKey: key);
+    }
+  }
+
   Future<void> toggleTranslation() async {
     final next = !state.showTranslation;
     if (next && state.ayahs.isNotEmpty) {
       final idx = state.currentPage - 1;
       final firstId = kPageFirstAyah[idx];
       final lastId = kPageLastAyah[idx];
-      final translations =
-          await _repo.getPageTranslations(firstId, lastId);
+      final translations = await _repo.getPageTranslations(firstId, lastId,
+          translationKey: state.activeTranslationKey);
       state = state.copyWith(showTranslation: next, translations: translations);
     } else {
       state = state.copyWith(showTranslation: next, translations: {});

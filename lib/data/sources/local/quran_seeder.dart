@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'quran_database.dart';
 
 // Bump this key when the seed data changes (forces re-seed on next launch).
-const _seededKey = 'quran_db_seeded_v2';
+const _seededKey = 'quran_db_seeded_v3';
 
 /// Populates the database from bundled JSON assets on first launch.
 /// Safe to call on every startup — skips if already seeded.
@@ -22,6 +22,11 @@ class QuranSeeder {
     await _seedJuzs();
     await _seedAyahs();
     await _seedTranslations(); // seed after ayahs (references ayah ids)
+    // Additional translations — only seeded if asset files are present.
+    await _seedOptionalTranslation(
+        'assets/quran/translations_ur_jalandhry.json', 'ur_jalandhry');
+    await _seedOptionalTranslation(
+        'assets/quran/translations_id_indonesian.json', 'id_indonesian');
 
     await prefs.setBool(_seededKey, true);
   }
@@ -136,6 +141,34 @@ class QuranSeeder {
         return TranslationsCompanion.insert(
           ayahId: m['id'] as int,
           translationKey: key,
+          body: m['text'] as String,
+        );
+      }).toList();
+      await _db.batch(
+          (b) => b.insertAll(_db.translations, rows, mode: InsertMode.insertOrIgnore));
+    }
+  }
+
+  // Silently skips if the asset file has not been downloaded yet.
+  Future<void> _seedOptionalTranslation(
+      String assetPath, String translationKey) async {
+    String raw;
+    try {
+      raw = await rootBundle.loadString(assetPath);
+    } catch (_) {
+      return; // file not bundled — skip
+    }
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    final list = data['translations'] as List<dynamic>;
+
+    const batchSize = 500;
+    for (var i = 0; i < list.length; i += batchSize) {
+      final chunk = list.sublist(i, (i + batchSize).clamp(0, list.length));
+      final rows = chunk.map((t) {
+        final m = t as Map<String, dynamic>;
+        return TranslationsCompanion.insert(
+          ayahId: m['id'] as int,
+          translationKey: translationKey,
           body: m['text'] as String,
         );
       }).toList();
