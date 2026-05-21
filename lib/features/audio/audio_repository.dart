@@ -15,15 +15,18 @@ class AudioRepository {
   static const _fallbackBase = 'https://everyayah.com/data';
   static const _versesQfBase = 'https://verses.quran.foundation';
 
-  // Available reciters.
-  // For CDNs 1-3 the key is also the folder name used in the URL path.
-  // For verses.quran.foundation reciters see _versesQfFolders below.
+  // Display name → slug.
+  // For CDNs 1-3 the slug is also the folder name in the URL path.
+  // Reciters with entries in _versesQfFolders use CDN 4 instead.
   static const Map<String, String> reciters = {
     'Alafasy_128kbps': 'Mishary Alafasy',
     'Bandar_Baleela': 'Bandar Baleela',
     'Abdul_Basit_Murattal_192kbps': 'Abdul Basit (Murattal)',
     'Minshawi_Murattal_128kbps': 'Mohamed Siddiq El-Minshawi',
     'Husary_128kbps': 'Mahmoud Al-Husary',
+    'MaherAlMuaiqly128kbps': 'Maher Al Muaiqly',
+    'Abdullah_Basfar_192kbps': 'Abdullah Basfar',
+    'Shuraim_128kbps': "Sa'ud ash-Shuraym",
   };
 
   // cdn.islamic.network edition identifiers (CDN 1).
@@ -32,11 +35,14 @@ class AudioRepository {
     'Abdul_Basit_Murattal_192kbps': 'ar.abdulbasitmurattal',
     'Minshawi_Murattal_128kbps': 'ar.minshawi',
     'Husary_128kbps': 'ar.husary',
+    'MaherAlMuaiqly128kbps': 'ar.mahermuaiqly',
+    'Abdullah_Basfar_192kbps': 'ar.abdullahbasfar',
+    'Shuraim_128kbps': 'ar.saoudshuraym',
   };
 
-  // Candidate folder names on verses.quran.foundation (CDN 4), tried in
-  // order. The CDN uses PascalCase concatenated names (Alafasy, AbdulBaset)
-  // so BandarBaleela is the most likely — the others are fallbacks.
+  // Candidate folder names on verses.quran.foundation (CDN 4).
+  // The CDN uses PascalCase names (Alafasy, AbdulBaset) so BandarBaleela
+  // is tried first, with underscore variants as fallbacks.
   static const Map<String, List<String>> _versesQfFolders = {
     'Bandar_Baleela': ['BandarBaleela', 'bandar_baleela', 'Bandar_Baleela'],
   };
@@ -79,9 +85,7 @@ class AudioRepository {
     if (folders == null) return const [];
     final s = surahNumber.toString().padLeft(3, '0');
     final a = ayahNumber.toString().padLeft(3, '0');
-    return folders
-        .map((f) => '$_versesQfBase/$f/mp3/$s$a.mp3')
-        .toList();
+    return folders.map((f) => '$_versesQfBase/$f/mp3/$s$a.mp3').toList();
   }
 }
 
