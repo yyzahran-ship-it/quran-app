@@ -288,19 +288,21 @@ class AudioNotifier extends Notifier<AudioState> {
           'https://api.quran.com/api/v4/recitations/$id/by_chapter/$surah',
         );
         final files = response.data?['audio_files'] as List? ?? [];
+        const cdnBase = 'https://verses.quran.foundation/';
         final urlMap = <int, String>{};
         for (final f in files) {
           final key = f['verse_key'] as String? ?? '';
-          var url = f['url'] as String? ?? '';
-          if (url.isNotEmpty && !url.startsWith('http')) {
-            url = 'https://$url';
-          }
+          final rawUrl = f['url'] as String? ?? '';
+          if (rawUrl.isEmpty) continue;
+          // API returns relative paths like "Alafasy/mp3/001001.mp3".
+          // Prepend the CDN base unless it's already absolute.
+          final fullUrl = rawUrl.startsWith('http')
+              ? rawUrl
+              : '$cdnBase$rawUrl';
           final parts = key.split(':');
           if (parts.length == 2) {
             final ayahNum = int.tryParse(parts[1]);
-            if (ayahNum != null && url.isNotEmpty) {
-              urlMap[ayahNum] = url;
-            }
+            if (ayahNum != null) urlMap[ayahNum] = fullUrl;
           }
         }
         _qfUrlCache[cacheKey] = urlMap;
