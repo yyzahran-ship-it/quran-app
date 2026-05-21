@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Available tafsirs from api.quran.com/api/v4
 class TafsirInfo {
   const TafsirInfo(
       {required this.id, required this.name, required this.language});
@@ -45,21 +44,48 @@ class TafsirIdNotifier extends Notifier<int> {
 final tafsirIdProvider =
     NotifierProvider<TafsirIdNotifier, int>(TafsirIdNotifier.new);
 
-// ─── Tafsir fetcher ───────────────────────────────────────────────────────────
+// ─── Tafsir fetcher with persistent cache ─────────────────────────────────────
 
 class TafsirRepository {
   TafsirRepository(this._dio);
 
   final Dio _dio;
 
+  // In-memory layer prevents repeat fetches within the same session.
+  final Map<String, String> _memCache = {};
+
+  String _cacheKey(int tafsirId, String verseKey) =>
+      'tafsir_${tafsirId}_$verseKey';
+
   Future<String> fetchTafsir(
       {required int tafsirId, required String verseKey}) async {
+    final key = _cacheKey(tafsirId, verseKey);
+
+    // 1 — memory hit
+    final mem = _memCache[key];
+    if (mem != null) return mem;
+
+    // 2 — SharedPreferences hit (survives app restarts)
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(key);
+    if (cached != null) {
+      _memCache[key] = cached;
+      return cached;
+    }
+
+    // 3 — network fetch; on failure re-throw (no stale to serve)
     final url =
         'https://api.quran.com/api/v4/tafsirs/$tafsirId/by_ayah/$verseKey';
     final response = await _dio.get<Map<String, dynamic>>(url);
-    final text =
+    final raw =
         (response.data!['tafsir'] as Map<String, dynamic>)['text'] as String;
-    return _stripHtml(text);
+    final text = _stripHtml(raw);
+
+    _memCache[key] = text;
+    // Fire-and-forget: don't block the caller on prefs write.
+    prefs.setString(key, text);
+
+    return text;
   }
 
   static String _stripHtml(String html) => html
@@ -81,7 +107,6 @@ final tafsirRepositoryProvider = Provider<TafsirRepository>(
 
 // ─── Auto-dispose fetch provider ──────────────────────────────────────────────
 
-// Named Dart record used as family key — has structural == and hashCode.
 typedef TafsirKey = ({int tafsirId, String verseKey});
 
 final tafsirTextProvider =

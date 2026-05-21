@@ -37,15 +37,16 @@
 - [x] Stream verse-level audio (everyayah.com CDN — Mishary Alafasy)
 - [x] Integrate `just_audio` + background playback + lock-screen controls
 - [x] Verse highlighting synced to playback position
-- [ ] A-B repeat, repeat-N-times, speed control
-- [ ] Reciter picker (settings screen)
+- [x] A-B repeat, speed control (loop button + speed cycle in AudioPlayerBar)
+- [x] Reciter picker — persistent strip at bottom of every page + modal sheet
 
 ### Phase 1 — Translations + Tafsir (Week 4-5)
 - [x] Import Sahih International translation (6236 entries bundled as asset)
 - [x] Toggle translation display under each ayah
 - [ ] Multi-translation side-by-side view
-- [ ] Import 2 tafsirs (Ibn Kathir, Sa'di)
-- [ ] Tafsir reader screen
+- [x] Tafsir reader screen (DraggableScrollableSheet, tafsir switcher dropdown)
+- [x] Tafsir caching — cached to SharedPreferences after first load (offline after 1st view)
+- [ ] Bundle tafsir data as local asset (full offline on first install)
 
 ### Phase 1 — Bookmarks + Notes (Week 5)
 - [x] Unlimited bookmarks with date + optional tag
