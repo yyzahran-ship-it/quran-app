@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/constants/app_constants.dart';
@@ -349,6 +350,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         surahNumber: ayah.surahNumber,
         ayahNumber: ayah.ayahNumber,
         ayahId: ayah.id,
+        textUthmani: ayah.textUthmani,
       ),
     );
   }
@@ -774,12 +776,14 @@ class _AyahActionSheet extends ConsumerWidget {
     required this.surahNumber,
     required this.ayahNumber,
     required this.ayahId,
+    required this.textUthmani,
   });
 
   final String ayahKey;
   final int surahNumber;
   final int ayahNumber;
   final int ayahId;
+  final String textUthmani;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -892,7 +896,20 @@ class _AyahActionSheet extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.share_outlined),
                 title: const Text('Share'),
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                  final mushafState = ref.read(mushafProvider);
+                  final translation = mushafState.translations[ayahId];
+                  final buffer = StringBuffer();
+                  buffer.writeln('﴿ $textUthmani ﴾');
+                  if (translation != null) {
+                    buffer.writeln();
+                    buffer.writeln(translation);
+                  }
+                  buffer.writeln();
+                  buffer.write('— Quran $ayahKey');
+                  SharePlus.instance.share(ShareParams(text: buffer.toString()));
+                },
               ),
             ],
           ),

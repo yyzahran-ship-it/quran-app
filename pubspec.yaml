@@ -48,6 +48,9 @@ dependencies:
   # Image caching for King Fahad page images
   cached_network_image: ^3.4.1
 
+  # Sharing ayah text via OS share sheet
+  share_plus: ^10.1.4
+
   # Utilities
   path_provider: ^2.1.5
   shared_preferences: ^2.3.5
