@@ -33,36 +33,30 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
-      - name: Download KFGQPC Uthmanic Script HAFS font
+      - name: Ensure UthmanicHafs font is present
         run: |
-          # The KFGQPC Uthmanic Script HAFS font is the official King Fahad
-          # Quran Printing Complex font. Freely distributable for Quran apps.
-          # Try multiple official mirrors; fall back to AmiriQuran if unavailable.
           DEST="assets/fonts/UthmanicHafs.ttf"
-          FALLBACK="assets/fonts/AmiriQuran.ttf"
-
-          download_font() {
-            local url="$1"
-            echo "Trying: $url"
-            curl -fsSL --max-time 30 "$url" -o "$DEST" 2>/dev/null && \
-            python3 -c "
-import struct, sys
-data = open('$DEST','rb').read(4)
-sys.exit(0 if data[:4] in [b'\\x00\\x01\\x00\\x00', b'OTTO', b'true'] else 1)
-" && return 0 || return 1
-          }
-
-          # Official King Fahad Quran Printing Complex sources
-          download_font "https://fonts.qurancomplex.gov.sa/wp02/uploads/2019/08/UthmanicHafs1Ver18.ttf" ||
-          download_font "https://www.qurancomplex.gov.sa/quran/fonts/UthmanicHafs1Ver18.ttf" ||
-          download_font "https://quran.ksu.edu.sa/fonts/hafs/UthmanicHafs1Ver18.ttf" ||
-          {
-            echo "All font download attempts failed — copying AmiriQuran as fallback"
-            cp "$FALLBACK" "$DEST"
-          }
-
-          SIZE=$(stat -c%s "$DEST")
-          echo "Font ready: $DEST ($SIZE bytes)"
+          # File is already committed as AmiriQuran placeholder.
+          # Try to replace it with the real KFGQPC Uthmanic Script HAFS font
+          # from the King Fahad Quran Printing Complex (freely distributable).
+          TMP="$(mktemp /tmp/font_XXXX.ttf)"
+          URLS=(
+            "https://fonts.qurancomplex.gov.sa/wp02/uploads/2019/08/UthmanicHafs1Ver18.ttf"
+            "https://www.qurancomplex.gov.sa/quran/fonts/UthmanicHafs1Ver18.ttf"
+          )
+          for URL in "${URLS[@]}"; do
+            echo "Trying: $URL"
+            if curl -fsSL --max-time 30 "$URL" -o "$TMP" 2>/dev/null; then
+              MAGIC=$(xxd -p -l 4 "$TMP" 2>/dev/null || true)
+              if [ "$MAGIC" = "00010000" ] || [ "$MAGIC" = "4f54544f" ] || [ "$MAGIC" = "74727565" ]; then
+                cp "$TMP" "$DEST"
+                echo "KFGQPC font installed: $(stat -c%s "$DEST") bytes"
+                break
+              fi
+            fi
+          done
+          rm -f "$TMP"
+          echo "Font ready: $DEST ($(stat -c%s "$DEST") bytes)"
 
       - name: Get dependencies
         run: flutter pub get
