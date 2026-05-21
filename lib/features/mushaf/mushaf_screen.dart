@@ -8,6 +8,7 @@ import '../../domain/entities/ayah.dart';
 import '../../domain/entities/surah.dart';
 import '../audio/audio_player_bar.dart';
 import '../audio/audio_provider.dart';
+import '../audio/audio_repository.dart';
 import '../bookmarks/bookmarks_provider.dart';
 import '../bookmarks/note_editor_dialog.dart';
 import '../../data/repositories/quran_repository.dart';
@@ -922,9 +923,9 @@ class _AyahActionSheet extends ConsumerWidget {
   }
 }
 
-// ─── Bottom area: audio bar + page navigation ─────────────────────────────────
+// ─── Bottom area: audio bar + reciter strip + page navigation ─────────────────
 
-class _BottomArea extends StatelessWidget {
+class _BottomArea extends ConsumerWidget {
   const _BottomArea({
     required this.currentPage,
     required this.onPrevious,
@@ -936,17 +937,130 @@ class _BottomArea extends StatelessWidget {
   final VoidCallback onNext;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const AudioPlayerBar(),
+        const _ReciterStrip(),
         _PageNav(
           currentPage: currentPage,
           onPrevious: onPrevious,
           onNext: onNext,
         ),
       ],
+    );
+  }
+}
+
+// ─── Reciter strip ─────────────────────────────────────────────────────────────
+
+class _ReciterStrip extends ConsumerWidget {
+  const _ReciterStrip();
+
+  void _showPicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => const _ReciterPickerSheet(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audio = ref.watch(audioProvider);
+    final colors = Theme.of(context).colorScheme;
+    final isPlaying = audio.isPlaying;
+    final reciterSlug = audio.reciter;
+    final reciterName =
+        AudioRepository.reciters[reciterSlug] ?? reciterSlug;
+
+    return InkWell(
+      onTap: () => _showPicker(context),
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerLow,
+          border: Border(
+            top: BorderSide(color: colors.outlineVariant, width: 0.5),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Icon(
+              isPlaying ? Icons.volume_up : Icons.headphones,
+              size: 18,
+              color: colors.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                reciterName,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: colors.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(
+              Icons.expand_less,
+              size: 20,
+              color: colors.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Reciter picker sheet ──────────────────────────────────────────────────────
+
+class _ReciterPickerSheet extends ConsumerWidget {
+  const _ReciterPickerSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audio = ref.watch(audioProvider);
+    final notifier = ref.read(audioProvider.notifier);
+    final colors = Theme.of(context).colorScheme;
+    final reciters = AudioRepository.reciters;
+
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Select Reciter',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: colors.onSurface,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          for (final entry in reciters.entries)
+            ListTile(
+              title: Text(entry.value),
+              trailing: audio.reciter == entry.key
+                  ? Icon(Icons.check, color: colors.primary)
+                  : null,
+              onTap: () {
+                notifier.setReciter(entry.key);
+                Navigator.of(context).pop();
+              },
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }
