@@ -823,7 +823,7 @@ class _ContinuousTextState extends State<_ContinuousText> {
             ayahs: widget.ayahs,
             translations: widget.translations,
             fontSize: widget.translationFontSize,
-            colors: colors,
+            colors: Theme.of(context).colorScheme,
           ),
         ],
       ],
