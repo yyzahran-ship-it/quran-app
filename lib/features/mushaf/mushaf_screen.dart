@@ -21,7 +21,8 @@ import '../settings/settings_screen.dart';
 // CDN base URLs for King Fahad Mushaf page images, tried in order.
 const _kPageCdnBases = [
   'https://cdn.qurancdn.com/images/quran/pages/page',
-  'https://quran.com/images/quran/pages/page',
+  'https://qurancdn.com/images/quran/pages/page',
+  'https://static.qurancdn.com/images/quran/pages/page',
 ];
 
 // ─── Helper: page number for a given surah + ayah ────────────────────────────
@@ -514,8 +515,13 @@ String _toArabicNumerals(int n) {
 
 // ─── Text fallback view (used when CDN images are unreachable) ─────────────────
 //
-// Renders page ayahs as flowing Uthmanic Arabic text using the bundled font.
-// Works fully offline — text comes from the local SQLite DB.
+// Renders page ayahs as flowing Uthmanic Arabic text using the bundled font,
+// styled to resemble the King Fahad Mushaf layout: gold-bordered surah header,
+// centred bismillah, flowing right-to-left ayah text with end markers.
+// Works fully offline — all data comes from the local SQLite database.
+
+// Gold tone matching the King Fahad Mushaf ornamental borders.
+const _kMushafGold = Color(0xFFA67C00);
 
 class _TextFallbackView extends StatelessWidget {
   const _TextFallbackView({
@@ -532,47 +538,56 @@ class _TextFallbackView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     if (ayahs.isEmpty) return const SizedBox.shrink();
 
-    final children = <Widget>[];
+    final bg = isDark ? const Color(0xFF1C1C1C) : Colors.white;
+    final textColor = isDark ? const Color(0xFFEEEEEE) : const Color(0xFF1A1A1A);
 
-    // Small banner so user knows why they're seeing text instead of the scan.
-    children.add(
-      Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-        child: Row(
-          children: [
-            Icon(Icons.wifi_off_rounded, size: 13, color: colors.outline),
-            const SizedBox(width: 6),
-            Text(
-              'Page image unavailable — showing text',
-              style: TextStyle(fontSize: 11, color: colors.outline),
-            ),
-          ],
-        ),
-      ),
-    );
+    final children = <Widget>[];
 
     int lastSurah = -1;
     for (final ayah in ayahs) {
       if (ayah.surahNumber != lastSurah) {
         lastSurah = ayah.surahNumber;
         final surah = surahFor(ayah.surahNumber);
-        children.add(_TextSurahHeader(surah: surah, colors: colors));
+        children.add(_MushafSurahHeader(surah: surah, textColor: textColor));
         if (surah != null && surah.bismillahPre) {
-          children.add(_TextBismillah(colors: colors));
+          children.add(_MushafBismillah(textColor: textColor));
         }
       }
-      children.add(_TextAyahLine(
+      children.add(_MushafAyahText(
         ayah: ayah,
         translation: translations[ayah.id],
-        colors: colors,
+        textColor: textColor,
+        isDark: isDark,
       ));
     }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+    // Very subtle footnote — doesn't interrupt reading.
+    children.add(
+      Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 11,
+                color: isDark ? Colors.white24 : Colors.black26),
+            const SizedBox(width: 4),
+            Text(
+              'Text view — page scan unavailable',
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.white24 : Colors.black26,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return Container(
+      color: bg,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,
@@ -581,106 +596,126 @@ class _TextFallbackView extends StatelessWidget {
   }
 }
 
-class _TextSurahHeader extends StatelessWidget {
-  const _TextSurahHeader({required this.surah, required this.colors});
+class _MushafSurahHeader extends StatelessWidget {
+  const _MushafSurahHeader({required this.surah, required this.textColor});
 
   final Surah? surah;
-  final ColorScheme colors;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
+    final place = surah?.revelationPlace == 'makkah' ? 'Makkah' : 'Madinah';
+    final count = surah?.versesCount;
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      margin: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        border: Border.all(color: colors.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _kMushafGold, width: 1.5),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
         children: [
-          Text(
-            surah?.nameArabic ?? '',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'UthmanicHafs',
-              fontSize: 22,
-              height: 1.8,
-              color: colors.onSurface,
+          // Outer decorative rule
+          Container(height: 3, color: _kMushafGold),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              children: [
+                Text(
+                  surah?.nameArabic ?? '',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'UthmanicHafs',
+                    fontSize: 26,
+                    height: 1.6,
+                    color: _kMushafGold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  surah != null && count != null
+                      ? '${surah!.nameSimple}  •  $count verses  •  $place'
+                      : '',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: textColor.withAlpha(153),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
             ),
           ),
-          if (surah != null)
-            Text(
-              surah!.nameSimple,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: colors.outline),
-            ),
+          Container(height: 3, color: _kMushafGold),
         ],
       ),
     );
   }
 }
 
-class _TextBismillah extends StatelessWidget {
-  const _TextBismillah({required this.colors});
+class _MushafBismillah extends StatelessWidget {
+  const _MushafBismillah({required this.textColor});
 
-  final ColorScheme colors;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
         textAlign: TextAlign.center,
         textDirection: TextDirection.rtl,
         style: TextStyle(
           fontFamily: 'UthmanicHafs',
-          fontSize: 19,
+          fontSize: 22,
           height: 2.0,
-          color: colors.onSurface,
+          color: textColor,
         ),
       ),
     );
   }
 }
 
-class _TextAyahLine extends StatelessWidget {
-  const _TextAyahLine({
+class _MushafAyahText extends StatelessWidget {
+  const _MushafAyahText({
     required this.ayah,
     required this.translation,
-    required this.colors,
+    required this.textColor,
+    required this.isDark,
   });
 
   final Ayah ayah;
   final String? translation;
-  final ColorScheme colors;
+  final Color textColor;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    // U+06DD = ARABIC END OF AYAH circle glyph + Arabic-Indic ayah number
+    // U+06DD = ARABIC END OF AYAH ornament + Arabic-Indic numeral
     final marker = '۝${_toArabicNumerals(ayah.ayahNumber)}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           '${ayah.textUthmani} $marker',
-          textAlign: TextAlign.right,
+          textAlign: TextAlign.justify,
           textDirection: TextDirection.rtl,
           style: TextStyle(
             fontFamily: 'UthmanicHafs',
-            fontSize: 21,
-            height: 2.2,
-            color: colors.onSurface,
+            fontSize: 24,
+            height: 2.5,
+            color: textColor,
           ),
         ),
         if (translation != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               '${ayah.verseKey}  $translation',
               style: TextStyle(
                 fontSize: 12,
-                color: colors.onSurfaceVariant,
+                color: textColor.withAlpha(178),
                 height: 1.5,
               ),
             ),
