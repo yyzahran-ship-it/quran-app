@@ -14,6 +14,9 @@ build/
 *.iml
 *.iws
 
+# Claude Code internal files
+.claude/
+
 # Mac
 .DS_Store
 
