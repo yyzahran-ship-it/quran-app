@@ -1,0 +1,73 @@
+name: Setup Mushaf Pages Branch
+
+# Run this once (manually) to download all 604 King Fahad Mushaf page images
+# and push them to the `mushaf-pages` orphan branch so the app can fetch them
+# from raw.githubusercontent.com — a CDN that is not blocked by carriers that
+# block cdn.qurancdn.com.
+#
+# After this workflow succeeds, the app will automatically find the images at:
+#   https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page001.png
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  download-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all 604 King Fahad Mushaf pages
+        run: |
+          mkdir -p pages
+          FAILED=0
+          for i in $(seq 1 604); do
+            NNN=$(printf '%03d' $i)
+            DEST="pages/page${NNN}.png"
+            if curl -fsSL --max-time 40 \
+              "https://cdn.qurancdn.com/images/quran/pages/page${NNN}.png" \
+              -o "$DEST" 2>/dev/null; then
+              SIZE=$(stat -c%s "$DEST")
+              if [ "$SIZE" -lt 10000 ]; then
+                echo "page ${NNN}: too small (${SIZE} bytes), removing"
+                rm -f "$DEST"
+                FAILED=$((FAILED + 1))
+              else
+                echo "page ${NNN}: OK (${SIZE} bytes)"
+              fi
+            else
+              echo "page ${NNN}: download failed"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          COUNT=$(ls pages/*.png 2>/dev/null | wc -l)
+          echo ""
+          echo "============================="
+          echo "Downloaded: ${COUNT}/604 pages"
+          echo "Failed:     ${FAILED}"
+          echo "============================="
+          if [ "$COUNT" -lt 550 ]; then
+            echo "ERROR: Too few pages downloaded. Aborting."
+            exit 1
+          fi
+
+      - name: Publish to mushaf-pages branch
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          # Create a standalone orphan branch — no history, no connection to main.
+          git checkout --orphan mushaf-pages
+          # Remove everything from the index except our pages/ directory.
+          git rm -rf --cached . 2>/dev/null || true
+          git add pages/
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "King Fahad Mushaf: ${COUNT} page images ($(date -u '+%Y-%m-%d'))"
+          git push origin mushaf-pages --force
+          echo ""
+          echo "Done. ${COUNT} pages are now live at:"
+          echo "  https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page001.png"

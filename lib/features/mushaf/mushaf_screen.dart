@@ -19,10 +19,15 @@ import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 
 // CDN base URLs for King Fahad Mushaf page images, tried in order.
+// The GitHub raw URL is a fallback served from GitHub's CDN (Fastly/Azure)
+// which is on a completely different IP range from cdn.qurancdn.com and is
+// not blocked by carriers that block quran.com. The mushaf-pages branch is
+// populated by running the "Setup Mushaf Pages Branch" GitHub Actions workflow.
 const _kPageCdnBases = [
   'https://cdn.qurancdn.com/images/quran/pages/page',
   'https://qurancdn.com/images/quran/pages/page',
   'https://static.qurancdn.com/images/quran/pages/page',
+  'https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page',
 ];
 
 // ─── Helper: page number for a given surah + ayah ────────────────────────────
@@ -414,7 +419,9 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
   }
 
   static Future<File> _cacheFileFor(int page) async {
-    final dir = await getTemporaryDirectory();
+    // Use support dir (permanent, not cleared by OS) so pages survive
+    // low-storage cleanup that would wipe getTemporaryDirectory().
+    final dir = await getApplicationSupportDirectory();
     final cacheDir = Directory('${dir.path}/mushaf_pages');
     await cacheDir.create(recursive: true);
     return File('${cacheDir.path}/page${page.toString().padLeft(3, '0')}.png');
