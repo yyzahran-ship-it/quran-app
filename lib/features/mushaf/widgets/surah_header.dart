@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/surah.dart';
 
-/// Displays the surah name, English translation, revelation place, and
-/// the Bismillah line (omitted for At-Tawbah, surah 9).
+/// Surah header styled after the King Fahad Quran Printing Complex (KFGQPC)
+/// printed Mushaf:
+///   • Double-line gold ornamental border frame
+///   • Arabic surah name in UthmanicHafs 34 px
+///   • Makkiyyah / Madaniyyah chip in gold palette
+///   • Verse count and surah number chips
+///   • Gold divider + centred Bismillah (omitted for At-Tawbah, surah 9)
 class SurahHeader extends StatelessWidget {
   const SurahHeader({super.key, required this.surah});
 
@@ -11,103 +17,141 @@ class SurahHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Parchment background for the header block
+    final headerBg = isDark ? const Color(0xFF1A2A1A) : kMushafahCream;
+    final textColor = isDark ? Colors.white : const Color(0xFF1A1A1A);
+    final subTextColor =
+        isDark ? Colors.white70 : const Color(0xFF3E3E3E);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+      // Outer gold border
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colors.primaryContainer,
-            colors.secondaryContainer,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: headerBg,
+        border: Border.all(color: kMushafahGold, width: 2),
       ),
-      child: Column(
-        children: [
-          // Arabic surah name
-          Text(
-            surah.nameArabic,
-            textDirection: TextDirection.rtl,
-            style: TextStyle(
-              fontFamily: kArabicFont,
-              fontSize: 32,
-              color: colors.onPrimaryContainer,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          // English name + transliteration
-          Text(
-            '${surah.nameSimple} · ${surah.nameEnglish}',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onPrimaryContainer.withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(height: 4),
-          // Metadata row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _MetaChip(
-                label: surah.revelationPlace == 'makkah' ? 'Makki' : 'Madani',
-                colors: colors,
-              ),
-              const SizedBox(width: 8),
-              _MetaChip(
-                label: '${surah.versesCount} verses',
-                colors: colors,
-              ),
-              const SizedBox(width: 8),
-              _MetaChip(label: 'Surah ${surah.id}', colors: colors),
-            ],
-          ),
-          // Bismillah — shown for all surahs except At-Tawbah (9)
-          if (surah.bismillahPre) ...[
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 16),
+      child: Container(
+        // Inner gold border — double-frame effect of the printed Mushaf
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          border: Border.all(color: kMushafahGoldLight, width: 0.8),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+        child: Column(
+          children: [
+            // ── Arabic surah name ──────────────────────────────────────────
             Text(
-              'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
+              surah.nameArabic,
               textDirection: TextDirection.rtl,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: kArabicFont,
-                fontSize: 24,
-                color: colors.onPrimaryContainer,
-                height: 2.0,
+                fontSize: 34,
+                fontWeight: FontWeight.w400,
+                height: 1.8,
+                color: textColor,
               ),
             ),
+            const SizedBox(height: 6),
+
+            // ── English name · transliteration ────────────────────────────
+            Text(
+              '${surah.nameSimple}  ·  ${surah.nameEnglish}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: subTextColor,
+                letterSpacing: 0.3,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ── Metadata chips ─────────────────────────────────────────────
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _GoldChip(
+                  label: surah.revelationPlace == 'makkah'
+                      ? 'مكية  Makkiyyah'
+                      : 'مدنية  Madaniyyah',
+                  isDark: isDark,
+                ),
+                _GoldChip(
+                    label: '${surah.versesCount} verses', isDark: isDark),
+                _GoldChip(label: 'Surah ${surah.id}', isDark: isDark),
+              ],
+            ),
+
+            // ── Bismillah (omitted for At-Tawbah, surah 9) ────────────────
+            if (surah.bismillahPre) ...[
+              const SizedBox(height: 14),
+              // Gold ornamental divider line
+              Row(
+                children: [
+                  Expanded(child: Container(height: 0.8, color: kMushafahGold)),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      Icons.brightness_1,
+                      size: 6,
+                      color: kMushafahGold,
+                    ),
+                  ),
+                  Expanded(child: Container(height: 0.8, color: kMushafahGold)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: kArabicFont,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w400,
+                  height: 2.0,
+                  color: textColor,
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label, required this.colors});
+// ─── Gold ornamental chip ─────────────────────────────────────────────────────
+
+class _GoldChip extends StatelessWidget {
+  const _GoldChip({required this.label, required this.isDark});
 
   final String label;
-  final ColorScheme colors;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: colors.onPrimaryContainer.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        color: isDark
+            ? const Color(0xFF2A3A2A)
+            : const Color(0xFFF5E6C8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kMushafahGold, width: 0.8),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 11,
-          color: colors.onPrimaryContainer,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
+          color: isDark ? kMushafahGoldLight : kMushafahGreen,
+          letterSpacing: 0.2,
         ),
       ),
     );

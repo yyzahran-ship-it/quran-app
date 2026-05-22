@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/ayah.dart';
 import '../../audio/audio_provider.dart';
 
-/// Renders one ayah: Arabic text (RTL) with its number badge on the left.
-/// Subscribes to [audioProvider] via select() so only this tile rebuilds
-/// when its own highlight state changes — not the entire list.
+// ─── Arabic-Indic numeral helper ──────────────────────────────────────────────
+// The King Fahad Mushaf uses Arabic-Indic numerals (١٢٣) inside the
+// ornamental end markers, matching the printed Mushaf exactly.
+
+String _toArabicIndic(int n) {
+  const digits = '٠١٢٣٤٥٦٧٨٩';
+  return n.toString().split('').map((c) => digits[int.parse(c)]).join();
+}
+
+/// Renders one ayah in King Fahad Mushaf complex style:
+///   • Warm cream (parchment) background with gold border
+///   • Arabic text justified RTL in UthmanicHafs, line height 2.2
+///   • Ornamental ۝ end marker with Arabic-Indic verse number
+///   • Gold highlight border when the ayah is currently playing
+///   • Optional English translation below
 class AyahTile extends ConsumerWidget {
   const AyahTile({
     super.key,
     required this.ayah,
-    this.arabicFontSize = 26.0,
+    this.arabicFontSize = 28.0,
     this.translationText,
     this.onTap,
   });
@@ -28,89 +41,109 @@ class AyahTile extends ConsumerWidget {
           audio.surahNumber == ayah.surahNumber &&
           audio.currentAyahNumber == ayah.ayahNumber),
     );
-    final colors = Theme.of(context).colorScheme;
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Parchment / dark background
+    final tileBg = isDark
+        ? (isHighlighted
+            ? const Color(0xFF1E3A1E)
+            : const Color(0xFF161E16))
+        : (isHighlighted
+            ? const Color(0xFFF5EDD0)
+            : kMushafahCream);
+
+    final borderColor = isHighlighted ? kMushafahGoldLight : kMushafahGold;
+    final borderWidth = isHighlighted ? 1.5 : 0.8;
+
+    final arabicTextColor =
+        isDark ? Colors.white : const Color(0xFF1A1A1A);
+    final translationColor =
+        isDark ? Colors.white70 : const Color(0xFF4A4A4A);
+
+    // Arabic text with ornamental end marker appended inline
+    final arabicWithMarker =
+        '${ayah.textUthmani}\u202F\u06DD${_toArabicIndic(ayah.ayahNumber)}';
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(3),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: isHighlighted
-              ? colors.primaryContainer.withValues(alpha: 0.4)
-              : colors.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isHighlighted ? colors.primary : colors.outlineVariant,
-            width: isHighlighted ? 1.5 : 0.5,
-          ),
+          color: tileBg,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: borderColor, width: borderWidth),
+          boxShadow: isHighlighted
+              ? [
+                  BoxShadow(
+                    color: kMushafahGold.withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Ayah number badge
-            _AyahNumberBadge(number: ayah.ayahNumber, colors: colors),
-            const SizedBox(width: 12),
-            // Arabic text + optional translation — RTL, full-width
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    ayah.textUthmani,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontFamily: kArabicFont,
-                      fontSize: arabicFontSize,
-                      height: 2.0, // generous line height for diacritics
-                      color: colors.onSurface,
-                    ),
-                  ),
-                  if (translationText != null) ...[
-                    const SizedBox(height: 8),
+            // ── Arabic text block ────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+              child: Text(
+                arabicWithMarker,
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.justify,
+                style: TextStyle(
+                  fontFamily: kArabicFont,
+                  fontSize: arabicFontSize,
+                  height: 2.2, // accommodates stacked tashkeel
+                  color: arabicTextColor,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+
+            // ── Translation (optional) ───────────────────────────────────
+            if (translationText != null) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 1, right: 1),
+                child: Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  color: kMushafahGold.withValues(alpha: 0.4),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Verse reference label
                     Text(
-                      translationText!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.5,
-                        color: colors.onSurfaceVariant,
+                      '${ayah.surahNumber}:${ayah.ayahNumber}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: kMushafahGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        translationText!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.6,
+                          color: translationColor,
+                        ),
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
+            ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AyahNumberBadge extends StatelessWidget {
-  const _AyahNumberBadge({required this.number, required this.colors});
-
-  final int number;
-  final ColorScheme colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: colors.primaryContainer,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '$number',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: colors.onPrimaryContainer,
         ),
       ),
     );

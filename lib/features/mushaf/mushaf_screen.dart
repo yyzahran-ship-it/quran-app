@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/surah.dart';
@@ -162,22 +163,26 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final themeMode = ref.watch(themeProvider);
     final isLight = themeMode != AppThemeMode.dark &&
         themeMode != AppThemeMode.inverted;
-    const offWhite = Color(0xFFFAF8F5);
-    final bgColor = isLight ? offWhite : null;
+    final bgColor = isLight ? kMushafahCream : null;
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        // King Fahad Mushaf: forest-green AppBar with gold accent bottom border
+        backgroundColor: kMushafahGreen,
+        foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         toolbarHeight: 44,
+        shape: const Border(
+          bottom: BorderSide(color: kMushafahGold, width: 2),
+        ),
         title: _AppBarTitle(state: state),
         titleSpacing: 16,
         actions: [
           PopupMenuButton<_AppAction>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             tooltip: 'More options',
             onSelected: _handleAction,
             itemBuilder: (_) => [
@@ -331,7 +336,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final juzNumber =
         state.ayahs.isNotEmpty ? state.ayahs.first.juzNumber : null;
 
+    final isDarkFallback = Theme.of(context).brightness == Brightness.dark;
     return Container(
+      color: isDarkFallback ? null : kMushafahCream,
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -576,35 +583,33 @@ class _PageDivider extends StatelessWidget {
 
 class _SurahBanner extends StatelessWidget {
   const _SurahBanner({required this.surah});
-
   final Surah surah;
-
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
+      // Outer gold border — King Fahad Mushaf double-frame style
       decoration: BoxDecoration(
-        border: Border.all(color: colors.outline, width: 1.5),
-        borderRadius: BorderRadius.circular(3),
+        color: isDark ? const Color(0xFF1A2A1A) : kMushafahCream,
+        border: Border.all(color: kMushafahGold, width: 2),
       ),
       child: Container(
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          border: Border.all(
-              color: colors.outline.withValues(alpha: 0.4), width: 0.5),
-          borderRadius: BorderRadius.circular(1),
+          border: Border.all(color: kMushafahGoldLight, width: 0.8),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Text(
           surah.nameArabic,
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: kArabicFont,
-            fontSize: 26,
-            fontWeight: FontWeight.w600,
-            color: colors.onSurface,
+            fontSize: 30,
+            fontWeight: FontWeight.w400,
+            height: 1.8,
+            color: isDark ? Colors.white : const Color(0xFF1A1A1A),
           ),
         ),
       ),
@@ -616,19 +621,35 @@ class _SurahBanner extends StatelessWidget {
 
 class _BismillahLine extends StatelessWidget {
   const _BismillahLine();
-
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
-      textDirection: TextDirection.rtl,
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontFamily: kArabicFont,
-        fontSize: 22,
-        height: 2.0,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      children: [
+        // Gold ornamental divider
+        Row(
+          children: [
+            Expanded(child: Container(height: 0.8, color: kMushafahGold)),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Icon(Icons.brightness_1, size: 6, color: kMushafahGold),
+            ),
+            Expanded(child: Container(height: 0.8, color: kMushafahGold)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: kArabicFont,
+            fontSize: 24,
+            height: 2.0,
+            color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+          ),
+        ),
+      ],
     );
   }
 }
