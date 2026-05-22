@@ -277,11 +277,13 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         pageNum: state.currentPage,
         isDark: isDark,
         textFallback: textFallback,
+        nowPlayingBanner: _NowPlayingBanner(ayahs: state.ayahs, isDark: isDark),
         imageTranslations: showTx
             ? _PageTranslations(
                 ayahs: state.ayahs,
                 translations: state.translations,
                 secondTranslations: secondTranslations,
+                isDark: isDark,
               )
             : null,
       ),
@@ -333,6 +335,7 @@ class _MushafPageLoader extends StatefulWidget {
     required this.pageNum,
     required this.isDark,
     this.textFallback,
+    this.nowPlayingBanner,
     this.imageTranslations,
   });
 
@@ -340,6 +343,8 @@ class _MushafPageLoader extends StatefulWidget {
   final bool isDark;
   // Shown instead of the "offline" message when CDN is unreachable.
   final Widget? textFallback;
+  // Overlay shown at the bottom of the image when audio is playing.
+  final Widget? nowPlayingBanner;
   // Shown below the image when image loads successfully (and translations on).
   final Widget? imageTranslations;
 
@@ -485,12 +490,26 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
       );
     }
 
-    // Wrap with translations below if provided.
+    // Stack the "now playing" banner over the bottom of the image.
+    final imgWithBanner = widget.nowPlayingBanner != null
+        ? Stack(
+            children: [
+              img,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: widget.nowPlayingBanner!,
+              ),
+            ],
+          )
+        : img;
+
     if (widget.imageTranslations != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          img,
+          imgWithBanner,
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -500,7 +519,7 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
       );
     }
 
-    return img;
+    return imgWithBanner;
   }
 
   Widget _buildOfflineWidget(BuildContext context) {
@@ -533,6 +552,88 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
             label: const Text('Retry'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Now-playing banner (overlaid on bottom of page image while audio plays) ──
+//
+// Shows the current ayah key + first few words of Arabic text while audio
+// is active. Tapping it opens the action sheet for that ayah so the user
+// can access Tafsir, Bookmark, or Note without switching to text-fallback mode.
+
+class _NowPlayingBanner extends ConsumerWidget {
+  const _NowPlayingBanner({required this.ayahs, required this.isDark});
+
+  final List<Ayah> ayahs;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audio = ref.watch(audioProvider);
+    if (!audio.hasAudio) return const SizedBox.shrink();
+
+    final currentAyah = ayahs
+        .where((a) =>
+            a.surahNumber == audio.surahNumber &&
+            a.ayahNumber == audio.currentAyahNumber)
+        .firstOrNull;
+
+    if (currentAyah == null) return const SizedBox.shrink();
+
+    final colors = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: () => _showAyahActions(context, ref, currentAyah, isDark),
+      child: Container(
+        decoration: BoxDecoration(
+          // Semi-transparent so the page image is partially visible behind.
+          color: colors.primaryContainer.withAlpha(220),
+          border: Border(
+            top: BorderSide(
+              color: colors.primary.withAlpha(80),
+              width: 0.5,
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              audio.isPlaying ? Icons.volume_up : Icons.pause_circle_outline,
+              size: 16,
+              color: colors.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              currentAyah.verseKey,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: colors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                // Show first ~40 chars of Arabic so users can follow along.
+                currentAyah.textUthmani.length > 40
+                    ? '${currentAyah.textUthmani.substring(0, 40)}…'
+                    : currentAyah.textUthmani,
+                textDirection: TextDirection.rtl,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'UthmanicHafs',
+                  fontSize: 14,
+                  color: colors.onPrimaryContainer,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.menu_book_outlined, size: 16, color: colors.primary),
+          ],
+        ),
       ),
     );
   }
@@ -1076,18 +1177,21 @@ class _PageTranslations extends ConsumerWidget {
   const _PageTranslations({
     required this.ayahs,
     required this.translations,
+    required this.isDark,
     this.secondTranslations = const {},
   });
 
   final List<Ayah> ayahs;
   final Map<int, String> translations;
   final Map<int, String> secondTranslations;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
-    // dyslexia_font applies monospace + extra spacing to translation text only.
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
+    final audio = ref.watch(audioProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1095,53 +1199,83 @@ class _PageTranslations extends ConsumerWidget {
         const SizedBox(height: 4),
         for (final ayah in ayahs)
           if (translations[ayah.id] != null || secondTranslations[ayah.id] != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
+            _buildAyahRow(context, ref, ayah, audio, colors, dyslexiaFont),
+      ],
+    );
+  }
+
+  Widget _buildAyahRow(
+    BuildContext context,
+    WidgetRef ref,
+    Ayah ayah,
+    AudioState audio,
+    ColorScheme colors,
+    bool dyslexiaFont,
+  ) {
+    final isPlaying = audio.hasAudio &&
+        audio.surahNumber == ayah.surahNumber &&
+        audio.currentAyahNumber == ayah.ayahNumber;
+    final highlightColor = isDark
+        ? colors.primary.withAlpha(40)
+        : colors.primary.withAlpha(20);
+
+    return GestureDetector(
+      onTap: () => _showAyahActions(context, ref, ayah, isDark),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        color: isPlaying ? highlightColor : Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+        margin: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${ayah.verseKey}  ',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: isPlaying ? colors.primary : colors.primary.withAlpha(180),
+              ),
+            ),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${ayah.verseKey}  ',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: colors.primary,
+                  if (translations[ayah.id] != null)
+                    Text(
+                      translations[ayah.id]!,
+                      style: TextStyle(
+                        fontFamily: dyslexiaFont ? 'monospace' : null,
+                        fontSize: 13,
+                        height: dyslexiaFont ? 1.8 : 1.6,
+                        letterSpacing: dyslexiaFont ? 1.0 : null,
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (translations[ayah.id] != null)
-                          Text(
-                            translations[ayah.id]!,
-                            style: TextStyle(
-                              fontFamily: dyslexiaFont ? 'monospace' : null,
-                              fontSize: 13,
-                              height: dyslexiaFont ? 1.8 : 1.6,
-                              letterSpacing: dyslexiaFont ? 1.0 : null,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
-                        if (secondTranslations[ayah.id] != null)
-                          Text(
-                            secondTranslations[ayah.id]!,
-                            style: TextStyle(
-                              fontFamily: dyslexiaFont ? 'monospace' : null,
-                              fontSize: 13,
-                              fontStyle: FontStyle.italic,
-                              height: dyslexiaFont ? 1.8 : 1.6,
-                              letterSpacing: dyslexiaFont ? 1.0 : null,
-                              color: colors.onSurfaceVariant.withAlpha(180),
-                            ),
-                          ),
-                      ],
+                  if (secondTranslations[ayah.id] != null)
+                    Text(
+                      secondTranslations[ayah.id]!,
+                      style: TextStyle(
+                        fontFamily: dyslexiaFont ? 'monospace' : null,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                        height: dyslexiaFont ? 1.8 : 1.6,
+                        letterSpacing: dyslexiaFont ? 1.0 : null,
+                        color: colors.onSurfaceVariant.withAlpha(180),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
-      ],
+            if (isPlaying)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Icon(Icons.volume_up_rounded,
+                    size: 14, color: colors.primary),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
