@@ -1060,7 +1060,7 @@ class _AppBarTitle extends StatelessWidget {
 
 // ─── Translation list below King Fahad page image ────────────────────────────
 
-class _PageTranslations extends StatelessWidget {
+class _PageTranslations extends ConsumerWidget {
   const _PageTranslations({
     required this.ayahs,
     required this.translations,
@@ -1070,8 +1070,10 @@ class _PageTranslations extends StatelessWidget {
   final Map<int, String> translations;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    // dyslexia_font applies monospace + extra spacing to translation text only.
+    final dyslexiaFont = ref.watch(dyslexiaFontProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1096,8 +1098,10 @@ class _PageTranslations extends StatelessWidget {
                     child: Text(
                       translations[ayah.id]!,
                       style: TextStyle(
+                        fontFamily: dyslexiaFont ? 'monospace' : null,
                         fontSize: 13,
-                        height: 1.6,
+                        height: dyslexiaFont ? 1.8 : 1.6,
+                        letterSpacing: dyslexiaFont ? 1.0 : null,
                         color: colors.onSurfaceVariant,
                       ),
                     ),
