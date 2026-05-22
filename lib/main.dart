@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/services/arabic_font_service.dart';
 import 'core/theme/theme_provider.dart';
 import 'data/repositories/quran_repository.dart';
 import 'data/sources/local/quran_seeder.dart';
@@ -57,6 +58,9 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
       final results = await Future.wait([
         QuranSeeder(db).seedIfNeeded(),
         hasSeenOnboarding(),
+        // Load KFGQPC font from cache if available (instant).
+        // On first install, starts a background download and returns false.
+        ArabicFontService.tryLoadCached(),
       ]);
       if (mounted) {
         setState(() {
@@ -64,6 +68,8 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
           _ready = true;
         });
       }
+      // results[2] is the font-loaded flag — no action needed;
+      // if true the font was overridden via FontLoader already.
     } catch (_) {
       // On any error, still proceed to the app so it doesn't stay stuck.
       if (mounted) setState(() => _ready = true);
