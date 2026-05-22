@@ -242,29 +242,29 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final isDark = themeMode == AppThemeMode.dark ||
         themeMode == AppThemeMode.inverted;
 
-    // Translations shown as numbered list below the page image when enabled.
     final showTx = state.showTranslation && state.translations.isNotEmpty;
+
+    // Text-based fallback (used when CDN is unreachable) includes translations
+    // inline, so _PageTranslations is only attached to the image path.
+    final textFallback = _TextFallbackView(
+      ayahs: state.ayahs,
+      surahFor: state.surahFor,
+      translations: showTx ? state.translations : {},
+      isDark: isDark,
+    );
 
     return SingleChildScrollView(
       controller: _scrollController,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _MushafPageLoader(
-            pageNum: state.currentPage,
-            isDark: isDark,
-          ),
-          if (showTx) ...[
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: _PageTranslations(
+      child: _MushafPageLoader(
+        pageNum: state.currentPage,
+        isDark: isDark,
+        textFallback: textFallback,
+        imageTranslations: showTx
+            ? _PageTranslations(
                 ayahs: state.ayahs,
                 translations: state.translations,
-              ),
-            ),
-          ],
-        ],
+              )
+            : null,
       ),
     );
   }
@@ -310,10 +310,19 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 // Successfully downloaded pages are written to the temp-directory cache.
 
 class _MushafPageLoader extends StatefulWidget {
-  const _MushafPageLoader({required this.pageNum, required this.isDark});
+  const _MushafPageLoader({
+    required this.pageNum,
+    required this.isDark,
+    this.textFallback,
+    this.imageTranslations,
+  });
 
   final int pageNum;
   final bool isDark;
+  // Shown instead of the "offline" message when CDN is unreachable.
+  final Widget? textFallback;
+  // Shown below the image when image loads successfully (and translations on).
+  final Widget? imageTranslations;
 
   @override
   State<_MushafPageLoader> createState() => _MushafPageLoaderState();
@@ -420,7 +429,7 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
     }
 
     if (_failed || _bytes == null) {
-      return _buildOfflineWidget(context);
+      return widget.textFallback ?? _buildOfflineWidget(context);
     }
 
     Widget img = Image.memory(
@@ -439,6 +448,21 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
            0,  0,  0, 1,   0,
         ]),
         child: img,
+      );
+    }
+
+    // Wrap with translations below if provided.
+    if (widget.imageTranslations != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          img,
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: widget.imageTranslations!,
+          ),
+        ],
       );
     }
 
@@ -476,6 +500,192 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Arabic-Indic numeral helper ─────────────────────────────────────────────
+
+// Converts e.g. 255 → ٢٥٥ — used in ayah end markers.
+String _toArabicNumerals(int n) {
+  const e = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return n.toString().split('').map((d) => e[int.parse(d)]).join();
+}
+
+// ─── Text fallback view (used when CDN images are unreachable) ─────────────────
+//
+// Renders page ayahs as flowing Uthmanic Arabic text using the bundled font.
+// Works fully offline — text comes from the local SQLite DB.
+
+class _TextFallbackView extends StatelessWidget {
+  const _TextFallbackView({
+    required this.ayahs,
+    required this.surahFor,
+    required this.translations,
+    required this.isDark,
+  });
+
+  final List<Ayah> ayahs;
+  final Surah? Function(int) surahFor;
+  final Map<int, String> translations;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    if (ayahs.isEmpty) return const SizedBox.shrink();
+
+    final children = <Widget>[];
+
+    // Small banner so user knows why they're seeing text instead of the scan.
+    children.add(
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        child: Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 13, color: colors.outline),
+            const SizedBox(width: 6),
+            Text(
+              'Page image unavailable — showing text',
+              style: TextStyle(fontSize: 11, color: colors.outline),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    int lastSurah = -1;
+    for (final ayah in ayahs) {
+      if (ayah.surahNumber != lastSurah) {
+        lastSurah = ayah.surahNumber;
+        final surah = surahFor(ayah.surahNumber);
+        children.add(_TextSurahHeader(surah: surah, colors: colors));
+        if (surah != null && surah.bismillahPre) {
+          children.add(_TextBismillah(colors: colors));
+        }
+      }
+      children.add(_TextAyahLine(
+        ayah: ayah,
+        translation: translations[ayah.id],
+        colors: colors,
+      ));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _TextSurahHeader extends StatelessWidget {
+  const _TextSurahHeader({required this.surah, required this.colors});
+
+  final Surah? surah;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            surah?.nameArabic ?? '',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'UthmanicHafs',
+              fontSize: 22,
+              height: 1.8,
+              color: colors.onSurface,
+            ),
+          ),
+          if (surah != null)
+            Text(
+              surah!.nameSimple,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: colors.outline),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TextBismillah extends StatelessWidget {
+  const _TextBismillah({required this.colors});
+
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.rtl,
+        style: TextStyle(
+          fontFamily: 'UthmanicHafs',
+          fontSize: 19,
+          height: 2.0,
+          color: colors.onSurface,
+        ),
+      ),
+    );
+  }
+}
+
+class _TextAyahLine extends StatelessWidget {
+  const _TextAyahLine({
+    required this.ayah,
+    required this.translation,
+    required this.colors,
+  });
+
+  final Ayah ayah;
+  final String? translation;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    // U+06DD = ARABIC END OF AYAH circle glyph + Arabic-Indic ayah number
+    final marker = '۝${_toArabicNumerals(ayah.ayahNumber)}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '${ayah.textUthmani} $marker',
+          textAlign: TextAlign.right,
+          textDirection: TextDirection.rtl,
+          style: TextStyle(
+            fontFamily: 'UthmanicHafs',
+            fontSize: 21,
+            height: 2.2,
+            color: colors.onSurface,
+          ),
+        ),
+        if (translation != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '${ayah.verseKey}  $translation',
+              style: TextStyle(
+                fontSize: 12,
+                color: colors.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
