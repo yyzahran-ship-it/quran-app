@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
+import '../audio/audio_provider.dart';
 import 'fsrs.dart';
 import 'hifz_provider.dart';
 
@@ -12,10 +13,20 @@ class HifzReviewScreen extends ConsumerStatefulWidget {
 }
 
 class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
+  // Session-local toggle — persisted only while this screen is open.
+  bool _audioMode = false;
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(hifzProvider.notifier).startSession());
+  }
+
+  // Play the audio for the current review card.
+  void _playCurrentCard(ReviewItem item) {
+    ref
+        .read(audioProvider.notifier)
+        .playAyah(item.ayah.surahNumber, item.ayah.ayahNumber);
   }
 
   @override
@@ -23,23 +34,58 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
     final session = ref.watch(hifzProvider);
     final colors = Theme.of(context).colorScheme;
 
+    // Whenever audio mode is on and a new (unrevealed) card appears, auto-play.
+    ref.listen<HifzSession>(hifzProvider, (prev, next) {
+      if (_audioMode &&
+          next.hasCards &&
+          !next.done &&
+          !next.revealed &&
+          next.current != null) {
+        // Only auto-play when the card index actually changed (or it's the
+        // first card) — avoids re-triggering on unrelated state changes.
+        final prevIndex = prev?.currentIndex ?? -1;
+        if (next.currentIndex != prevIndex) {
+          _playCurrentCard(next.current!);
+        }
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Review'),
-        actions: session.hasCards && !session.done
-            ? [
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Center(
-                    child: Text(
-                      '${session.currentIndex + 1} / ${session.queue.length}',
-                      style: TextStyle(
-                          color: colors.onSurfaceVariant, fontSize: 13),
-                    ),
-                  ),
+        actions: [
+          // Audio mode toggle — always visible so the user can switch any time.
+          IconButton(
+            tooltip: _audioMode ? 'Audio mode: ON' : 'Audio mode: OFF',
+            icon: Icon(
+              Icons.headphones,
+              color: _audioMode ? colors.primary : colors.onSurfaceVariant,
+            ),
+            onPressed: () {
+              setState(() => _audioMode = !_audioMode);
+              // If we just turned audio mode on and there is an unrevealed card,
+              // start playing immediately.
+              if (_audioMode &&
+                  session.hasCards &&
+                  !session.done &&
+                  !session.revealed &&
+                  session.current != null) {
+                _playCurrentCard(session.current!);
+              }
+            },
+          ),
+          if (session.hasCards && !session.done)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  '${session.currentIndex + 1} / ${session.queue.length}',
+                  style: TextStyle(
+                      color: colors.onSurfaceVariant, fontSize: 13),
                 ),
-              ]
-            : null,
+              ),
+            ),
+        ],
       ),
       body: _buildBody(session, colors),
     );
@@ -88,7 +134,8 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Arabic text card.
+                // Arabic text card — replaced by audio hint when audio mode is on
+                // and the card has not yet been revealed.
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -101,12 +148,14 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
                           text: ayah.textUthmani,
                           colors: colors,
                         )
-                      : _HiddenAyah(
-                          hint: _firstWord(ayah.textUthmani),
-                          colors: colors,
-                          onReveal: () =>
-                              ref.read(hifzProvider.notifier).reveal(),
-                        ),
+                      : (_audioMode
+                          ? _AudioModeHint(colors: colors)
+                          : _HiddenAyah(
+                              hint: _firstWord(ayah.textUthmani),
+                              colors: colors,
+                              onReveal: () =>
+                                  ref.read(hifzProvider.notifier).reveal(),
+                            )),
                 ),
                 if (session.revealed) ...[
                   const SizedBox(height: 8),
@@ -154,6 +203,39 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
 }
 
 // ─── Sub-widgets ──────────────────────────────────────────────────────────────
+
+/// Shown in place of the Arabic text when audio mode is active and the card
+/// has not yet been revealed.  The user is expected to listen to the audio and
+/// recall the ayah before tapping "Show Ayah".
+class _AudioModeHint extends StatelessWidget {
+  const _AudioModeHint({required this.colors});
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 16),
+        Icon(
+          Icons.headphones,
+          size: 64,
+          color: colors.primary,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Listen carefully…',
+          style: TextStyle(
+            fontSize: 16,
+            color: colors.onSurface,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+}
 
 class _HiddenAyah extends StatelessWidget {
   const _HiddenAyah({

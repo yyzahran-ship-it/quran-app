@@ -1,5 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../mushaf/mushaf_provider.dart';
 import 'bookmarks_provider.dart';
 
@@ -34,11 +40,17 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
       appBar: AppBar(
         title: const Text('Bookmarks'),
         actions: [
-          if (allBookmarks.isNotEmpty)
+          if (allBookmarks.isNotEmpty) ...[
+            IconButton(
+              tooltip: 'Export bookmarks',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => _exportBookmarks(context, allBookmarks),
+            ),
             TextButton(
               onPressed: () => _confirmClearAll(context, ref),
               child: const Text('Clear all'),
             ),
+          ],
         ],
       ),
       body: allBookmarks.isEmpty
@@ -168,6 +180,49 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
     if (diff.inDays == 1) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays} days ago';
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  /// Build a date string in YYYY-MM-DD format for the JSON export.
+  String _isoDate(DateTime dt) {
+    return '${dt.year}-'
+        '${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Export all bookmarks as a JSON file and open the system share sheet.
+  Future<void> _exportBookmarks(
+      BuildContext context, List<dynamic> bookmarks) async {
+    try {
+      // Build the JSON payload.
+      final list = bookmarks.map((bm) {
+        return {
+          'verse': bm.verseKey,             // e.g. "2:255"
+          'surah': bm.surahNumber,
+          'ayah': bm.ayahNumber,
+          'tag': bm.tag ?? '',
+          'saved': _isoDate(bm.createdAt),  // e.g. "2026-05-22"
+        };
+      }).toList();
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert(list);
+
+      // Write to a temp file.
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/quran_bookmarks.json');
+      await file.writeAsString(jsonString);
+
+      // Open system share sheet.
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'application/json')],
+        subject: 'Quran Bookmarks',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _confirmClearAll(BuildContext context, WidgetRef ref) async {
