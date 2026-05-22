@@ -37,6 +37,7 @@ dependencies:
   # Local database (SQLite, type-safe)
   drift: ^2.23.1
   drift_flutter: ^0.2.4
+  sqlite3: ^2.9.4
   sqlite3_flutter_libs: ^0.5.30
 
   # Audio playback

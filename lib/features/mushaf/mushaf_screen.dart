@@ -21,7 +21,7 @@ import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
-import 'page_line_provider.dart';
+import 'ayah_coords_provider.dart';
 import 'second_translation_provider.dart';
 import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
@@ -964,67 +964,51 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
     if (mounted) setState(() => _highlightedId = null);
   }
 
-  // ── King Fahad Mushaf 15-line page geometry ──────────────────────────────
-  // Approximate fractions of image height where the text area sits.
-  // Derived from inspecting the qurancdn.com page images.
-  static const _textTop    = 0.076; // measured from actual King Fahad Mushaf images
-  static const _textBottom = 0.932; // averaged across pages 3,100,200,300
-  static const _totalLines = 15;
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final shadeColor = colors.primary.withAlpha(55);
-    final lineAsync = ref.watch(pageLineProvider(widget.page));
 
-    // Use precise line data when available; proportional fallback otherwise.
-    final lineMap = lineAsync.valueOrNull;
-    final hasLineData = lineMap != null && lineMap.isNotEmpty;
+    // ── Primary: pixel-precise coords from bundled KingFahad1.db ────────────
+    final coordsAsync = ref.watch(ayahCoordsProvider(widget.page));
+    final coordsMap   = coordsAsync.valueOrNull;
 
-    if (!hasLineData) {
-      // ── Proportional fallback (offline / first load) ─────────────────────
-      return Column(
-        children: [
-          for (final ayah in widget.ayahs)
-            Expanded(
-              flex: ayah.textUthmani.length.clamp(50, 99999),
+    if (coordsMap != null && coordsMap.isNotEmpty) {
+      return LayoutBuilder(builder: (ctx, box) {
+        final W = box.maxWidth;
+        final H = box.maxHeight;
+        final xScale = W / kDbImageWidth;
+        final yScale = H / kDbImageHeight;
+
+        // Build all Positioned zones as flat list — one per ayah-line segment.
+        final zones = <Widget>[];
+        for (final ayah in widget.ayahs) {
+          final key   = ayah.surahNumber * 10000 + ayah.ayahNumber;
+          final rects = coordsMap[key];
+          if (rects == null) continue;
+          for (final r in rects) {
+            zones.add(Positioned(
+              left:   r.left   * xScale,
+              top:    r.top    * yScale,
+              width:  r.width  * xScale,
+              height: r.height * yScale,
               child: _zone(ayah, shadeColor),
-            ),
-        ],
-      );
+            ));
+          }
+        }
+        return Stack(children: zones);
+      });
     }
 
-    // ── Precise line-number layout ───────────────────────────────────────────
-    // Use LayoutBuilder so we know the rendered image height at build time.
-    return LayoutBuilder(
-      builder: (ctx, box) {
-        final imgH   = box.maxHeight;
-        final textH  = imgH * (_textBottom - _textTop);
-        final lineH  = textH / _totalLines;
-        final topOff = imgH * _textTop;
-
-        return Stack(
-          children: [
-            for (final ayah in widget.ayahs)
-              Builder(builder: (_) {
-                final pos = lineMap[ayah.id];
-                if (pos == null) return const SizedBox.shrink();
-
-                // Clamp in case the API returns a line outside 1–15.
-                final s = (pos.start - 1).clamp(0, _totalLines - 1);
-                final e = pos.end.clamp(1, _totalLines);
-
-                return Positioned(
-                  top:    topOff + s * lineH,
-                  height: (e - s) * lineH,
-                  left: 0,
-                  right: 0,
-                  child: _zone(ayah, shadeColor),
-                );
-              }),
-          ],
-        );
-      },
+    // ── Fallback: proportional zones based on character count ────────────────
+    return Column(
+      children: [
+        for (final ayah in widget.ayahs)
+          Expanded(
+            flex: ayah.textUthmani.length.clamp(50, 99999),
+            child: _zone(ayah, shadeColor),
+          ),
+      ],
     );
   }
 
