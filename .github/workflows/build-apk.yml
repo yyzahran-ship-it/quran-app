@@ -60,31 +60,62 @@ jobs:
 
       - name: Bundle King Fahad Mushaf page images
         run: |
-          # Install WebP encoder for compact, lossless-quality image bundling.
-          sudo apt-get install -y --quiet webp
           mkdir -p assets/quran/pages
-          FAILED=0
-          for i in $(seq 1 604); do
-            NNN=$(printf '%03d' $i)
-            TMP="/tmp/mushaf_page_${NNN}.png"
-            DEST="assets/quran/pages/page${NNN}.webp"
-            if curl -fsSL --max-time 40 \
-              "https://cdn.qurancdn.com/images/quran/pages/page${NNN}.png" \
-              -o "$TMP" 2>/dev/null; then
-              # q=88 keeps text sharp while halving PNG file size on average.
-              if cwebp -q 88 -quiet "$TMP" -o "$DEST" 2>/dev/null; then
-                rm -f "$TMP"
-              else
-                # cwebp failed — keep original PNG as fallback.
-                mv "$TMP" "assets/quran/pages/page${NNN}.png"
-              fi
-            else
-              echo "Warning: failed to download page ${NNN}"
-              FAILED=$((FAILED + 1))
+          sudo apt-get install -y --quiet webp
+
+          # ── Diagnostic: test CDN access before the full loop ──────────────
+          echo "=== CDN access test ==="
+          HTTP=$(curl -o /tmp/p001.png -w "%{http_code}" -sSL --max-time 15 \
+            "https://cdn.qurancdn.com/images/quran/pages/page001.png" 2>&1 || true)
+          SIZE=$(stat -c%s /tmp/p001.png 2>/dev/null || echo 0)
+          echo "cdn.qurancdn.com → HTTP ${HTTP}, bytes: ${SIZE}"
+
+          # Pick the working base URL (CDN direct, or Quran.com static bucket).
+          CDN_URLS=(
+            "https://cdn.qurancdn.com/images/quran/pages/page"
+            "https://qurancdn.com/images/quran/pages/page"
+            "https://images.quran.com/images/quran/pages/page"
+            "https://static.qurancdn.com/images/quran/pages/page"
+          )
+
+          WORKING_BASE=""
+          for BASE in "${CDN_URLS[@]}"; do
+            echo "Testing: ${BASE}001.png"
+            HTTP=$(curl -o /tmp/test_p.png -w "%{http_code}" -sSL --max-time 15 \
+              "${BASE}001.png" 2>&1 || true)
+            SZ=$(stat -c%s /tmp/test_p.png 2>/dev/null || echo 0)
+            echo "  → HTTP ${HTTP}, ${SZ} bytes"
+            if [ "$SZ" -gt 10000 ]; then
+              WORKING_BASE="$BASE"
+              echo "  ✓ Using this CDN"
+              break
             fi
           done
-          COUNT=$(ls assets/quran/pages/page*.* 2>/dev/null | wc -l)
-          echo "Bundled ${COUNT}/604 pages (${FAILED} download failures)"
+
+          if [ -z "$WORKING_BASE" ]; then
+            echo "ERROR: No CDN is reachable. Mushaf pages will not be bundled."
+            echo "Run the 'Setup Mushaf Pages Branch' workflow once to populate"
+            echo "the mushaf-pages branch, then re-run this build."
+            # Do not exit 1 — the app has a text fallback so the APK still works.
+          else
+            # ── Download all 604 pages from the working CDN ─────────────────
+            FAILED=0
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i)
+              TMP="/tmp/mp_${NNN}.png"
+              DEST_WEBP="assets/quran/pages/page${NNN}.webp"
+              if curl -fsSL --max-time 40 "${WORKING_BASE}${NNN}.png" \
+                -o "$TMP" 2>/dev/null; then
+                cwebp -q 88 -quiet "$TMP" -o "$DEST_WEBP" 2>/dev/null \
+                  || cp "$TMP" "assets/quran/pages/page${NNN}.png"
+                rm -f "$TMP"
+              else
+                FAILED=$((FAILED + 1))
+              fi
+            done
+            COUNT=$(ls assets/quran/pages/page*.{webp,png} 2>/dev/null | wc -l)
+            echo "=== Bundled ${COUNT}/604 pages (${FAILED} failures) ==="
+          fi
 
       - name: Get dependencies
         run: flutter pub get
@@ -106,8 +137,8 @@ jobs:
           path: build/app/outputs/flutter-apk/app-*-debug.apk
           retention-days: 7
 
-      - name: Upload build log (on failure)
-        if: failure()
+      - name: Upload build log (always)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
