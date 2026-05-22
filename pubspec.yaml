@@ -69,6 +69,7 @@ flutter:
 
   assets:
     - assets/quran/      # Tanzil Quran text
+    - assets/quran/pages/ # King Fahad Mushaf page images (bundled by CI)
     - assets/icon/       # App icon (used in splash screen)
     - assets/fonts/      # Arabic Quran font
 

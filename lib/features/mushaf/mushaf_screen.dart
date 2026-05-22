@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -363,7 +364,26 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
 
     final padded = page.toString().padLeft(3, '0');
 
-    // 1. Serve from disk cache (instant, works fully offline).
+    // 1. Load from bundled assets (no network, always works).
+    //    CI downloads all 604 pages at build time; they ship inside the APK.
+    //    Try both .webp (preferred, smaller) and .png (PNG fallback if webp
+    //    conversion failed in CI).
+    for (final ext in ['webp', 'png']) {
+      try {
+        final data = await rootBundle.load(
+            'assets/quran/pages/page$padded.$ext');
+        final bytes = data.buffer.asUint8List();
+        if (bytes.length > 5 * 1024 && mounted && _loadedFor == page) {
+          setState(() {
+            _bytes = bytes;
+            _loading = false;
+          });
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Serve from on-device disk cache (pages saved from previous CDN fetch).
     try {
       final file = await _cacheFileFor(page);
       if (await file.exists() && file.lengthSync() > 10 * 1024) {
@@ -378,7 +398,7 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
       }
     } catch (_) {}
 
-    // 2. Download from CDN, trying each base URL in order.
+    // 3. Download from CDN, trying each base URL in order.
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
@@ -394,7 +414,6 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
             resp.data != null &&
             resp.data!.length > 10 * 1024) {
           final bytes = Uint8List.fromList(resp.data!);
-          // Persist to cache for next time (and for offline use).
           try {
             await (await _cacheFileFor(page)).writeAsBytes(bytes);
           } catch (_) {}
@@ -409,7 +428,7 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
       } catch (_) {}
     }
 
-    // 3. Nothing worked — show offline message.
+    // 4. Nothing worked — show text fallback.
     if (mounted && _loadedFor == page) {
       setState(() {
         _loading = false;
