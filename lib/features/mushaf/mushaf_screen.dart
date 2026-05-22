@@ -16,6 +16,7 @@ import '../../domain/entities/surah.dart';
 import '../audio/audio_player_bar.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
+import '../audio/reciter_provider.dart';
 import '../bookmarks/bookmarks_provider.dart';
 import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
@@ -966,33 +967,41 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final shadeColor = colors.primary.withAlpha(55);
+    final colors     = Theme.of(context).colorScheme;
+    final tapShade   = colors.primary.withAlpha(55);
+    final playShade  = Colors.amber.withAlpha(80);
 
-    // ── Primary: pixel-precise coords from bundled KingFahad1.db ────────────
+    final audio      = ref.watch(audioProvider);
     final coordsAsync = ref.watch(ayahCoordsProvider(widget.page));
     final coordsMap   = coordsAsync.valueOrNull;
 
+    bool isPlaying(Ayah ayah) =>
+        (audio.isPlaying || audio.isLoading) &&
+        !audio.hasError &&
+        audio.surahNumber == ayah.surahNumber &&
+        audio.currentAyahNumber == ayah.ayahNumber;
+
+    // ── Primary: pixel-precise coords from bundled KingFahad1.db ────────────
     if (coordsMap != null && coordsMap.isNotEmpty) {
       return LayoutBuilder(builder: (ctx, box) {
-        final W = box.maxWidth;
-        final H = box.maxHeight;
+        final W      = box.maxWidth;
+        final H      = box.maxHeight;
         final xScale = W / kDbImageWidth;
         final yScale = H / kDbImageHeight;
 
-        // Build all Positioned zones as flat list — one per ayah-line segment.
         final zones = <Widget>[];
         for (final ayah in widget.ayahs) {
           final key   = ayah.surahNumber * 10000 + ayah.ayahNumber;
           final rects = coordsMap[key];
           if (rects == null) continue;
+          final playing = isPlaying(ayah);
           for (final r in rects) {
             zones.add(Positioned(
               left:   r.left   * xScale,
               top:    r.top    * yScale,
               width:  r.width  * xScale,
               height: r.height * yScale,
-              child: _zone(ayah, shadeColor),
+              child: _zone(ayah, tapShade, playShade, playing),
             ));
           }
         }
@@ -1006,20 +1015,24 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
         for (final ayah in widget.ayahs)
           Expanded(
             flex: ayah.textUthmani.length.clamp(50, 99999),
-            child: _zone(ayah, shadeColor),
+            child: _zone(ayah, tapShade, playShade, isPlaying(ayah)),
           ),
       ],
     );
   }
 
-  Widget _zone(Ayah ayah, Color shadeColor) {
+  Widget _zone(Ayah ayah, Color tapShade, Color playShade, bool playing) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTapDown: (d) => _tapPos = d.globalPosition,
       onTap: () => _onTap(ayah),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
-        color: _highlightedId == ayah.id ? shadeColor : Colors.transparent,
+        color: _highlightedId == ayah.id
+            ? tapShade
+            : playing
+                ? playShade
+                : Colors.transparent,
       ),
     );
   }
@@ -1909,8 +1922,12 @@ class _ReciterStrip extends ConsumerWidget {
   void _showPicker(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
       builder: (_) => const _ReciterPickerSheet(),
     );
@@ -1918,12 +1935,12 @@ class _ReciterStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final audio = ref.watch(audioProvider);
-    final colors = Theme.of(context).colorScheme;
-    final isPlaying = audio.isPlaying;
+    final audio       = ref.watch(audioProvider);
+    final qaReciters  = ref.watch(reciterListProvider).valueOrNull ?? [];
+    final colors      = Theme.of(context).colorScheme;
+    final isPlaying   = audio.isPlaying;
     final reciterSlug = audio.reciter;
-    final reciterName =
-        AudioRepository.reciters[reciterSlug] ?? reciterSlug;
+    final reciterName = reciterDisplayName(qaReciters, reciterSlug);
 
     return Semantics(
       label: 'Reciter: $reciterName. Tap to change reciter.',
@@ -1978,17 +1995,27 @@ class _ReciterPickerSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final audio = ref.watch(audioProvider);
-    final notifier = ref.read(audioProvider.notifier);
-    final colors = Theme.of(context).colorScheme;
-    final reciters = AudioRepository.reciters;
+    final audio        = ref.watch(audioProvider);
+    final recitersAsync = ref.watch(reciterListProvider);
+    final notifier     = ref.read(audioProvider.notifier);
+    final colors       = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            height: 4,
+            width: 36,
+            decoration: BoxDecoration(
+              color: colors.onSurfaceVariant.withAlpha(80),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
               'Select Reciter',
               style: TextStyle(
@@ -1999,7 +2026,82 @@ class _ReciterPickerSheet extends ConsumerWidget {
             ),
           ),
           const Divider(height: 1),
-          for (final entry in reciters.entries)
+          Flexible(
+            child: recitersAsync.when(
+              // ── Full QA list ──────────────────────────────────────────────
+              data: (qaList) {
+                if (qaList.isEmpty) {
+                  // QA returned empty — show hardcoded fallback
+                  return _hardcodedList(context, audio, notifier, colors);
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: qaList.length,
+                  itemBuilder: (_, i) {
+                    final r        = qaList[i];
+                    final selected = audio.reciter == r.relativePath;
+                    return ListTile(
+                      title: Text(r.name),
+                      subtitle: r.arabicName.isNotEmpty
+                          ? Text(
+                              r.arabicName,
+                              textDirection: TextDirection.rtl,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            )
+                          : null,
+                      trailing: selected
+                          ? Icon(Icons.check, color: colors.primary)
+                          : null,
+                      selected: selected,
+                      onTap: () {
+                        notifier.setReciter(r.relativePath);
+                        Navigator.of(context).pop();
+                      },
+                    );
+                  },
+                );
+              },
+              // ── Loading spinner ───────────────────────────────────────────
+              loading: () => SizedBox(
+                height: 160,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Loading reciters…',
+                        style: TextStyle(color: colors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // ── Network error: hardcoded fallback ────────────────────────
+              error: (_, __) =>
+                  _hardcodedList(context, audio, notifier, colors),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _hardcodedList(
+    BuildContext context,
+    AudioState audio,
+    AudioNotifier notifier,
+    ColorScheme colors,
+  ) =>
+      ListView(
+        shrinkWrap: true,
+        children: [
+          for (final entry in AudioRepository.reciters.entries)
             ListTile(
               title: Text(entry.value),
               trailing: audio.reciter == entry.key
@@ -2010,11 +2112,8 @@ class _ReciterPickerSheet extends ConsumerWidget {
                 Navigator.of(context).pop();
               },
             ),
-          const SizedBox(height: 8),
         ],
-      ),
-    );
-  }
+      );
 }
 
 class _PageNav extends StatelessWidget {
