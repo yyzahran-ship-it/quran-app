@@ -60,17 +60,20 @@ const _kBaseTextTheme = TextTheme(
   bodySmall: TextStyle(fontSize: 14, height: 1.5),
 );
 
-// ─── Light theme (Mushaf parchment) ──────────────────────────────────────────
+// ─── Light theme (Mushaf white — matches the printed page image background) ───
 
 final appThemeLight = ThemeData(
   useMaterial3: true,
   colorSchemeSeed: _kSeedColor,
   brightness: Brightness.light,
-  scaffoldBackgroundColor: kMushafahCream,
+  scaffoldBackgroundColor: Colors.white,
   textTheme: _kBaseTextTheme,
   appBarTheme: const AppBarTheme(
-    backgroundColor: kMushafahGreen,
-    foregroundColor: Colors.white,
+    // White AppBar matches the King Fahad Mushaf page header style
+    backgroundColor: Colors.white,
+    foregroundColor: Color(0xFF1A1A1A),
+    shadowColor: Colors.transparent,
+    surfaceTintColor: Colors.transparent,
     elevation: 0,
     scrolledUnderElevation: 0,
     titleTextStyle: TextStyle(

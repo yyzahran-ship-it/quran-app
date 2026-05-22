@@ -224,18 +224,17 @@ class SettingsScreen extends ConsumerWidget {
               'KFGQPC Uthmanic Script Hafs v8 — King Fahad Quran Printing Complex',
             ),
           ),
-          // Live font preview tile
+          // Live font preview — plain white background matching the Mushaf page
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Container(
               width: double.infinity,
               padding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               decoration: BoxDecoration(
-                color: const Color(0xFFFDF6E3),
+                color: Colors.white,
                 border: Border.all(
-                    color: const Color(0xFFB8860B), width: 1),
-                borderRadius: BorderRadius.circular(4),
+                    color: const Color(0xFFCCCCCC), width: 0.8),
               ),
               child: const Text(
                 'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
@@ -243,9 +242,9 @@ class SettingsScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'UthmanicHafs',
-                  fontSize: 24,
-                  height: 2.0,
-                  color: Color(0xFF1A1A1A),
+                  fontSize: 26,
+                  height: 2.4,
+                  color: Color(0xFF0D0D0D),
                 ),
               ),
             ),

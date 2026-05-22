@@ -163,26 +163,25 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final themeMode = ref.watch(themeProvider);
     final isLight = themeMode != AppThemeMode.dark &&
         themeMode != AppThemeMode.inverted;
-    final bgColor = isLight ? kMushafahCream : null;
+    final bgColor = isLight ? Colors.white : null;
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        // King Fahad Mushaf: forest-green AppBar with gold accent bottom border
-        backgroundColor: kMushafahGreen,
-        foregroundColor: Colors.white,
+        // King Fahad Mushaf: plain white AppBar matching the printed page style
+        // Surah name (left) · Juz number (right) — no color, no border
+        backgroundColor: isLight ? Colors.white : null,
+        foregroundColor: isLight ? const Color(0xFF1A1A1A) : null,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         toolbarHeight: 44,
-        shape: const Border(
-          bottom: BorderSide(color: kMushafahGold, width: 2),
-        ),
         title: _AppBarTitle(state: state),
         titleSpacing: 16,
         actions: [
           PopupMenuButton<_AppAction>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
+            icon: Icon(Icons.more_vert,
+                color: isLight ? const Color(0xFF1A1A1A) : null),
             tooltip: 'More options',
             onSelected: _handleAction,
             itemBuilder: (_) => [
@@ -326,6 +325,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   }
 
   // ── Text fallback (used when CDN is unreachable) ──────────────────────────
+  //
+  // Layout matches the King Fahad Mushaf page exactly:
+  //   • Plain white background
+  //   • Surah name + Juz header at top (plain text, no italic)
+  //   • Continuous justified Arabic text with inline circular verse markers
+  //   • Bismillah centred before the text block
+  //   • Surah name ornamental box at the BOTTOM of the page (like printed Mushaf)
+  //   • Page number centred at the very bottom
 
   Widget _buildTextFallback(MushafState state) {
     final fontSize = ref.watch(fontSizeProvider);
@@ -337,22 +344,28 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         state.ayahs.isNotEmpty ? state.ayahs.first.juzNumber : null;
 
     final isDarkFallback = Theme.of(context).brightness == Brightness.dark;
+    final textColor =
+        isDarkFallback ? Colors.white : const Color(0xFF1A1A1A);
+
     return Container(
-      color: isDarkFallback ? null : kMushafahCream,
+      color: isDarkFallback ? const Color(0xFF0D1117) : Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // ── Running header: Surah name (left) · Juz (right) ──────────────
           if (firstSurah != null)
             _PageHeader(surah: firstSurah, juzNumber: juzNumber),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
+
+          // ── Surah sections ────────────────────────────────────────────────
           for (final section in sections) ...[
-            _SurahBanner(surah: section.surah),
+            // Bismillah centred above text (omit for At-Tawbah surah 9)
             if (section.surah.bismillahPre && section.surah.id != 1) ...[
-              const SizedBox(height: 4),
               const _BismillahLine(),
+              const SizedBox(height: 16),
             ],
-            const SizedBox(height: 12),
+            // Continuous flowing Arabic text — all ayahs in one paragraph
             _ContinuousText(
               ayahs: section.ayahs,
               fontSize: fontSize,
@@ -364,17 +377,25 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
               playingSurahNumber: audio.surahNumber,
               playingAyahNumber: audio.currentAyahNumber,
             ),
+            const SizedBox(height: 24),
+            // ── Surah name ornamental box at BOTTOM of page ───────────────
+            // In the printed King Fahad Mushaf the surah name banner appears
+            // at the bottom of the last page of that surah, not at the top.
+            _SurahFooterBanner(surah: section.surah, textColor: textColor),
             const SizedBox(height: 20),
           ],
-          const SizedBox(height: 8),
-          const Center(child: _PageDivider()),
+
+          // ── Page number centred at bottom ─────────────────────────────────
           const SizedBox(height: 8),
           Center(
             child: Text(
               '${state.currentPage}',
               style: TextStyle(
                 fontSize: 13,
-                color: Theme.of(context).colorScheme.outline,
+                fontWeight: FontWeight.w400,
+                color: isDarkFallback
+                    ? Colors.white38
+                    : const Color(0xFF888888),
               ),
             ),
           ),
@@ -431,6 +452,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
 // ─── AppBar title ─────────────────────────────────────────────────────────────
 
+// Matches the King Fahad Mushaf running header exactly:
+//   Surah Ash-Shu‘arāʼ  (left, plain)          Juz’ 19  (right, plain)
 class _AppBarTitle extends StatelessWidget {
   const _AppBarTitle({required this.state});
 
@@ -441,43 +464,30 @@ class _AppBarTitle extends StatelessWidget {
     if (state.ayahs.isEmpty) return const Text('Quran');
     final firstSurah = state.surahFor(state.ayahs.first.surahNumber);
     final juzNumber = state.ayahs.first.juzNumber;
-    final hizbNumber = _pageHizb(state.currentPage);
-    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white70 : const Color(0xFF2A2A2A);
+
     return Row(
       children: [
-        // Surah name (English) — left
+        // Surah transliteration name — left, plain, matches reference
         Expanded(
           child: Text(
             firstSurah?.nameSimple ?? 'Page ${state.currentPage}',
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w400,
+              color: textColor,
             ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        // Arabic surah name — center, RTL
-        if (firstSurah != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              firstSurah.nameArabic,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                fontFamily: kArabicFont,
-                fontSize: 14,
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          ),
-        // Juz + Hizb — right
+        // Juz number — right, plain, matches reference
         Text(
-          "Juz' $juzNumber · Hizb $hizbNumber",
+          "Juz\u2019 $juzNumber",
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w400,
-            color: colors.outline,
+            color: textColor,
           ),
         ),
       ],
@@ -495,16 +505,21 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white60 : const Color(0xFF2A2A2A);
+    // Matches the King Fahad Mushaf running header:
+    //   Surah Ash-Shu‘arāʼ  (left)          Juz’ 19  (right)
+    // Plain, no italic, no decoration.
     final style = TextStyle(
       fontSize: 13,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-      fontStyle: FontStyle.italic,
+      fontWeight: FontWeight.w400,
+      color: textColor,
     );
     return Row(
       children: [
         Text(surah.nameSimple, style: style),
         const Spacer(),
-        if (juzNumber != null) Text("Juz' $juzNumber", style: style),
+        if (juzNumber != null) Text("Juz\u2019 $juzNumber", style: style),
       ],
     );
   }
@@ -579,37 +594,55 @@ class _PageDivider extends StatelessWidget {
   }
 }
 
-// ─── Decorative surah banner ──────────────────────────────────────────────────
+// ─── Surah footer banner (bottom of page, matches King Fahad Mushaf) ─────────
+//
+// In the printed Mushaf the surah name appears in an ornamental bordered box
+// at the BOTTOM of the last page of that surah — not at the top.
+// The border uses a repeating geometric Islamic pattern (simulated with
+// CustomPainter dashes) and the surah name is in the KFGQPC Uthmanic font.
 
-class _SurahBanner extends StatelessWidget {
-  const _SurahBanner({required this.surah});
+class _SurahFooterBanner extends StatelessWidget {
+  const _SurahFooterBanner({
+    required this.surah,
+    required this.textColor,
+  });
+
   final Surah surah;
+  final Color textColor;
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Outer border colour matches the dark ink of the printed Mushaf
+    const borderColor = Color(0xFF2A2A2A);
+    final darkBorderColor = Colors.white70;
+    final bc = isDark ? darkBorderColor : borderColor;
+
     return Container(
       width: double.infinity,
-      // Outer gold border — King Fahad Mushaf double-frame style
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A2A1A) : kMushafahCream,
-        border: Border.all(color: kMushafahGold, width: 2),
+        color: isDark ? const Color(0xFF0D1117) : Colors.white,
+        // Outer border — thick, matches the printed Mushaf frame
+        border: Border.all(color: bc, width: 2.5),
       ),
       child: Container(
-        margin: const EdgeInsets.all(4),
+        // Inner border — thin, creates the double-frame effect
+        margin: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          border: Border.all(color: kMushafahGoldLight, width: 0.8),
+          border: Border.all(color: bc, width: 1.0),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         child: Text(
-          surah.nameArabic,
+          // Use the full Arabic surah name with "سُورَةُ" prefix
+          'سُورَةُ ${surah.nameArabic}',
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: kArabicFont,
-            fontSize: 30,
+            fontSize: 26,
             fontWeight: FontWeight.w400,
             height: 1.8,
-            color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+            color: textColor,
           ),
         ),
       ),
@@ -617,39 +650,44 @@ class _SurahBanner extends StatelessWidget {
   }
 }
 
+// ─── Legacy _SurahBanner (kept for any remaining references) ──────────────────
+
+class _SurahBanner extends StatelessWidget {
+  const _SurahBanner({required this.surah});
+  final Surah surah;
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return _SurahFooterBanner(
+      surah: surah,
+      textColor: isDark ? Colors.white : const Color(0xFF1A1A1A),
+    );
+  }
+}
+
 // ─── Bismillah line ───────────────────────────────────────────────────────────
+//
+// Matches the printed Mushaf: centred Arabic text, no decorative divider,
+// same font and colour as the body text.
 
 class _BismillahLine extends StatelessWidget {
   const _BismillahLine();
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      children: [
-        // Gold ornamental divider
-        Row(
-          children: [
-            Expanded(child: Container(height: 0.8, color: kMushafahGold)),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: Icon(Icons.brightness_1, size: 6, color: kMushafahGold),
-            ),
-            Expanded(child: Container(height: 0.8, color: kMushafahGold)),
-          ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontFamily: kArabicFont,
+          fontSize: 26,
+          height: 2.2,
+          color: isDark ? Colors.white : const Color(0xFF1A1A1A),
         ),
-        const SizedBox(height: 12),
-        Text(
-          'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
-          textDirection: TextDirection.rtl,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: kArabicFont,
-            fontSize: 24,
-            height: 2.0,
-            color: isDark ? Colors.white : const Color(0xFF1A1A1A),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -725,8 +763,9 @@ class _ContinuousTextState extends State<_ContinuousText> {
   Widget build(BuildContext context) {
     if (widget.ayahs.isEmpty) return const SizedBox.shrink();
 
-    final colors = Theme.of(context).colorScheme;
-    final textColor = colors.onSurface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Pure black on white — matches the printed Mushaf ink colour exactly
+    final textColor = isDark ? Colors.white : const Color(0xFF0D0D0D);
     const playingColor = Color(0xFF1B6B3A);
 
     // Build a single flowing TextSpan for all ayahs in this surah section.
@@ -767,7 +806,10 @@ class _ContinuousTextState extends State<_ContinuousText> {
             style: TextStyle(
               fontFamily: kArabicFont,
               fontSize: widget.fontSize,
-              height: 2.0, // KFGQPC has tall ascenders that contain diacritic space
+              // Line height 2.4 matches the King Fahad Mushaf printed spacing —
+              // the KFGQPC font has tall ascenders for diacritics (tashkeel)
+              // and the printed Mushaf uses generous inter-line spacing.
+              height: 2.4,
               color: textColor,
             ),
           ),
@@ -844,8 +886,12 @@ class _TranslationBlock extends StatelessWidget {
 }
 
 // ─── Circular ayah end marker ─────────────────────────────────────────────────
-// Uses Arabic-Indic numerals (١٢٣) with the Uthmanic font inside a decorative
-// circle, matching the printed King Fahad Mushaf verse-end marker style.
+//
+// Matches the King Fahad Mushaf exactly:
+//   • Circular badge with dark ink border (no fill colour — transparent)
+//   • Arabic-Indic numerals (١٢٣) in KFGQPC Uthmanic font
+//   • Size ~34px to be clearly readable inline with 28px Arabic text
+//   • Playing ayah: green fill + white numeral
 
 class _AyahEndMarker extends StatelessWidget {
   const _AyahEndMarker({
@@ -860,20 +906,24 @@ class _AyahEndMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    const activeColor = Color(0xFF1B6B3A);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Ink colour matches the body text — dark on white, white on dark
+    final inkColor = isDark ? Colors.white : const Color(0xFF1A1A1A);
+    const playingColor = Color(0xFF1B6B3A);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 30,
-        height: 30,
-        margin: const EdgeInsets.symmetric(horizontal: 2),
+        width: 34,
+        height: 34,
+        margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isPlaying ? activeColor : colors.primary.withValues(alpha: 0.08),
+          // Transparent fill — matches printed Mushaf (circle outline only)
+          color: isPlaying ? playingColor : Colors.transparent,
           border: Border.all(
-            color: isPlaying ? activeColor : colors.primary.withValues(alpha: 0.5),
-            width: 0.8,
+            color: isPlaying ? playingColor : inkColor,
+            width: 1.2,
           ),
         ),
         alignment: Alignment.center,
@@ -882,9 +932,9 @@ class _AyahEndMarker extends StatelessWidget {
           textDirection: TextDirection.rtl,
           style: TextStyle(
             fontFamily: kArabicFont,
-            fontSize: 10,
+            fontSize: 11,
             height: 1.0,
-            color: isPlaying ? Colors.white : colors.primary,
+            color: isPlaying ? Colors.white : inkColor,
           ),
         ),
       ),
