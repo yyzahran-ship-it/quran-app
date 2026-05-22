@@ -969,7 +969,7 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
   Widget build(BuildContext context) {
     final colors     = Theme.of(context).colorScheme;
     final tapShade   = colors.primary.withAlpha(55);
-    final playShade  = Colors.amber.withAlpha(80);
+    final playShade  = const Color(0xFF4CAF50).withAlpha(100); // apple green
 
     final audio      = ref.watch(audioProvider);
     final coordsAsync = ref.watch(ayahCoordsProvider(widget.page));

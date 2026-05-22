@@ -40,7 +40,7 @@ class _ReciterRepo {
   _ReciterRepo(this._dio);
 
   final Dio _dio;
-  static const _cacheKey = 'qa_reciters_v1';
+  static const _cacheKey = 'qa_reciters_v2'; // v2: relaxed count filter
   static const _apiUrl   = 'https://quranicaudio.com/api/qaris';
 
   Future<List<QAReciter>> fetchReciters() async {
@@ -55,7 +55,7 @@ class _ReciterRepo {
     final resp = await _dio.get<List<dynamic>>(_apiUrl);
     final list = resp.data!
         .cast<Map<String, dynamic>>()
-        .where((r) => (r['count'] as int? ?? 0) == 6236) // full Quran only
+        .where((r) => (r['count'] as int? ?? 0) >= 6000) // full (or near-full) Quran
         .map(QAReciter.fromJson)
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
