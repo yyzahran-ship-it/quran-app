@@ -191,6 +191,13 @@ final appThemeInverted = ThemeData(
     foregroundColor: Colors.white,
     elevation: 0,
     scrolledUnderElevation: 0,
+    titleTextStyle: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+    iconTheme: IconThemeData(color: Colors.white),
+    actionsIconTheme: IconThemeData(color: Colors.white),
     shape: Border(
       bottom: BorderSide(color: kMushafahGold, width: 2),
     ),
@@ -206,5 +213,89 @@ final appThemeInverted = ThemeData(
   dividerTheme: const DividerThemeData(
     color: kMushafahGold,
     thickness: 0.5,
+  ),
+  colorScheme: const ColorScheme.dark(
+    surface: Colors.black,
+    onSurface: Colors.white,
+    onSurfaceVariant: Color(0xFFCCCCCC),
+  ),
+);
+
+// ─── High-contrast theme (white background, pure black text, thick borders) ───
+//
+// Designed for users with low vision or contrast sensitivity. Uses pure black
+// on white (WCAG AAA contrast ratio 21:1) with thick card borders for clarity.
+
+final appThemeHighContrast = ThemeData(
+  useMaterial3: true,
+  brightness: Brightness.light,
+  colorScheme: const ColorScheme.light(
+    primary: Colors.black,
+    onPrimary: Colors.white,
+    secondary: Colors.black,
+    onSecondary: Colors.white,
+    surface: Colors.white,
+    onSurface: Colors.black,
+    onSurfaceVariant: Colors.black,
+    outline: Colors.black,
+    outlineVariant: Colors.black,
+  ),
+  scaffoldBackgroundColor: Colors.white,
+  textTheme: _kBaseTextTheme.apply(
+    bodyColor: Colors.black,
+    displayColor: Colors.black,
+  ),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Colors.white,
+    foregroundColor: Colors.black,
+    elevation: 0,
+    scrolledUnderElevation: 0,
+    titleTextStyle: TextStyle(
+      color: Colors.black,
+      fontSize: 18,
+      fontWeight: FontWeight.w700,
+    ),
+    iconTheme: IconThemeData(color: Colors.black),
+    actionsIconTheme: IconThemeData(color: Colors.black),
+    shape: Border(
+      bottom: BorderSide(color: Colors.black, width: 3),
+    ),
+  ),
+  cardTheme: const CardThemeData(
+    color: Colors.white,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(4)),
+      side: BorderSide(color: Colors.black, width: 2.5),
+    ),
+  ),
+  dividerTheme: const DividerThemeData(
+    color: Colors.black,
+    thickness: 2,
+  ),
+  iconTheme: const IconThemeData(color: Colors.black),
+  listTileTheme: const ListTileThemeData(
+    iconColor: Colors.black,
+  ),
+  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+    backgroundColor: Colors.white,
+    selectedItemColor: Colors.black,
+    unselectedItemColor: Color(0xFF444444),
+    elevation: 0,
+  ),
+  sliderTheme: const SliderThemeData(
+    activeTrackColor: Colors.black,
+    thumbColor: Colors.black,
+    inactiveTrackColor: Color(0xFF888888),
+  ),
+  chipTheme: ChipThemeData(
+    backgroundColor: Colors.white,
+    labelStyle: const TextStyle(
+      fontSize: 11,
+      color: Colors.black,
+      fontWeight: FontWeight.w700,
+    ),
+    side: const BorderSide(color: Colors.black, width: 2),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   ),
 );

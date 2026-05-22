@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app_theme.dart';
 import 'package:flutter/material.dart';
 
-enum AppThemeMode { light, dark, inverted }
+enum AppThemeMode { light, dark, inverted, highContrast }
 
 class ThemeNotifier extends Notifier<AppThemeMode> {
   static const _key = 'theme_mode';
@@ -38,4 +38,5 @@ ThemeData themeDataFor(AppThemeMode mode) => switch (mode) {
       AppThemeMode.light => appThemeLight,
       AppThemeMode.dark => appThemeDark,
       AppThemeMode.inverted => appThemeInverted,
+      AppThemeMode.highContrast => appThemeHighContrast,
     };

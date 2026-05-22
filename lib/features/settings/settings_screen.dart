@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../core/theme/dyslexia_provider.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
 import '../mushaf/mushaf_provider.dart';
@@ -75,6 +76,7 @@ class SettingsScreen extends ConsumerWidget {
     final theme = ref.watch(themeProvider);
     final fontSize = ref.watch(fontSizeProvider);
     final translationFontSize = ref.watch(translationFontSizeProvider);
+    final dyslexiaFont = ref.watch(dyslexiaFontProvider);
     final audio = ref.watch(audioProvider);
     final tafsirId = ref.watch(tafsirIdProvider);
     final mushaf = ref.watch(mushafProvider);
@@ -100,6 +102,9 @@ class SettingsScreen extends ConsumerWidget {
                 DropdownMenuItem(
                     value: AppThemeMode.inverted,
                     child: Text('Inverted (night)')),
+                DropdownMenuItem(
+                    value: AppThemeMode.highContrast,
+                    child: Text('High Contrast')),
               ],
               onChanged: (v) {
                 if (v != null) ref.read(themeProvider.notifier).setTheme(v);
@@ -126,6 +131,20 @@ class SettingsScreen extends ConsumerWidget {
             colors: colors,
             onChanged: (v) =>
                 ref.read(translationFontSizeProvider.notifier).set(v),
+          ),
+          // Dyslexia-friendly font: monospace + extra letter spacing + tall line
+          // height for translation text. Arabic Quran text is not affected.
+          SwitchListTile(
+            secondary: const Icon(Icons.font_download_outlined),
+            title: const Text('Dyslexia-friendly translation font'),
+            subtitle: const Text(
+              'Applies monospace font with extra letter spacing and '
+              'line height to translation text only.',
+              style: TextStyle(fontSize: 12),
+            ),
+            value: dyslexiaFont,
+            onChanged: (v) =>
+                ref.read(dyslexiaFontProvider.notifier).setEnabled(enabled: v),
           ),
           // ── Reading ───────────────────────────────────────────────────────
           _SectionHeader(title: 'Reading', colors: colors),

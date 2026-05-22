@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/theme/theme_provider.dart';
+import '../../core/theme/dyslexia_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/surah.dart';
@@ -148,6 +149,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     });
 
     final themeMode = ref.watch(themeProvider);
+    // highContrast renders as light (white background, black text).
+    // inverted renders as dark (pure black background, white text).
     final isLight = themeMode != AppThemeMode.dark &&
         themeMode != AppThemeMode.inverted;
     final bgColor = isLight ? Colors.white : null;
@@ -261,6 +264,8 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   Widget _buildReader(MushafState state) {
     final themeMode = ref.watch(themeProvider);
+    // isDark controls the color-invert matrix on the Mushaf page image.
+    // highContrast is a light mode (white background), so isDark = false there.
     final isDark = themeMode == AppThemeMode.dark ||
         themeMode == AppThemeMode.inverted;
 
@@ -577,6 +582,8 @@ class _TextFallbackView extends ConsumerWidget {
     if (ayahs.isEmpty) return const SizedBox.shrink();
 
     final audio = ref.watch(audioProvider);
+    // dyslexia_font applies monospace + extra spacing to translation text only.
+    final dyslexiaFont = ref.watch(dyslexiaFontProvider);
 
     final bg = isDark ? const Color(0xFF1C1C1C) : Colors.white;
     final textColor = isDark ? const Color(0xFFEEEEEE) : const Color(0xFF1A1A1A);
@@ -601,6 +608,7 @@ class _TextFallbackView extends ConsumerWidget {
         textColor: textColor,
         isDark: isDark,
         isHighlighted: isHighlighted,
+        dyslexiaFont: dyslexiaFont,
       ));
     }
 
@@ -725,6 +733,7 @@ class _MushafAyahText extends ConsumerWidget {
     required this.textColor,
     required this.isDark,
     required this.isHighlighted,
+    this.dyslexiaFont = false,
   });
 
   final Ayah ayah;
@@ -732,6 +741,9 @@ class _MushafAyahText extends ConsumerWidget {
   final Color textColor;
   final bool isDark;
   final bool isHighlighted;
+  // When true, translation text uses monospace font + extra spacing/height
+  // to aid readability for users with dyslexia. Arabic text is unaffected.
+  final bool dyslexiaFont;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -758,9 +770,11 @@ class _MushafAyahText extends ConsumerWidget {
             child: Text(
               '${ayah.verseKey}  $translation',
               style: TextStyle(
+                fontFamily: dyslexiaFont ? 'monospace' : null,
                 fontSize: 12,
                 color: textColor.withAlpha(178),
-                height: 1.5,
+                height: dyslexiaFont ? 1.8 : 1.5,
+                letterSpacing: dyslexiaFont ? 1.0 : null,
               ),
             ),
           ),
