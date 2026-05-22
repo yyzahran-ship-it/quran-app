@@ -14,8 +14,12 @@ import '../../domain/entities/surah.dart';
 import '../audio/audio_player_bar.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
+import '../bookmarks/bookmarks_provider.dart';
+import '../bookmarks/bookmarks_screen.dart';
+import '../bookmarks/note_editor_dialog.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
+import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 
@@ -64,7 +68,7 @@ int _pageHizb(int page) {
 
 // ─── Screen actions (overflow menu) ──────────────────────────────────────────
 
-enum _AppAction { playPause, search, juzJump, toggleTranslation, settings }
+enum _AppAction { playPause, search, juzJump, toggleTranslation, bookmarks, settings }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -114,6 +118,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         showJuzJumpDialog(context);
       case _AppAction.toggleTranslation:
         ref.read(mushafProvider.notifier).toggleTranslation();
+      case _AppAction.bookmarks:
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const BookmarksScreen()));
       case _AppAction.settings:
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const SettingsScreen()));
@@ -201,6 +208,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                   Text(state.showTranslation
                       ? 'Hide translation'
                       : 'Show translation'),
+                ]),
+              ),
+              const PopupMenuItem(
+                value: _AppAction.bookmarks,
+                child: Row(children: [
+                  Icon(Icons.bookmark_outline),
+                  SizedBox(width: 12),
+                  Text('Bookmarks'),
                 ]),
               ),
               const PopupMenuDivider(),
@@ -544,7 +559,7 @@ String _toArabicNumerals(int n) {
 // Gold tone matching the King Fahad Mushaf ornamental borders.
 const _kMushafGold = Color(0xFFA67C00);
 
-class _TextFallbackView extends StatelessWidget {
+class _TextFallbackView extends ConsumerWidget {
   const _TextFallbackView({
     required this.ayahs,
     required this.surahFor,
@@ -558,8 +573,10 @@ class _TextFallbackView extends StatelessWidget {
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (ayahs.isEmpty) return const SizedBox.shrink();
+
+    final audio = ref.watch(audioProvider);
 
     final bg = isDark ? const Color(0xFF1C1C1C) : Colors.white;
     final textColor = isDark ? const Color(0xFFEEEEEE) : const Color(0xFF1A1A1A);
@@ -576,11 +593,14 @@ class _TextFallbackView extends StatelessWidget {
           children.add(_MushafBismillah(textColor: textColor));
         }
       }
+      final isHighlighted = audio.surahNumber == ayah.surahNumber &&
+          audio.currentAyahNumber == ayah.ayahNumber;
       children.add(_MushafAyahText(
         ayah: ayah,
         translation: translations[ayah.id],
         textColor: textColor,
         isDark: isDark,
+        isHighlighted: isHighlighted,
       ));
     }
 
@@ -698,24 +718,27 @@ class _MushafBismillah extends StatelessWidget {
   }
 }
 
-class _MushafAyahText extends StatelessWidget {
+class _MushafAyahText extends ConsumerWidget {
   const _MushafAyahText({
     required this.ayah,
     required this.translation,
     required this.textColor,
     required this.isDark,
+    required this.isHighlighted,
   });
 
   final Ayah ayah;
   final String? translation;
   final Color textColor;
   final bool isDark;
+  final bool isHighlighted;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // U+06DD = ARABIC END OF AYAH ornament + Arabic-Indic numeral
     final marker = '۝${_toArabicNumerals(ayah.ayahNumber)}';
-    return Column(
+
+    Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
@@ -742,6 +765,292 @@ class _MushafAyahText extends StatelessWidget {
             ),
           ),
       ],
+    );
+
+    if (isHighlighted) {
+      content = Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer.withAlpha(120),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: content,
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => _showAyahActions(context, ref, ayah, isDark),
+      child: content,
+    );
+  }
+}
+
+// ─── Ayah action sheet ────────────────────────────────────────────────────────
+
+void _showAyahActions(
+    BuildContext context, WidgetRef ref, Ayah ayah, bool isDark) {
+  showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => _AyahActionSheet(ayah: ayah),
+  );
+}
+
+class _AyahActionSheet extends ConsumerStatefulWidget {
+  const _AyahActionSheet({required this.ayah});
+  final Ayah ayah;
+
+  @override
+  ConsumerState<_AyahActionSheet> createState() => _AyahActionSheetState();
+}
+
+class _AyahActionSheetState extends ConsumerState<_AyahActionSheet> {
+  bool? _isBookmarked;
+
+  static const _kPredefinedTags = ['Important', 'Memorizing', 'Reflect', 'Dua'];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBookmark();
+  }
+
+  Future<void> _checkBookmark() async {
+    final result =
+        await ref.read(bookmarksProvider.notifier).isBookmarked(widget.ayah.id);
+    if (mounted) setState(() => _isBookmarked = result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    // Re-check whenever the bookmarks list changes.
+    ref.listen(bookmarksProvider, (_, __) => _checkBookmark());
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: colors.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                widget.ayah.verseKey,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: colors.primary,
+                ),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Icon(
+              _isBookmarked == true ? Icons.bookmark : Icons.bookmark_outline,
+              color: _isBookmarked == true ? colors.primary : null,
+            ),
+            title: Text(
+                _isBookmarked == true ? 'Remove bookmark' : 'Bookmark'),
+            onTap: () async {
+              Navigator.pop(context);
+              if (_isBookmarked == true) {
+                await ref.read(bookmarksProvider.notifier).toggle(
+                      ayahId: widget.ayah.id,
+                      surahNumber: widget.ayah.surahNumber,
+                      ayahNumber: widget.ayah.ayahNumber,
+                    );
+              } else {
+                if (context.mounted) {
+                  await _showTagPicker(context, ref, widget.ayah);
+                }
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.menu_book_outlined),
+            title: const Text('Tafsir'),
+            onTap: () {
+              Navigator.pop(context);
+              showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (_) => TafsirSheet(verseKey: widget.ayah.verseKey),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.note_outlined),
+            title: const Text('Note'),
+            onTap: () {
+              Navigator.pop(context);
+              showNoteEditor(
+                context,
+                ayahId: widget.ayah.id,
+                surahNumber: widget.ayah.surahNumber,
+                ayahNumber: widget.ayah.ayahNumber,
+                verseKey: widget.ayah.verseKey,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showTagPicker(
+      BuildContext context, WidgetRef ref, Ayah ayah) async {
+    final existing = ref
+        .read(bookmarksProvider)
+        .map((b) => b.tag)
+        .whereType<String>()
+        .toSet()
+        .toList()
+      ..sort();
+
+    final allTags = {..._kPredefinedTags, ...existing}.toList();
+
+    String? selectedTag;
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _TagPickerSheet(
+        tags: allTags,
+        onDone: (tag) => selectedTag = tag,
+      ),
+    );
+
+    await ref.read(bookmarksProvider.notifier).toggle(
+          ayahId: ayah.id,
+          surahNumber: ayah.surahNumber,
+          ayahNumber: ayah.ayahNumber,
+          tag: selectedTag,
+        );
+  }
+}
+
+class _TagPickerSheet extends StatefulWidget {
+  const _TagPickerSheet({required this.tags, required this.onDone});
+  final List<String> tags;
+  final void Function(String?) onDone;
+
+  @override
+  State<_TagPickerSheet> createState() => _TagPickerSheetState();
+}
+
+class _TagPickerSheetState extends State<_TagPickerSheet> {
+  String? _selected;
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Text(
+              'Add a tag (optional)',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: widget.tags
+                  .map((tag) => FilterChip(
+                        label: Text(tag),
+                        selected: _selected == tag,
+                        onSelected: (_) => setState(
+                          () => _selected = _selected == tag ? null : tag,
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                hintText: 'Or type a custom tag…',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                isDense: true,
+              ),
+              onChanged: (v) {
+                if (v.trim().isNotEmpty) setState(() => _selected = null);
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    widget.onDone(null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Skip'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () {
+                    final custom = _controller.text.trim();
+                    widget.onDone(custom.isNotEmpty ? custom : _selected);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Bookmark'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

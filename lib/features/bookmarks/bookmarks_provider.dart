@@ -18,15 +18,17 @@ class BookmarksNotifier extends Notifier<List<Bookmark>> {
     state = await _repo.getAllBookmarks();
   }
 
-  Future<void> toggle(
-      {required int ayahId,
-      required int surahNumber,
-      required int ayahNumber}) async {
+  Future<void> toggle({
+    required int ayahId,
+    required int surahNumber,
+    required int ayahNumber,
+    String? tag,
+  }) async {
     final already = await _repo.isBookmarked(ayahId);
     if (already) {
       await _repo.removeBookmark(ayahId);
     } else {
-      await _repo.addBookmark(ayahId, surahNumber, ayahNumber);
+      await _repo.addBookmark(ayahId, surahNumber, ayahNumber, tag: tag);
     }
     state = await _repo.getAllBookmarks();
   }
