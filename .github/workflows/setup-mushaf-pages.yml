@@ -1,8 +1,9 @@
 name: Setup Mushaf Pages Branch
 
-# Runs once to download all 604 King Fahad Mushaf color page images and push
-# them to the `mushaf-pages` orphan branch. After this succeeds, Build APK
-# will automatically use these real KFGQPC images.
+# Downloads all 604 King Fahad Mushaf page images from the "Quran for Android"
+# app server (android.quran.com) — the same source shown in the open-source app
+# at github.com/quran/quran_android — and pushes them to the `mushaf-pages`
+# orphan branch. Run this once; Build APK then bundles them automatically.
 
 on:
   workflow_dispatch:
@@ -23,86 +24,100 @@ jobs:
 
       - name: Diagnose network access
         run: |
-          echo "=== Testing CDN sources ==="
+          echo "=== Testing image sources ==="
           for URL in \
+            "https://android.quran.com/data/_1024/page001.png" \
+            "https://android.quran.com/data/zips/images_1024.zip" \
             "https://cdn.qurancdn.com/images/quran/pages/page001.png" \
-            "https://qurancdn.com/images/quran/pages/page001.png" \
-            "https://images.quran.com/images/quran/pages/page001.png" \
-            "https://qurancomplex.gov.sa/quran/images/pages/page001.png" \
-            "https://quran.com/images/quran/pages/page001.png"; do
-            HTTP=$(curl -o /tmp/test.png -w "%{http_code}" -sSL --max-time 20 \
-              -H "User-Agent: Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/120 Safari/537.36" \
-              -H "Referer: https://quran.com/" \
-              "$URL" 2>/dev/null || echo "ERR")
-            SZ=$(stat -c%s /tmp/test.png 2>/dev/null || echo 0)
+            "https://images.quran.com/images/quran/pages/page001.png"; do
+            HTTP=$(curl -o /tmp/test.bin -w "%{http_code}" -sSL --max-time 20 "$URL" 2>/dev/null || echo "ERR")
+            SZ=$(stat -c%s /tmp/test.bin 2>/dev/null || echo 0)
             echo "  $URL → HTTP ${HTTP}, size ${SZ}"
           done
 
-      - name: Download all 604 King Fahad Mushaf pages
+      - name: Download all 604 Madani Mushaf pages
         run: |
           mkdir -p pages
 
-          UA="Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-          REF="https://quran.com/"
-
-          # Try sources in order — first one that serves a valid image wins.
-          SOURCES=(
-            "https://cdn.qurancdn.com/images/quran/pages/page{NNN}.png"
-            "https://qurancdn.com/images/quran/pages/page{NNN}.png"
-            "https://images.quran.com/images/quran/pages/page{NNN}.png"
-          )
-
-          echo "=== Finding working source ==="
-          WORKING_URL=""
-          for TMPL in "${SOURCES[@]}"; do
-            URL="${TMPL//\{NNN\}/001}"
-            HTTP=$(curl -o /tmp/test.png -w "%{http_code}" -sSL --max-time 20 \
-              -H "User-Agent: ${UA}" -H "Referer: ${REF}" "$URL" 2>/dev/null || echo "ERR")
-            SZ=$(stat -c%s /tmp/test.png 2>/dev/null || echo 0)
-            echo "  ${URL} → HTTP ${HTTP}, size ${SZ}"
-            if [ "$SZ" -gt 10000 ]; then
-              WORKING_URL="$TMPL"
-              echo "  ✓ Source works!"
-              break
+          # Strategy 1: Download the zip (all 604 pages in one file).
+          # Source: android.quran.com — the "Quran for Android" open-source app server.
+          # Images are generated from King Fahad Quran Printing Complex (KFGQPC) fonts.
+          echo "=== Trying zip download (android.quran.com) ==="
+          ZIP_DOWNLOADED=0
+          for WIDTH in 1024 1260 1920 768 480; do
+            URL="https://android.quran.com/data/zips/images_${WIDTH}.zip"
+            echo "Trying: $URL"
+            if curl -fsSL --max-time 300 "$URL" -o /tmp/pages.zip 2>/dev/null; then
+              SZ=$(stat -c%s /tmp/pages.zip 2>/dev/null || echo 0)
+              echo "  Downloaded: ${SZ} bytes"
+              if [ "$SZ" -gt 10000000 ]; then
+                echo "  Extracting..."
+                unzip -q /tmp/pages.zip -d /tmp/pages_extracted/ 2>/dev/null
+                # Files may be at root or under a subdirectory
+                find /tmp/pages_extracted -name "page*.png" | while read F; do
+                  FNAME=$(basename "$F")
+                  cp "$F" "pages/$FNAME"
+                done
+                COUNT=$(ls pages/page*.png 2>/dev/null | wc -l)
+                echo "  Extracted: ${COUNT} pages"
+                if [ "$COUNT" -gt 550 ]; then
+                  ZIP_DOWNLOADED=1
+                  echo "  ✓ Zip strategy succeeded!"
+                  break
+                fi
+              fi
             fi
           done
 
-          if [ -z "$WORKING_URL" ]; then
-            echo "ERROR: No color image source is reachable from GitHub Actions."
-            echo "The mushaf-pages branch cannot be populated automatically."
-            exit 1
-          fi
+          # Strategy 2: Individual page downloads if zip failed.
+          if [ "$ZIP_DOWNLOADED" -eq 0 ]; then
+            echo "=== Zip failed — trying individual page downloads ==="
+            WORKING_URL=""
+            for TMPL in \
+              "https://android.quran.com/data/_1024/page{NNN}.png" \
+              "https://android.quran.com/data/_1260/page{NNN}.png" \
+              "https://cdn.qurancdn.com/images/quran/pages/page{NNN}.png" \
+              "https://images.quran.com/images/quran/pages/page{NNN}.png"; do
+              URL="${TMPL//\{NNN\}/001}"
+              HTTP=$(curl -o /tmp/test.png -w "%{http_code}" -sSL --max-time 20 "$URL" 2>/dev/null || echo "ERR")
+              SZ=$(stat -c%s /tmp/test.png 2>/dev/null || echo 0)
+              echo "  ${URL} → HTTP ${HTTP}, size ${SZ}"
+              if [ "$SZ" -gt 10000 ]; then
+                WORKING_URL="$TMPL"
+                echo "  ✓ Source works!"
+                break
+              fi
+            done
 
-          echo ""
-          echo "=== Downloading 604 pages from ${WORKING_URL} ==="
-          FAILED=0
-          for i in $(seq 1 604); do
-            NNN=$(printf '%03d' $i)
-            URL="${WORKING_URL//\{NNN\}/${NNN}}"
-            DEST="pages/page${NNN}.png"
-            if curl -fsSL --max-time 60 \
-              -H "User-Agent: ${UA}" -H "Referer: ${REF}" \
-              "$URL" -o "$DEST"; then
-              SIZE=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
-              if [ "$SIZE" -lt 10000 ]; then
-                echo "page ${NNN}: too small (${SIZE} bytes), removing"
-                rm -f "$DEST"
+            if [ -z "$WORKING_URL" ]; then
+              echo "ERROR: No image source reachable from GitHub Actions."
+              exit 1
+            fi
+
+            FAILED=0
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i)
+              URL="${WORKING_URL//\{NNN\}/${NNN}}"
+              DEST="pages/page${NNN}.png"
+              if curl -fsSL --max-time 60 "$URL" -o "$DEST"; then
+                SZ=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
+                if [ "$SZ" -lt 10000 ]; then
+                  rm -f "$DEST"
+                  FAILED=$((FAILED + 1))
+                fi
+              else
                 FAILED=$((FAILED + 1))
               fi
-            else
-              echo "page ${NNN}: download failed"
-              FAILED=$((FAILED + 1))
-            fi
-          done
+            done
+          fi
 
-          COUNT=$(ls pages/*.png 2>/dev/null | wc -l)
+          COUNT=$(ls pages/page*.png 2>/dev/null | wc -l)
           echo ""
           echo "============================="
           echo "Downloaded: ${COUNT}/604 pages"
-          echo "Failed:     ${FAILED}"
           echo "============================="
           if [ "$COUNT" -lt 550 ]; then
-            echo "ERROR: Too few pages downloaded. Aborting."
+            echo "ERROR: Too few pages. Aborting."
             exit 1
           fi
 
@@ -114,8 +129,7 @@ jobs:
           git rm -rf --cached . 2>/dev/null || true
           git add pages/
           COUNT=$(git diff --cached --name-only | wc -l)
-          git commit -m "King Fahad Mushaf: ${COUNT} color page images ($(date -u '+%Y-%m-%d'))"
+          git commit -m "Madani Mushaf: ${COUNT} pages from Quran for Android ($(date -u '+%Y-%m-%d'))"
           git push origin mushaf-pages --force
-          echo ""
-          echo "Done. ${COUNT} pages are now live at:"
+          echo "Done. ${COUNT} pages live at:"
           echo "  https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page001.png"
