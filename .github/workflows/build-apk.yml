@@ -61,60 +61,35 @@ jobs:
       - name: Bundle King Fahad Mushaf page images
         run: |
           mkdir -p assets/quran/pages
-          sudo apt-get install -y --quiet webp
+          # Source: public GitHub repo with all 604 King Fahad Mushaf pages as WebP.
+          # GitHub→GitHub raw content is always reachable from GitHub Actions.
+          # Source uses 4-digit page numbers (0001-0604); we save as 3-digit (001-604).
+          BASE="https://raw.githubusercontent.com/abuumairabuaamir/quran.images/main/QuranMajeed-15Lines-SaudiPrint_page-"
 
-          UA="Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36"
-          REF="https://quran.com/"
-
-          # Sources in priority order.
-          # web.archive.org is the last resort — it mirrors the public web and is
-          # reachable from GitHub Actions even when the CDN's origin is blocked.
-          CDN_URLS=(
-            "https://cdn.qurancdn.com/images/quran/pages/page"
-            "https://qurancdn.com/images/quran/pages/page"
-            "https://images.quran.com/images/quran/pages/page"
-            "https://static.qurancdn.com/images/quran/pages/page"
-            "https://web.archive.org/web/20241201000000/https://cdn.qurancdn.com/images/quran/pages/page"
-          )
-
-          echo "=== Testing image sources ==="
-          WORKING_BASE=""
-          for BASE in "${CDN_URLS[@]}"; do
-            echo "Trying: ${BASE}001.png"
-            HTTP=$(curl -o /tmp/test_p.png -w "%{http_code}" -sSL --max-time 30 \
-              -H "User-Agent: ${UA}" -H "Referer: ${REF}" \
-              "${BASE}001.png" 2>&1 || true)
-            SZ=$(stat -c%s /tmp/test_p.png 2>/dev/null || echo 0)
-            echo "  HTTP ${HTTP}  size ${SZ}"
-            if [ "$SZ" -gt 10000 ]; then
-              WORKING_BASE="$BASE"
-              echo "  ✓ Source works"
-              break
-            fi
-          done
-
-          if [ -z "$WORKING_BASE" ]; then
-            echo "ERROR: All image sources unreachable — pages not bundled."
-          else
-            echo "=== Downloading 604 pages ==="
-            FAILED=0
-            for i in $(seq 1 604); do
-              NNN=$(printf '%03d' $i)
-              TMP="/tmp/mp_${NNN}.png"
-              if curl -fsSL --max-time 60 \
-                -H "User-Agent: ${UA}" -H "Referer: ${REF}" \
-                "${WORKING_BASE}${NNN}.png" -o "$TMP" 2>/dev/null; then
-                cwebp -q 88 -quiet "$TMP" \
-                  -o "assets/quran/pages/page${NNN}.webp" 2>/dev/null \
-                  || cp "$TMP" "assets/quran/pages/page${NNN}.png"
-                rm -f "$TMP"
-              else
+          echo "=== Downloading 604 pages from GitHub ==="
+          FAILED=0
+          for i in $(seq 1 604); do
+            NNN=$(printf '%03d' $i)
+            NNNN=$(printf '%04d' $i)
+            URL="${BASE}${NNNN}.webp"
+            DEST="assets/quran/pages/page${NNN}.webp"
+            if curl -fsSL --max-time 60 "$URL" -o "$DEST"; then
+              SZ=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
+              if [ "$SZ" -lt 5000 ]; then
+                echo "Warning: page ${NNN} too small (${SZ} bytes), removing"
+                rm -f "$DEST"
                 FAILED=$((FAILED + 1))
               fi
-            done
-            COUNT=$(ls assets/quran/pages/page*.webp \
-                       assets/quran/pages/page*.png 2>/dev/null | wc -l)
-            echo "=== Bundled ${COUNT}/604 pages (${FAILED} failures) ==="
+            else
+              echo "Warning: failed page ${NNN}"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          COUNT=$(ls assets/quran/pages/page*.webp 2>/dev/null | wc -l)
+          echo "=== Bundled ${COUNT}/604 pages (${FAILED} failures) ==="
+          if [ "$COUNT" -lt 550 ]; then
+            echo "ERROR: Too few pages bundled — aborting build."
+            exit 1
           fi
 
       - name: Get dependencies
