@@ -1,15 +1,14 @@
 name: Setup Mushaf Pages Branch
 
-# Run this once (manually) to download all 604 King Fahad Mushaf page images
-# and push them to the `mushaf-pages` orphan branch so the app can fetch them
-# from raw.githubusercontent.com — a CDN that is not blocked by carriers that
-# block cdn.qurancdn.com.
-#
-# After this workflow succeeds, the app will automatically find the images at:
-#   https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page001.png
+# Runs once to download all 604 King Fahad Mushaf color page images and push
+# them to the `mushaf-pages` orphan branch. After this succeeds, Build APK
+# will automatically use these real KFGQPC images.
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ 'claude/**' ]
+    paths: [ '.github/workflows/setup-mushaf-pages.yml' ]
 
 permissions:
   contents: write
@@ -22,29 +21,80 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Diagnose network access
+        run: |
+          echo "=== Testing CDN sources ==="
+          for URL in \
+            "https://cdn.qurancdn.com/images/quran/pages/page001.png" \
+            "https://qurancdn.com/images/quran/pages/page001.png" \
+            "https://images.quran.com/images/quran/pages/page001.png" \
+            "https://qurancomplex.gov.sa/quran/images/pages/page001.png" \
+            "https://quran.com/images/quran/pages/page001.png"; do
+            HTTP=$(curl -o /tmp/test.png -w "%{http_code}" -sSL --max-time 20 \
+              -H "User-Agent: Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/120 Safari/537.36" \
+              -H "Referer: https://quran.com/" \
+              "$URL" 2>/dev/null || echo "ERR")
+            SZ=$(stat -c%s /tmp/test.png 2>/dev/null || echo 0)
+            echo "  $URL → HTTP ${HTTP}, size ${SZ}"
+          done
+
       - name: Download all 604 King Fahad Mushaf pages
         run: |
           mkdir -p pages
+
+          UA="Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+          REF="https://quran.com/"
+
+          # Try sources in order — first one that serves a valid image wins.
+          SOURCES=(
+            "https://cdn.qurancdn.com/images/quran/pages/page{NNN}.png"
+            "https://qurancdn.com/images/quran/pages/page{NNN}.png"
+            "https://images.quran.com/images/quran/pages/page{NNN}.png"
+          )
+
+          echo "=== Finding working source ==="
+          WORKING_URL=""
+          for TMPL in "${SOURCES[@]}"; do
+            URL="${TMPL//\{NNN\}/001}"
+            HTTP=$(curl -o /tmp/test.png -w "%{http_code}" -sSL --max-time 20 \
+              -H "User-Agent: ${UA}" -H "Referer: ${REF}" "$URL" 2>/dev/null || echo "ERR")
+            SZ=$(stat -c%s /tmp/test.png 2>/dev/null || echo 0)
+            echo "  ${URL} → HTTP ${HTTP}, size ${SZ}"
+            if [ "$SZ" -gt 10000 ]; then
+              WORKING_URL="$TMPL"
+              echo "  ✓ Source works!"
+              break
+            fi
+          done
+
+          if [ -z "$WORKING_URL" ]; then
+            echo "ERROR: No color image source is reachable from GitHub Actions."
+            echo "The mushaf-pages branch cannot be populated automatically."
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Downloading 604 pages from ${WORKING_URL} ==="
           FAILED=0
           for i in $(seq 1 604); do
             NNN=$(printf '%03d' $i)
+            URL="${WORKING_URL//\{NNN\}/${NNN}}"
             DEST="pages/page${NNN}.png"
-            if curl -fsSL --max-time 40 \
-              "https://cdn.qurancdn.com/images/quran/pages/page${NNN}.png" \
-              -o "$DEST" 2>/dev/null; then
-              SIZE=$(stat -c%s "$DEST")
+            if curl -fsSL --max-time 60 \
+              -H "User-Agent: ${UA}" -H "Referer: ${REF}" \
+              "$URL" -o "$DEST"; then
+              SIZE=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
               if [ "$SIZE" -lt 10000 ]; then
                 echo "page ${NNN}: too small (${SIZE} bytes), removing"
                 rm -f "$DEST"
                 FAILED=$((FAILED + 1))
-              else
-                echo "page ${NNN}: OK (${SIZE} bytes)"
               fi
             else
               echo "page ${NNN}: download failed"
               FAILED=$((FAILED + 1))
             fi
           done
+
           COUNT=$(ls pages/*.png 2>/dev/null | wc -l)
           echo ""
           echo "============================="
@@ -60,13 +110,11 @@ jobs:
         run: |
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
-          # Create a standalone orphan branch — no history, no connection to main.
           git checkout --orphan mushaf-pages
-          # Remove everything from the index except our pages/ directory.
           git rm -rf --cached . 2>/dev/null || true
           git add pages/
           COUNT=$(git diff --cached --name-only | wc -l)
-          git commit -m "King Fahad Mushaf: ${COUNT} page images ($(date -u '+%Y-%m-%d'))"
+          git commit -m "King Fahad Mushaf: ${COUNT} color page images ($(date -u '+%Y-%m-%d'))"
           git push origin mushaf-pages --force
           echo ""
           echo "Done. ${COUNT} pages are now live at:"
