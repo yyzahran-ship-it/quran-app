@@ -934,25 +934,47 @@ class _MushafAyahText extends ConsumerWidget {
 // Result: tapping anywhere in the rough area of an ayah shows that ayah's
 // popup toolbar.
 
-class _AyahImageOverlay extends ConsumerWidget {
+class _AyahImageOverlay extends ConsumerStatefulWidget {
   const _AyahImageOverlay({required this.ayahs, required this.isDark});
 
   final List<Ayah> ayahs;
   final bool isDark;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Offset tapPos = Offset.zero;
+  ConsumerState<_AyahImageOverlay> createState() => _AyahImageOverlayState();
+}
+
+class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
+  int? _highlightedId;
+  Offset _tapPos = Offset.zero;
+
+  Future<void> _onTap(Ayah ayah) async {
+    setState(() => _highlightedId = ayah.id);
+    await _showAyahPopup(context, ref, ayah, widget.isDark, _tapPos);
+    if (mounted) setState(() => _highlightedId = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    // Subtle green tint matching the popup colour.
+    final shadeColor = colors.primary.withAlpha(55);
+
     return Column(
       children: [
-        for (final ayah in ayahs)
+        for (final ayah in widget.ayahs)
           Expanded(
-            // Minimum flex of 50 so even 1–3 char ayahs have a tappable area.
             flex: ayah.textUthmani.length.clamp(50, 99999),
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTapDown: (d) => tapPos = d.globalPosition,
-              onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
+              onTapDown: (d) => _tapPos = d.globalPosition,
+              onTap: () => _onTap(ayah),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                color: _highlightedId == ayah.id
+                    ? shadeColor
+                    : Colors.transparent,
+              ),
             ),
           ),
       ],
@@ -1139,9 +1161,9 @@ class _PageAyahSheet extends ConsumerWidget {
 // Green floating toolbar (bookmark / tag / share / tafsir / play) that appears
 // above the tapped ayah — same UX pattern as Quran for Android.
 
-void _showAyahPopup(
+Future<void> _showAyahPopup(
     BuildContext context, WidgetRef ref, Ayah ayah, bool isDark, Offset pos) {
-  showDialog<void>(
+  return showDialog<void>(
     context: context,
     barrierColor: Colors.transparent,
     barrierDismissible: true,
