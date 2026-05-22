@@ -21,6 +21,7 @@ import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
+import 'page_line_provider.dart';
 import 'second_translation_provider.dart';
 import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
@@ -280,7 +281,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         textFallback: textFallback,
         nowPlayingBanner: _NowPlayingBanner(ayahs: state.ayahs, isDark: isDark),
         imageAyahOverlay: state.ayahs.isNotEmpty
-            ? _AyahImageOverlay(ayahs: state.ayahs, isDark: isDark)
+            ? _AyahImageOverlay(
+                ayahs: state.ayahs,
+                isDark: isDark,
+                page: state.currentPage,
+              )
             : null,
         imageTranslations: showTx
             ? _PageTranslations(
@@ -935,10 +940,15 @@ class _MushafAyahText extends ConsumerWidget {
 // popup toolbar.
 
 class _AyahImageOverlay extends ConsumerStatefulWidget {
-  const _AyahImageOverlay({required this.ayahs, required this.isDark});
+  const _AyahImageOverlay({
+    required this.ayahs,
+    required this.isDark,
+    required this.page,
+  });
 
   final List<Ayah> ayahs;
   final bool isDark;
+  final int page;
 
   @override
   ConsumerState<_AyahImageOverlay> createState() => _AyahImageOverlayState();
@@ -954,30 +964,79 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
     if (mounted) setState(() => _highlightedId = null);
   }
 
+  // ── King Fahad Mushaf 15-line page geometry ──────────────────────────────
+  // Approximate fractions of image height where the text area sits.
+  // Derived from inspecting the qurancdn.com page images.
+  static const _textTop    = 0.075; // running header ends here
+  static const _textBottom = 0.920; // page-number area starts here
+  static const _totalLines = 15;
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    // Subtle green tint matching the popup colour.
     final shadeColor = colors.primary.withAlpha(55);
+    final lineAsync = ref.watch(pageLineProvider(widget.page));
 
-    return Column(
-      children: [
-        for (final ayah in widget.ayahs)
-          Expanded(
-            flex: ayah.textUthmani.length.clamp(50, 99999),
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTapDown: (d) => _tapPos = d.globalPosition,
-              onTap: () => _onTap(ayah),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                color: _highlightedId == ayah.id
-                    ? shadeColor
-                    : Colors.transparent,
-              ),
+    // Use precise line data when available; proportional fallback otherwise.
+    final lineMap = lineAsync.valueOrNull;
+    final hasLineData = lineMap != null && lineMap.isNotEmpty;
+
+    if (!hasLineData) {
+      // ── Proportional fallback (offline / first load) ─────────────────────
+      return Column(
+        children: [
+          for (final ayah in widget.ayahs)
+            Expanded(
+              flex: ayah.textUthmani.length.clamp(50, 99999),
+              child: _zone(ayah, shadeColor),
             ),
-          ),
-      ],
+        ],
+      );
+    }
+
+    // ── Precise line-number layout ───────────────────────────────────────────
+    // Use LayoutBuilder so we know the rendered image height at build time.
+    return LayoutBuilder(
+      builder: (ctx, box) {
+        final imgH   = box.maxHeight;
+        final textH  = imgH * (_textBottom - _textTop);
+        final lineH  = textH / _totalLines;
+        final topOff = imgH * _textTop;
+
+        return Stack(
+          children: [
+            for (final ayah in widget.ayahs)
+              Builder(builder: (_) {
+                final pos = lineMap[ayah.id];
+                if (pos == null) return const SizedBox.shrink();
+
+                // Clamp in case the API returns a line outside 1–15.
+                final s = (pos.start - 1).clamp(0, _totalLines - 1);
+                final e = pos.end.clamp(1, _totalLines);
+
+                return Positioned(
+                  top:    topOff + s * lineH,
+                  height: (e - s) * lineH,
+                  left: 0,
+                  right: 0,
+                  child: _zone(ayah, shadeColor),
+                );
+              }),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _zone(Ayah ayah, Color shadeColor) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (d) => _tapPos = d.globalPosition,
+      onTap: () => _onTap(ayah),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        color: _highlightedId == ayah.id ? shadeColor : Colors.transparent,
+      ),
     );
   }
 }
