@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:just_audio_background/just_audio_background.dart';
+import 'core/services/arabic_font_service.dart';
 import 'core/theme/theme_provider.dart';
 import 'data/repositories/quran_repository.dart';
 import 'data/sources/local/quran_seeder.dart';
-import 'features/mushaf/mushaf_screen.dart';
+import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.quranapp.audio',
-    androidNotificationChannelName: 'Quran Audio',
-    androidNotificationOngoing: true,
-  );
 
   runApp(
     const ProviderScope(
@@ -31,7 +25,7 @@ class QuranApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Quran',
+      title: 'The Holy Quran',
       debugShowCheckedModeBanner: false,
       theme: themeDataFor(themeMode),
       home: const _AppStartup(),
@@ -58,17 +52,27 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
   }
 
   Future<void> _init() async {
-    final db = ref.read(quranDatabaseProvider);
-    // Seed DB and check onboarding status in parallel.
-    final results = await Future.wait([
-      QuranSeeder(db).seedIfNeeded(),
-      hasSeenOnboarding(),
-    ]);
-    if (mounted) {
-      setState(() {
-        _showOnboarding = !(results[1] as bool);
-        _ready = true;
-      });
+    try {
+      final db = ref.read(quranDatabaseProvider);
+      // Seed DB and check onboarding status in parallel.
+      final results = await Future.wait([
+        QuranSeeder(db).seedIfNeeded(),
+        hasSeenOnboarding(),
+        // Load KFGQPC font from cache if available (instant).
+        // On first install, starts a background download and returns false.
+        ArabicFontService.tryLoadCached(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _showOnboarding = !(results[1] as bool);
+          _ready = true;
+        });
+      }
+      // results[2] is the font-loaded flag — no action needed;
+      // if true the font was overridden via FontLoader already.
+    } catch (_) {
+      // On any error, still proceed to the app so it doesn't stay stuck.
+      if (mounted) setState(() => _ready = true);
     }
   }
 
@@ -82,7 +86,7 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
       );
     }
 
-    return const MushafScreen();
+    return const HomeScreen();
   }
 }
 
@@ -96,35 +100,36 @@ class _SplashScreen extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0a0a0a),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.primaryContainer,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.asset(
+                'assets/icon/icon.png',
+                width: 120,
+                height: 120,
               ),
-              child: Icon(Icons.menu_book, size: 44, color: colors.primary),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Quran',
+            const SizedBox(height: 24),
+            const Text(
+              'The Holy Quran',
               style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFD4A017),
+                letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: 28,
-              height: 28,
+            const SizedBox(height: 36),
+            const SizedBox(
+              width: 24,
+              height: 24,
               child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: colors.primary,
+                strokeWidth: 2,
+                color: Color(0xFFD4A017),
               ),
             ),
           ],

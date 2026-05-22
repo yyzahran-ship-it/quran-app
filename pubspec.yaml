@@ -39,12 +39,12 @@ dependencies:
   drift_flutter: ^0.2.4
   sqlite3_flutter_libs: ^0.5.30
 
-  # Audio playback + lock-screen controls
+  # Audio playback
   just_audio: ^0.9.46
-  just_audio_background: ^0.0.1-beta.12
 
   # HTTP client with retry + caching
   dio: ^5.8.0+1
+
 
   # Utilities
   path_provider: ^2.1.5
@@ -69,19 +69,27 @@ flutter:
 
   assets:
     - assets/quran/      # Tanzil Quran text
+    - assets/icon/       # App icon (used in splash screen)
     - assets/fonts/      # Arabic Quran font
 
   fonts:
     - family: AmiriQuran
       fonts:
         - asset: assets/fonts/AmiriQuran.ttf
+    # KFGQPC Uthmanic Script HAFS — the official King Fahad Quran Printing Complex
+    # font. Run scripts/setup_fonts.sh locally to download it, or it is fetched
+    # automatically by the GitHub Actions workflow. Falls back to AmiriQuran if
+    # the file is absent (CI copies AmiriQuran → UthmanicHafs.ttf when unavailable).
+    - family: UthmanicHafs
+      fonts:
+        - asset: assets/fonts/UthmanicHafs.ttf
 
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icon/icon.png"
   remove_alpha_ios: true
-  adaptive_icon_background: "#1B6B3A"
+  adaptive_icon_background: "#0a0a0a"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
   min_sdk_android: 21
   web:

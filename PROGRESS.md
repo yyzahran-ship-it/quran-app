@@ -3,6 +3,24 @@
 > Claude updates this after every working session.
 > Format: date, what was done, what's testable now, what's next.
 
+## 2026-05-21 — Reciters + tafsir caching (by Claude Code)
+
+**Done**
+- Expanded reciter list from 3 to 8: added Maher Al Muaiqly, Abdullah Basfar, Sa'ud ash-Shuraym, and confirmed Bandar Baleela routing through `verses.quran.foundation` (the only CDN that hosts his verse-level audio, tried with 3 folder-name candidates)
+- Added all new CDN identifiers for `cdn.islamic.network` (CDN 1 in fallback chain)
+- Replaced the reciter setting buried in the Settings screen with a persistent **reciter strip** always visible at the bottom of the mushaf page: shows current reciter name + icon, tap to open a modal picker listing all 8 reciters with a checkmark on the active one
+- Added **two-layer tafsir cache**: in-memory (no repeat fetches in a session) + SharedPreferences (persists across restarts). Tafsir now works fully offline after the first time an ayah is opened.
+
+**Testable on phone**
+- Bottom of every mushaf page: thin bar shows `🎧 Mishary Alafasy ⌃` — tap to switch reciter
+- Tafsir: tap any ayah → "Tafsir" → loads; revisit same ayah → instant (no network)
+- Audio plays for any of the 8 reciters
+
+**Next**
+- Multi-translation side-by-side (Urdu, Indonesian alongside Sahih International)
+- Accessibility font scaling 50–200%
+- Bundle tafsir data as local asset for full offline on first install
+
 ## 2026-05-16 — Project scaffolding (by Claude in chat)
 
 **Done**

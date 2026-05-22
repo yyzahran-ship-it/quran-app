@@ -98,7 +98,7 @@ class BookmarksScreen extends ConsumerWidget {
                     onTap: () {
                       ref
                           .read(mushafProvider.notifier)
-                          .navigateToSurah(bm.surahNumber);
+                          .navigateToAyah(bm.surahNumber, bm.ayahNumber);
                       Navigator.pop(context);
                     },
                   ),

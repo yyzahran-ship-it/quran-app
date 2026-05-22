@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_constants.dart';
 import '../sources/local/quran_database.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/bookmark.dart';
@@ -48,6 +49,48 @@ class QuranRepository {
           ..orderBy([(t) => OrderingTerm.asc(t.ayahNumber)]))
         .get();
     return rows.map(_toAyah).toList();
+  }
+
+  /// All ayahs on a given Mushaf page (1–604), ordered by global ID.
+  Future<List<Ayah>> getPageAyahs(int pageNumber) async {
+    final idx = pageNumber - 1; // 0-based index into kPageFirstAyah
+    if (idx < 0 || idx >= kPageFirstAyah.length) return [];
+    final firstId = kPageFirstAyah[idx];
+    final lastId = kPageLastAyah[idx];
+    if (firstId == 0) return [];
+    final rows = await (_db.select(_db.ayahs)
+          ..where((t) =>
+              t.id.isBiggerOrEqualValue(firstId) &
+              t.id.isSmallerOrEqualValue(lastId))
+          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+        .get();
+    return rows.map(_toAyah).toList();
+  }
+
+  /// Translations for a range of global ayah IDs.
+  Future<Map<int, String>> getPageTranslations(
+    int firstId,
+    int lastId, {
+    String translationKey = 'en_sahih',
+  }) async {
+    final txRows = await (_db.select(_db.translations)
+          ..where((t) =>
+              t.ayahId.isBiggerOrEqualValue(firstId) &
+              t.ayahId.isSmallerOrEqualValue(lastId) &
+              t.translationKey.equals(translationKey)))
+        .get();
+    return {for (final r in txRows) r.ayahId: r.body};
+  }
+
+  /// Returns all translation keys currently seeded in the database.
+  Future<List<String>> getAvailableTranslationKeys() async {
+    final result = await (_db.selectOnly(_db.translations)
+          ..addColumns([_db.translations.translationKey])
+          ..groupBy([_db.translations.translationKey]))
+        .get();
+    return result
+        .map((r) => r.read(_db.translations.translationKey)!)
+        .toList();
   }
 
   Future<List<Ayah>> getJuzAyahs(int juzNumber) async {

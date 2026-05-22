@@ -4,13 +4,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/theme_provider.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
+import '../mushaf/mushaf_provider.dart';
+import '../mushaf/tafsir_repository.dart';
 
 // ─── Font size persistence ────────────────────────────────────────────────────
 
-// Persistent font size provider (syncs to SharedPreferences).
 class FontSizeNotifier extends Notifier<double> {
   static const _key = 'arabic_font_size';
   static const _default = 26.0;
+  static const _min = 14.0; // ~50% of default
+  static const _max = 56.0; // ~200% of default
 
   @override
   double build() {
@@ -24,7 +27,7 @@ class FontSizeNotifier extends Notifier<double> {
   }
 
   Future<void> set(double size) async {
-    state = size.clamp(16.0, 48.0);
+    state = size.clamp(_min, _max);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_key, state);
   }
@@ -32,6 +35,35 @@ class FontSizeNotifier extends Notifier<double> {
 
 final fontSizeProvider =
     NotifierProvider<FontSizeNotifier, double>(FontSizeNotifier.new);
+
+// Translation font size is controlled independently from Arabic.
+class TranslationFontSizeNotifier extends Notifier<double> {
+  static const _key = 'translation_font_size';
+  static const _default = 13.0;
+  static const _min = 10.0;
+  static const _max = 22.0;
+
+  @override
+  double build() {
+    _load();
+    return _default;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getDouble(_key) ?? _default;
+  }
+
+  Future<void> set(double size) async {
+    state = size.clamp(_min, _max);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_key, state);
+  }
+}
+
+final translationFontSizeProvider =
+    NotifierProvider<TranslationFontSizeNotifier, double>(
+        TranslationFontSizeNotifier.new);
 
 // ─── Settings screen ──────────────────────────────────────────────────────────
 
@@ -42,7 +74,10 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(themeProvider);
     final fontSize = ref.watch(fontSizeProvider);
+    final translationFontSize = ref.watch(translationFontSizeProvider);
     final audio = ref.watch(audioProvider);
+    final tafsirId = ref.watch(tafsirIdProvider);
+    final mushaf = ref.watch(mushafProvider);
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -71,21 +106,75 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
           ),
+          _FontSizeTile(
+            label: 'Arabic font size',
+            value: fontSize,
+            min: FontSizeNotifier._min,
+            max: FontSizeNotifier._max,
+            defaultValue: 26.0,
+            divisions: 21,
+            colors: colors,
+            onChanged: (v) => ref.read(fontSizeProvider.notifier).set(v),
+          ),
+          _FontSizeTile(
+            label: 'Translation font size',
+            value: translationFontSize,
+            min: TranslationFontSizeNotifier._min,
+            max: TranslationFontSizeNotifier._max,
+            defaultValue: 13.0,
+            divisions: 12,
+            colors: colors,
+            onChanged: (v) =>
+                ref.read(translationFontSizeProvider.notifier).set(v),
+          ),
+          // ── Reading ───────────────────────────────────────────────────────
+          _SectionHeader(title: 'Reading', colors: colors),
           ListTile(
-            leading: const Icon(Icons.format_size),
-            title: const Text('Arabic font size'),
-            subtitle: Slider(
-              value: fontSize,
-              min: 16,
-              max: 48,
-              divisions: 16,
-              label: fontSize.round().toString(),
-              onChanged: (v) => ref.read(fontSizeProvider.notifier).set(v),
+            leading: const Icon(Icons.translate_outlined),
+            title: const Text('Translation language'),
+            subtitle: mushaf.availableTranslationKeys.length <= 1
+                ? const Text(
+                    'Only Sahih International available — see README to add more',
+                    style: TextStyle(fontSize: 11),
+                  )
+                : null,
+            trailing: DropdownButton<String>(
+              value: mushaf.activeTranslationKey,
+              underline: const SizedBox.shrink(),
+              items: mushaf.availableTranslationKeys
+                  .map((k) => DropdownMenuItem(
+                        value: k,
+                        child: Text(
+                          kTranslationNames[k] ?? k,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(mushafProvider.notifier).setTranslationKey(v);
+                }
+              },
             ),
-            trailing: Text(
-              '${fontSize.round()}',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: colors.primary),
+          ),
+          ListTile(
+            leading: const Icon(Icons.book_outlined),
+            title: const Text('Tafsir'),
+            trailing: DropdownButton<int>(
+              value: tafsirId,
+              underline: const SizedBox.shrink(),
+              items: kTafsirs
+                  .map((t) => DropdownMenuItem(
+                        value: t.id,
+                        child: Text(
+                          '${t.name} (${t.language})',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) ref.read(tafsirIdProvider.notifier).set(v);
+              },
             ),
           ),
           // ── Audio ─────────────────────────────────────────────────────────
@@ -126,7 +215,7 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.headphones_outlined),
             title: const Text('Audio'),
             subtitle: const Text(
-                'Streamed from everyayah.com — requires internet'),
+                'Streamed from audio.qurancdn.com — requires internet'),
           ),
           ListTile(
             leading: const Icon(Icons.font_download_outlined),
@@ -141,15 +230,6 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text(
               'No analytics, no crash reporters, no third-party SDKs. '
               'Your reading habits stay on your device.',
-            ),
-            isThreeLine: true,
-          ),
-          ListTile(
-            leading: Icon(Icons.wifi_off_outlined, color: colors.primary),
-            title: const Text('Offline first'),
-            subtitle: const Text(
-              'The Quran text and translations are bundled in the app. '
-              'Internet is only used for audio streaming.',
             ),
             isThreeLine: true,
           ),
@@ -170,6 +250,54 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Font size tile ───────────────────────────────────────────────────────────
+
+class _FontSizeTile extends StatelessWidget {
+  const _FontSizeTile({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.defaultValue,
+    required this.divisions,
+    required this.colors,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final double defaultValue;
+  final int divisions;
+  final ColorScheme colors;
+  final ValueChanged<double> onChanged;
+
+  String get _pct =>
+      '${((value / defaultValue) * 100).round()}%';
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.format_size),
+      title: Text(label),
+      subtitle: Slider(
+        value: value,
+        min: min,
+        max: max,
+        divisions: divisions,
+        label: _pct,
+        onChanged: onChanged,
+      ),
+      trailing: Text(
+        _pct,
+        style:
+            TextStyle(fontWeight: FontWeight.bold, color: colors.primary),
       ),
     );
   }
