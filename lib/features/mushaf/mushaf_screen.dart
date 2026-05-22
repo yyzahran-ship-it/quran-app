@@ -967,8 +967,8 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
   // ── King Fahad Mushaf 15-line page geometry ──────────────────────────────
   // Approximate fractions of image height where the text area sits.
   // Derived from inspecting the qurancdn.com page images.
-  static const _textTop    = 0.075; // running header ends here
-  static const _textBottom = 0.920; // page-number area starts here
+  static const _textTop    = 0.076; // measured from actual King Fahad Mushaf images
+  static const _textBottom = 0.932; // averaged across pages 3,100,200,300
   static const _totalLines = 15;
 
   @override
