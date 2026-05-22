@@ -279,7 +279,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         isDark: isDark,
         textFallback: textFallback,
         nowPlayingBanner: _NowPlayingBanner(ayahs: state.ayahs, isDark: isDark),
-        onImageTap: () => _showPageAyahSheet(context, ref, state, isDark),
+        imageAyahOverlay: state.ayahs.isNotEmpty
+            ? _AyahImageOverlay(ayahs: state.ayahs, isDark: isDark)
+            : null,
         imageTranslations: showTx
             ? _PageTranslations(
                 ayahs: state.ayahs,
@@ -339,19 +341,16 @@ class _MushafPageLoader extends StatefulWidget {
     this.textFallback,
     this.nowPlayingBanner,
     this.imageTranslations,
-    this.onImageTap,
+    this.imageAyahOverlay,
   });
 
   final int pageNum;
   final bool isDark;
-  // Shown instead of the "offline" message when CDN is unreachable.
   final Widget? textFallback;
-  // Overlay shown at the bottom of the image when audio is playing.
   final Widget? nowPlayingBanner;
-  // Shown below the image when image loads successfully (and translations on).
   final Widget? imageTranslations;
-  // Called when the user taps the page image (not the translation strip).
-  final VoidCallback? onImageTap;
+  // Transparent per-ayah tap zones stacked over the image.
+  final Widget? imageAyahOverlay;
 
   @override
   State<_MushafPageLoader> createState() => _MushafPageLoaderState();
@@ -495,22 +494,22 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
       );
     }
 
-    // Wrap image in a tap handler so the user can open the ayah picker.
-    if (widget.onImageTap != null) {
-      img = GestureDetector(onTap: widget.onImageTap, child: img);
-    }
-
-    // Stack the "now playing" banner over the bottom of the image.
-    final imgWithBanner = widget.nowPlayingBanner != null
+    // Stack per-ayah overlay and now-playing banner on top of the image.
+    final hasOverlay =
+        widget.imageAyahOverlay != null || widget.nowPlayingBanner != null;
+    final imgWithBanner = hasOverlay
         ? Stack(
             children: [
               img,
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: widget.nowPlayingBanner!,
-              ),
+              if (widget.imageAyahOverlay != null)
+                Positioned.fill(child: widget.imageAyahOverlay!),
+              if (widget.nowPlayingBanner != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: widget.nowPlayingBanner!,
+                ),
             ],
           )
         : img;
@@ -921,6 +920,42 @@ class _MushafAyahText extends ConsumerWidget {
       onTapDown: (d) => tapPos = d.globalPosition,
       onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
       child: content,
+    );
+  }
+}
+
+// ─── Per-ayah invisible tap overlay on the page image ────────────────────────
+//
+// The page is a flat raster image — individual ayah pixel positions are
+// unknown.  We approximate by stacking transparent GestureDetector zones
+// whose heights are proportional to each ayah's character count (a reasonable
+// proxy for the number of lines it occupies on the page).
+//
+// Result: tapping anywhere in the rough area of an ayah shows that ayah's
+// popup toolbar.
+
+class _AyahImageOverlay extends ConsumerWidget {
+  const _AyahImageOverlay({required this.ayahs, required this.isDark});
+
+  final List<Ayah> ayahs;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Offset tapPos = Offset.zero;
+    return Column(
+      children: [
+        for (final ayah in ayahs)
+          Expanded(
+            // Minimum flex of 50 so even 1–3 char ayahs have a tappable area.
+            flex: ayah.textUthmani.length.clamp(50, 99999),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTapDown: (d) => tapPos = d.globalPosition,
+              onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
+            ),
+          ),
+      ],
     );
   }
 }
