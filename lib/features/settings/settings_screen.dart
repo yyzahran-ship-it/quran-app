@@ -6,6 +6,7 @@ import '../../core/theme/dyslexia_provider.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
 import '../mushaf/mushaf_provider.dart';
+import '../mushaf/second_translation_provider.dart';
 import '../mushaf/tafsir_repository.dart';
 
 // ─── Font size persistence ────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ class SettingsScreen extends ConsumerWidget {
     final fontSize = ref.watch(fontSizeProvider);
     final translationFontSize = ref.watch(translationFontSizeProvider);
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
+    final secondTxId = ref.watch(secondTranslationProvider);
     final audio = ref.watch(audioProvider);
     final tafsirId = ref.watch(tafsirIdProvider);
     final mushaf = ref.watch(mushafProvider);
@@ -172,6 +174,30 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) {
                 if (v != null) {
                   ref.read(mushafProvider.notifier).setTranslationKey(v);
+                }
+              },
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.translate),
+            title: const Text('Second translation'),
+            subtitle: const Text(
+              'Show a second language alongside the primary translation',
+              style: TextStyle(fontSize: 11),
+            ),
+            trailing: DropdownButton<int>(
+              value: secondTxId,
+              underline: const SizedBox.shrink(),
+              items: kSecondaryTranslations.entries
+                  .map((e) => DropdownMenuItem(
+                        value: e.key,
+                        child: Text(e.value,
+                            style: const TextStyle(fontSize: 13)),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(secondTranslationProvider.notifier).set(v);
                 }
               },
             ),

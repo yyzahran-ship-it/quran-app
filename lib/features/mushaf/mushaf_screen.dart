@@ -20,6 +20,7 @@ import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
+import 'second_translation_provider.dart';
 import 'tafsir_sheet.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
@@ -271,12 +272,21 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
     final showTx = state.showTranslation && state.translations.isNotEmpty;
 
+    final secondTxId = ref.watch(secondTranslationProvider);
+    // Second translation fetched from api.quran.com, cached after first load.
+    final secondTxAsync = secondTxId > 0
+        ? ref.watch(secondTranslationPageProvider(
+            (translationId: secondTxId, page: state.currentPage)))
+        : null;
+    final secondTranslations = secondTxAsync?.valueOrNull ?? {};
+
     // Text-based fallback (used when CDN is unreachable) includes translations
     // inline, so _PageTranslations is only attached to the image path.
     final textFallback = _TextFallbackView(
       ayahs: state.ayahs,
       surahFor: state.surahFor,
       translations: showTx ? state.translations : {},
+      secondTranslations: showTx ? secondTranslations : {},
       isDark: isDark,
     );
 
@@ -290,6 +300,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
             ? _PageTranslations(
                 ayahs: state.ayahs,
                 translations: state.translations,
+                secondTranslations: secondTranslations,
               )
             : null,
       ),
@@ -570,11 +581,13 @@ class _TextFallbackView extends ConsumerWidget {
     required this.surahFor,
     required this.translations,
     required this.isDark,
+    this.secondTranslations = const {},
   });
 
   final List<Ayah> ayahs;
   final Surah? Function(int) surahFor;
   final Map<int, String> translations;
+  final Map<int, String> secondTranslations;
   final bool isDark;
 
   @override
@@ -605,6 +618,7 @@ class _TextFallbackView extends ConsumerWidget {
       children.add(_MushafAyahText(
         ayah: ayah,
         translation: translations[ayah.id],
+        secondTranslation: secondTranslations[ayah.id],
         textColor: textColor,
         isDark: isDark,
         isHighlighted: isHighlighted,
@@ -733,11 +747,13 @@ class _MushafAyahText extends ConsumerWidget {
     required this.textColor,
     required this.isDark,
     required this.isHighlighted,
+    this.secondTranslation,
     this.dyslexiaFont = false,
   });
 
   final Ayah ayah;
   final String? translation;
+  final String? secondTranslation;
   final Color textColor;
   final bool isDark;
   final bool isHighlighted;
@@ -766,13 +782,28 @@ class _MushafAyahText extends ConsumerWidget {
         ),
         if (translation != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: EdgeInsets.only(bottom: secondTranslation != null ? 4 : 10),
             child: Text(
               '${ayah.verseKey}  $translation',
               style: TextStyle(
                 fontFamily: dyslexiaFont ? 'monospace' : null,
                 fontSize: 12,
                 color: textColor.withAlpha(178),
+                height: dyslexiaFont ? 1.8 : 1.5,
+                letterSpacing: dyslexiaFont ? 1.0 : null,
+              ),
+            ),
+          ),
+        if (secondTranslation != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              secondTranslation!,
+              style: TextStyle(
+                fontFamily: dyslexiaFont ? 'monospace' : null,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: textColor.withAlpha(140),
                 height: dyslexiaFont ? 1.8 : 1.5,
                 letterSpacing: dyslexiaFont ? 1.0 : null,
               ),
@@ -1064,10 +1095,12 @@ class _PageTranslations extends ConsumerWidget {
   const _PageTranslations({
     required this.ayahs,
     required this.translations,
+    this.secondTranslations = const {},
   });
 
   final List<Ayah> ayahs;
   final Map<int, String> translations;
+  final Map<int, String> secondTranslations;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1080,7 +1113,7 @@ class _PageTranslations extends ConsumerWidget {
         Divider(color: colors.outlineVariant),
         const SizedBox(height: 4),
         for (final ayah in ayahs)
-          if (translations[ayah.id] != null)
+          if (translations[ayah.id] != null || secondTranslations[ayah.id] != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Row(
@@ -1095,15 +1128,33 @@ class _PageTranslations extends ConsumerWidget {
                     ),
                   ),
                   Expanded(
-                    child: Text(
-                      translations[ayah.id]!,
-                      style: TextStyle(
-                        fontFamily: dyslexiaFont ? 'monospace' : null,
-                        fontSize: 13,
-                        height: dyslexiaFont ? 1.8 : 1.6,
-                        letterSpacing: dyslexiaFont ? 1.0 : null,
-                        color: colors.onSurfaceVariant,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (translations[ayah.id] != null)
+                          Text(
+                            translations[ayah.id]!,
+                            style: TextStyle(
+                              fontFamily: dyslexiaFont ? 'monospace' : null,
+                              fontSize: 13,
+                              height: dyslexiaFont ? 1.8 : 1.6,
+                              letterSpacing: dyslexiaFont ? 1.0 : null,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        if (secondTranslations[ayah.id] != null)
+                          Text(
+                            secondTranslations[ayah.id]!,
+                            style: TextStyle(
+                              fontFamily: dyslexiaFont ? 'monospace' : null,
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              height: dyslexiaFont ? 1.8 : 1.6,
+                              letterSpacing: dyslexiaFont ? 1.0 : null,
+                              color: colors.onSurfaceVariant.withAlpha(180),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
