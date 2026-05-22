@@ -1,5 +1,11 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+
 import '../../core/theme/theme_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../domain/entities/ayah.dart';
@@ -11,6 +17,12 @@ import 'mushaf_provider.dart';
 import 'search_screen.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
+
+// CDN base URLs for King Fahad Mushaf page images, tried in order.
+const _kPageCdnBases = [
+  'https://cdn.qurancdn.com/images/quran/pages/page',
+  'https://quran.com/images/quran/pages/page',
+];
 
 // ─── Helper: page number for a given surah + ayah ────────────────────────────
 
@@ -229,37 +241,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     final themeMode = ref.watch(themeProvider);
     final isDark = themeMode == AppThemeMode.dark ||
         themeMode == AppThemeMode.inverted;
-    final pageNum = state.currentPage.toString().padLeft(3, '0');
-    final imageUrl =
-        'https://cdn.qurancdn.com/images/quran/pages/page$pageNum.png';
-
-    // The page image is white-on-dark in the printed Mushaf; invert for
-    // dark/inverted themes so the background matches the app theme.
-    Widget pageImg = Image.network(
-      imageUrl,
-      width: double.infinity,
-      fit: BoxFit.fitWidth,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return const SizedBox(
-          height: 200,
-          child: Center(child: CircularProgressIndicator()),
-        );
-      },
-      errorBuilder: (context, error, _) => _buildOfflineMessage(),
-    );
-
-    if (isDark) {
-      pageImg = ColorFiltered(
-        colorFilter: const ColorFilter.matrix([
-          -1,  0,  0, 0, 255,
-           0, -1,  0, 0, 255,
-           0,  0, -1, 0, 255,
-           0,  0,  0, 1,   0,
-        ]),
-        child: pageImg,
-      );
-    }
 
     // Translations shown as numbered list below the page image when enabled.
     final showTx = state.showTranslation && state.translations.isNotEmpty;
@@ -269,7 +250,10 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          pageImg,
+          _MushafPageLoader(
+            pageNum: state.currentPage,
+            isDark: isDark,
+          ),
           if (showTx) ...[
             const SizedBox(height: 8),
             Padding(
@@ -280,40 +264,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOfflineMessage() {
-    final colors = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 300,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.wifi_off_rounded, size: 48, color: colors.outlineVariant),
-          const SizedBox(height: 16),
-          Text(
-            'No internet connection',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'The Madinah Mushaf pages require an internet\nconnection to display.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: colors.outline),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => setState(() {}),
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          ),
         ],
       ),
     );
@@ -350,6 +300,184 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     );
   }
 
+}
+
+// ─── Disk-caching Mushaf page loader ─────────────────────────────────────────
+//
+// Checks the on-device cache first so previously-viewed pages render instantly
+// without any network. Falls back to trying each CDN in _kPageCdnBases so that
+// if the primary CDN is blocked for the user's network another may succeed.
+// Successfully downloaded pages are written to the temp-directory cache.
+
+class _MushafPageLoader extends StatefulWidget {
+  const _MushafPageLoader({required this.pageNum, required this.isDark});
+
+  final int pageNum;
+  final bool isDark;
+
+  @override
+  State<_MushafPageLoader> createState() => _MushafPageLoaderState();
+}
+
+class _MushafPageLoaderState extends State<_MushafPageLoader> {
+  Uint8List? _bytes;
+  bool _loading = true;
+  bool _failed = false;
+  // Tracks which page was last requested so stale responses are ignored.
+  int _loadedFor = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _load(widget.pageNum);
+  }
+
+  @override
+  void didUpdateWidget(_MushafPageLoader old) {
+    super.didUpdateWidget(old);
+    if (old.pageNum != widget.pageNum) _load(widget.pageNum);
+  }
+
+  Future<void> _load(int page) async {
+    setState(() {
+      _loading = true;
+      _failed = false;
+      _bytes = null;
+      _loadedFor = page;
+    });
+
+    final padded = page.toString().padLeft(3, '0');
+
+    // 1. Serve from disk cache (instant, works fully offline).
+    try {
+      final file = await _cacheFileFor(page);
+      if (await file.exists() && file.lengthSync() > 10 * 1024) {
+        final bytes = await file.readAsBytes();
+        if (mounted && _loadedFor == page) {
+          setState(() {
+            _bytes = bytes;
+            _loading = false;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Download from CDN, trying each base URL in order.
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
+    ));
+    for (final base in _kPageCdnBases) {
+      if (!mounted || _loadedFor != page) return;
+      try {
+        final resp = await dio.get<List<int>>(
+          '$base$padded.png',
+          options: Options(responseType: ResponseType.bytes),
+        );
+        if (resp.statusCode == 200 &&
+            resp.data != null &&
+            resp.data!.length > 10 * 1024) {
+          final bytes = Uint8List.fromList(resp.data!);
+          // Persist to cache for next time (and for offline use).
+          try {
+            await (await _cacheFileFor(page)).writeAsBytes(bytes);
+          } catch (_) {}
+          if (mounted && _loadedFor == page) {
+            setState(() {
+              _bytes = bytes;
+              _loading = false;
+            });
+          }
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Nothing worked — show offline message.
+    if (mounted && _loadedFor == page) {
+      setState(() {
+        _loading = false;
+        _failed = true;
+      });
+    }
+  }
+
+  static Future<File> _cacheFileFor(int page) async {
+    final dir = await getTemporaryDirectory();
+    final cacheDir = Directory('${dir.path}/mushaf_pages');
+    await cacheDir.create(recursive: true);
+    return File('${cacheDir.path}/page${page.toString().padLeft(3, '0')}.png');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_failed || _bytes == null) {
+      return _buildOfflineWidget(context);
+    }
+
+    Widget img = Image.memory(
+      _bytes!,
+      width: double.infinity,
+      fit: BoxFit.fitWidth,
+      gaplessPlayback: true,
+    );
+
+    if (widget.isDark) {
+      img = ColorFiltered(
+        colorFilter: const ColorFilter.matrix([
+          -1,  0,  0, 0, 255,
+           0, -1,  0, 0, 255,
+           0,  0, -1, 0, 255,
+           0,  0,  0, 1,   0,
+        ]),
+        child: img,
+      );
+    }
+
+    return img;
+  }
+
+  Widget _buildOfflineWidget(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 320,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 48, color: colors.outlineVariant),
+          const SizedBox(height: 16),
+          Text(
+            'Page not available',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Connect to the internet once to download\nthis page — it will be saved for offline use.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: colors.outline),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () => _load(widget.pageNum),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── AppBar title ─────────────────────────────────────────────────────────────
