@@ -398,9 +398,15 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
       }
     } catch (_) {}
 
-    // 3. Download from CDN, trying each base URL in order.
+    // 3. No bundled asset or disk-cached image.
+    //    Show text immediately so the user can read right away, then try
+    //    CDN in the background. If it succeeds the image replaces the text.
+    if (mounted && _loadedFor == page) {
+      setState(() { _loading = false; _failed = true; });
+    }
+
     final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 12),
       receiveTimeout: const Duration(seconds: 30),
     ));
     for (final base in _kPageCdnBases) {
@@ -418,22 +424,11 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
             await (await _cacheFileFor(page)).writeAsBytes(bytes);
           } catch (_) {}
           if (mounted && _loadedFor == page) {
-            setState(() {
-              _bytes = bytes;
-              _loading = false;
-            });
+            setState(() { _bytes = bytes; _failed = false; });
           }
           return;
         }
       } catch (_) {}
-    }
-
-    // 4. Nothing worked — show text fallback.
-    if (mounted && _loadedFor == page) {
-      setState(() {
-        _loading = false;
-        _failed = true;
-      });
     }
   }
 
