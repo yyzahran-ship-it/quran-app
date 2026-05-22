@@ -36,41 +36,26 @@ jobs:
       - name: Ensure UthmanicHafs font is present
         run: |
           DEST="assets/fonts/UthmanicHafs.ttf"
-          # Try to replace the bundled placeholder with the real KFGQPC Uthmanic
-          # Script HAFS font from the King Fahad Quran Printing Complex (freely
-          # distributable). Falls back to the committed Scheherazade placeholder.
+          # Scheherazade placeholder is committed; try to replace with the real
+          # KFGQPC Uthmanic Script HAFS font (freely distributable).
           TMP="$(mktemp /tmp/font_XXXX.ttf)"
-          is_valid_font() {
-            python3 -c "
-import sys
-try:
-    data = open('$1','rb').read(4)
-    valid = data[:4] in [b'\\x00\\x01\\x00\\x00', b'OTTO', b'true']
-    size  = $(stat -c%s "$1" 2>/dev/null || echo 0)
-    sys.exit(0 if valid and size > 300000 else 1)
-except Exception:
-    sys.exit(1)
-" 2>/dev/null
-          }
           URLS=(
             "https://fonts.qurancomplex.gov.sa/wp02/uploads/2019/08/UthmanicHafs1Ver18.ttf"
             "https://www.qurancomplex.gov.sa/quran/fonts/UthmanicHafs1Ver18.ttf"
             "https://quran.ksu.edu.sa/fonts/hafs/UthmanicHafs1Ver18.ttf"
           )
-          INSTALLED=false
           for URL in "${URLS[@]}"; do
             echo "Trying: $URL"
-            if curl -fsSL --max-time 40 "$URL" -o "$TMP" 2>/dev/null && is_valid_font "$TMP"; then
-              cp "$TMP" "$DEST"
-              echo "KFGQPC font installed: $(stat -c%s "$DEST") bytes"
-              INSTALLED=true
-              break
+            if curl -fsSL --max-time 40 "$URL" -o "$TMP" 2>/dev/null; then
+              MAGIC=$(xxd -p -l 4 "$TMP" 2>/dev/null || true)
+              if [ "$MAGIC" = "00010000" ] || [ "$MAGIC" = "4f54544f" ] || [ "$MAGIC" = "74727565" ]; then
+                cp "$TMP" "$DEST"
+                echo "KFGQPC font installed: $(stat -c%s "$DEST") bytes"
+                break
+              fi
             fi
           done
           rm -f "$TMP"
-          if [ "$INSTALLED" = false ]; then
-            echo "Download failed — using committed placeholder font"
-          fi
           echo "Font ready: $DEST ($(stat -c%s "$DEST") bytes)"
 
       - name: Get dependencies
