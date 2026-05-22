@@ -78,10 +78,15 @@ jobs:
             "https://static.qurancdn.com/images/quran/pages/page"
           )
 
+          # Browser-like headers so Cloudflare doesn't reject as a bot.
+          UA="Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36"
+          REF="https://quran.com/"
+
           WORKING_BASE=""
           for BASE in "${CDN_URLS[@]}"; do
             echo "Testing: ${BASE}001.png"
             HTTP=$(curl -o /tmp/test_p.png -w "%{http_code}" -sSL --max-time 15 \
+              -H "User-Agent: ${UA}" -H "Referer: ${REF}" \
               "${BASE}001.png" 2>&1 || true)
             SZ=$(stat -c%s /tmp/test_p.png 2>/dev/null || echo 0)
             echo "  → HTTP ${HTTP}, ${SZ} bytes"
@@ -96,16 +101,17 @@ jobs:
             echo "ERROR: No CDN is reachable. Mushaf pages will not be bundled."
             echo "Run the 'Setup Mushaf Pages Branch' workflow once to populate"
             echo "the mushaf-pages branch, then re-run this build."
-            # Do not exit 1 — the app has a text fallback so the APK still works.
+            # Do not exit 1 — app has a text fallback so the APK still works.
           else
-            # ── Download all 604 pages from the working CDN ─────────────────
+            # ── Download all 604 pages ──────────────────────────────────────
             FAILED=0
             for i in $(seq 1 604); do
               NNN=$(printf '%03d' $i)
               TMP="/tmp/mp_${NNN}.png"
               DEST_WEBP="assets/quran/pages/page${NNN}.webp"
-              if curl -fsSL --max-time 40 "${WORKING_BASE}${NNN}.png" \
-                -o "$TMP" 2>/dev/null; then
+              if curl -fsSL --max-time 40 \
+                -H "User-Agent: ${UA}" -H "Referer: ${REF}" \
+                "${WORKING_BASE}${NNN}.png" -o "$TMP" 2>/dev/null; then
                 cwebp -q 88 -quiet "$TMP" -o "$DEST_WEBP" 2>/dev/null \
                   || cp "$TMP" "assets/quran/pages/page${NNN}.png"
                 rm -f "$TMP"
@@ -113,7 +119,7 @@ jobs:
                 FAILED=$((FAILED + 1))
               fi
             done
-            COUNT=$(ls assets/quran/pages/page*.{webp,png} 2>/dev/null | wc -l)
+            COUNT=$(ls assets/quran/pages/page*.webp assets/quran/pages/page*.png 2>/dev/null | wc -l)
             echo "=== Bundled ${COUNT}/604 pages (${FAILED} failures) ==="
           fi
 
