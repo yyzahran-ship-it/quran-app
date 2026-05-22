@@ -5,6 +5,7 @@ import '../../data/repositories/quran_repository.dart';
 import '../../domain/entities/juz.dart';
 import '../../domain/entities/surah.dart';
 import '../bookmarks/bookmarks_provider.dart';
+import '../bookmarks/bookmarks_screen.dart';
 import '../memorization/hifz_dashboard.dart';
 import '../mushaf/mushaf_provider.dart';
 import '../mushaf/mushaf_screen.dart';
@@ -341,25 +342,45 @@ class _JuzTab extends ConsumerWidget {
 }
 
 // ─── Bookmarks tab ────────────────────────────────────────────────────────────
+//
+// Full-featured: tag filter chips, swipe-to-delete, export, navigate to ayah.
+// Mirrors BookmarksScreen functionality directly inside the home tab so
+// users don't have to open the Mushaf reader to manage their bookmarks.
 
-class _BookmarksTab extends ConsumerWidget {
+class _BookmarksTab extends ConsumerStatefulWidget {
   const _BookmarksTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bookmarks = ref.watch(bookmarksProvider);
+  ConsumerState<_BookmarksTab> createState() => _BookmarksTabState();
+}
+
+class _BookmarksTabState extends ConsumerState<_BookmarksTab> {
+  String? _filterTag;
+
+  @override
+  Widget build(BuildContext context) {
+    final allBookmarks = ref.watch(bookmarksProvider);
     final colors = Theme.of(context).colorScheme;
 
-    if (bookmarks.isEmpty) {
+    final tags = allBookmarks
+        .map((b) => b.tag)
+        .whereType<String>()
+        .toSet()
+        .toList()
+      ..sort();
+
+    final shown = _filterTag == null
+        ? allBookmarks
+        : allBookmarks.where((b) => b.tag == _filterTag).toList();
+
+    if (allBookmarks.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bookmark_border,
-                size: 64, color: colors.outlineVariant),
+            Icon(Icons.bookmark_border, size: 64, color: colors.outlineVariant),
             const SizedBox(height: 12),
-            Text('No bookmarks yet',
-                style: TextStyle(color: colors.outline)),
+            Text('No bookmarks yet', style: TextStyle(color: colors.outline)),
             const SizedBox(height: 4),
             Text(
               'Open a surah, tap any ayah, and press Bookmark',
@@ -371,58 +392,125 @@ class _BookmarksTab extends ConsumerWidget {
       );
     }
 
-    return ListView.builder(
-      itemCount: bookmarks.length,
-      itemBuilder: (context, i) {
-        final bm = bookmarks[i];
-        return Dismissible(
-          key: ValueKey(bm.id),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 20),
-            color: colors.errorContainer,
-            child:
-                Icon(Icons.delete_outline, color: colors.onErrorContainer),
-          ),
-          onDismissed: (_) {
-            ref.read(bookmarksProvider.notifier).toggle(
-                  ayahId: bm.ayahId,
-                  surahNumber: bm.surahNumber,
-                  ayahNumber: bm.ayahNumber,
-                );
-          },
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: colors.primaryContainer,
-              child: Text(
-                '${bm.surahNumber}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onPrimaryContainer,
+    return Column(
+      children: [
+        // Tag filter row + export action.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FilterChip(
+                        label: const Text('All'),
+                        selected: _filterTag == null,
+                        onSelected: (_) => setState(() => _filterTag = null),
+                      ),
+                      ...tags.map((tag) => Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: FilterChip(
+                              label: Text(tag),
+                              selected: _filterTag == tag,
+                              onSelected: (_) => setState(
+                                () => _filterTag =
+                                    _filterTag == tag ? null : tag,
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            title: Text(bm.verseKey,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(
-              _formatDate(bm.createdAt),
-              style:
-                  TextStyle(fontSize: 12, color: colors.outlineVariant),
-            ),
-            onTap: () {
-              ref
-                  .read(mushafProvider.notifier)
-                  .navigateToSurah(bm.surahNumber);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MushafScreen()),
-              );
-            },
+              // Opens the full BookmarksScreen for export / clear-all.
+              IconButton(
+                icon: const Icon(Icons.more_horiz),
+                tooltip: 'Manage bookmarks',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const BookmarksScreen()),
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: shown.isEmpty
+              ? Center(
+                  child: Text(
+                    'No bookmarks tagged "$_filterTag"',
+                    style: TextStyle(color: colors.outline),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: shown.length,
+                  itemBuilder: (context, i) {
+                    final bm = shown[i];
+                    return Dismissible(
+                      key: ValueKey(bm.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        color: colors.errorContainer,
+                        child: Icon(Icons.delete_outline,
+                            color: colors.onErrorContainer),
+                      ),
+                      onDismissed: (_) {
+                        ref.read(bookmarksProvider.notifier).toggle(
+                              ayahId: bm.ayahId,
+                              surahNumber: bm.surahNumber,
+                              ayahNumber: bm.ayahNumber,
+                            );
+                      },
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: colors.primaryContainer,
+                          child: Text(
+                            '${bm.surahNumber}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: colors.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                        title: Text(bm.verseKey,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          _formatDate(bm.createdAt),
+                          style: TextStyle(
+                              fontSize: 12, color: colors.outlineVariant),
+                        ),
+                        trailing: bm.tag != null
+                            ? Chip(
+                                label: Text(bm.tag!,
+                                    style: const TextStyle(fontSize: 11)),
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              )
+                            : null,
+                        onTap: () {
+                          // Navigate to the exact ayah, not just the surah.
+                          ref
+                              .read(mushafProvider.notifier)
+                              .navigateToAyah(bm.surahNumber, bm.ayahNumber);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const MushafScreen()),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
