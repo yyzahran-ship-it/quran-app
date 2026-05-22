@@ -279,6 +279,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         isDark: isDark,
         textFallback: textFallback,
         nowPlayingBanner: _NowPlayingBanner(ayahs: state.ayahs, isDark: isDark),
+        onImageTap: () => _showPageAyahSheet(context, ref, state, isDark),
         imageTranslations: showTx
             ? _PageTranslations(
                 ayahs: state.ayahs,
@@ -338,6 +339,7 @@ class _MushafPageLoader extends StatefulWidget {
     this.textFallback,
     this.nowPlayingBanner,
     this.imageTranslations,
+    this.onImageTap,
   });
 
   final int pageNum;
@@ -348,6 +350,8 @@ class _MushafPageLoader extends StatefulWidget {
   final Widget? nowPlayingBanner;
   // Shown below the image when image loads successfully (and translations on).
   final Widget? imageTranslations;
+  // Called when the user taps the page image (not the translation strip).
+  final VoidCallback? onImageTap;
 
   @override
   State<_MushafPageLoader> createState() => _MushafPageLoaderState();
@@ -489,6 +493,11 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
         ]),
         child: img,
       );
+    }
+
+    // Wrap image in a tap handler so the user can open the ayah picker.
+    if (widget.onImageTap != null) {
+      img = GestureDetector(onTap: widget.onImageTap, child: img);
     }
 
     // Stack the "now playing" banner over the bottom of the image.
@@ -906,10 +915,186 @@ class _MushafAyahText extends ConsumerWidget {
       );
     }
 
+    Offset tapPos = Offset.zero;
     return GestureDetector(
-      onTapDown: (d) =>
-          _showAyahPopup(context, ref, ayah, isDark, d.globalPosition),
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (d) => tapPos = d.globalPosition,
+      onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
       child: content,
+    );
+  }
+}
+
+// ─── Page ayah picker (shown when user taps the page image) ──────────────────
+//
+// Since the page is a flat raster image we cannot detect which individual ayah
+// was tapped.  Instead we show a compact list of all ayahs on the page so the
+// user can pick one and act on it (bookmark / tafsir / play).
+
+void _showPageAyahSheet(
+    BuildContext context, WidgetRef ref, MushafState state, bool isDark) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => ProviderScope(
+      parent: ProviderScope.containerOf(context),
+      child: _PageAyahSheet(state: state, isDark: isDark),
+    ),
+  );
+}
+
+class _PageAyahSheet extends ConsumerWidget {
+  const _PageAyahSheet({required this.state, required this.isDark});
+  final MushafState state;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    final ayahs = state.ayahs;
+    final translations = state.translations;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.5,
+      maxChildSize: 0.92,
+      minChildSize: 0.25,
+      builder: (ctx, sc) => Column(
+        children: [
+          // Handle + header.
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Column(
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      'Page ${state.currentPage}',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${ayahs.length} ayahs',
+                      style: TextStyle(
+                          fontSize: 12, color: colors.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Divider(color: colors.outlineVariant),
+              ],
+            ),
+          ),
+          // Ayah list.
+          Expanded(
+            child: ListView.builder(
+              controller: sc,
+              itemCount: ayahs.length,
+              itemBuilder: (_, i) {
+                final ayah = ayahs[i];
+                final tx = translations[ayah.id] ?? '';
+                final snippet = tx.length > 60 ? '${tx.substring(0, 60)}…' : tx;
+                final isBookmarked = ref.watch(bookmarksProvider
+                    .select((bms) => bms.any((b) => b.ayahId == ayah.id)));
+
+                return ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: colors.primaryContainer,
+                    child: Text(
+                      '${ayah.ayahNumber}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: colors.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    ayah.verseKey,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: snippet.isNotEmpty
+                      ? Text(snippet,
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant))
+                      : null,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                          color: isBookmarked
+                              ? colors.primary
+                              : colors.onSurfaceVariant,
+                          size: 20,
+                        ),
+                        tooltip: 'Bookmark',
+                        onPressed: () {
+                          ref.read(bookmarksProvider.notifier).toggle(
+                                ayahId: ayah.id,
+                                surahNumber: ayah.surahNumber,
+                                ayahNumber: ayah.ayahNumber,
+                              );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.menu_book_outlined,
+                            color: colors.onSurfaceVariant, size: 20),
+                        tooltip: 'Tafsir',
+                        onPressed: () {
+                          Navigator.pop(context);
+                          showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16)),
+                            ),
+                            builder: (_) =>
+                                TafsirSheet(verseKey: ayah.verseKey),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.play_circle_outline,
+                            color: colors.onSurfaceVariant, size: 20),
+                        tooltip: 'Play',
+                        onPressed: () {
+                          Navigator.pop(context);
+                          ref
+                              .read(audioProvider.notifier)
+                              .playAyah(ayah.surahNumber, ayah.ayahNumber);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1531,9 +1716,12 @@ class _PageTranslations extends ConsumerWidget {
         ? colors.primary.withAlpha(40)
         : colors.primary.withAlpha(20);
 
+    // Capture position on tapDown; trigger popup on tap (so scroll still works).
+    Offset tapPos = Offset.zero;
     return GestureDetector(
-      onTapDown: (d) =>
-          _showAyahPopup(context, ref, ayah, isDark, d.globalPosition),
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (d) => tapPos = d.globalPosition,
+      onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         color: isPlaying ? highlightColor : Colors.transparent,
