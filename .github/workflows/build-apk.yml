@@ -85,3 +85,38 @@ jobs:
           name: build-log
           path: build_log.txt
           retention-days: 3
+                - name: Apply King Fahd Mushaf Fonts and Style
+        run: |
+          # 1. Choose the file you want to style (change 'index.html' to your specific file name)
+          TARGET_FILE="index.html"
+          
+          # 2. This defines the official KFGQPC style settings
+          MUSHAF_STYLES='<style>
+            @font-face {
+                font-family: "QCF4_Hafs";
+                src: url("https://cdn.jsdelivr.net/gh/MohamadHajjRabee/quran-qcf4@main/fonts-woff2/QCF4_Hafs_01_W.woff2") format("woff2");
+                font-weight: normal;
+                font-style: normal;
+            }
+            .mushaf-container {
+                font-family: "QCF4_Hafs", "Traditional Arabic", serif;
+                font-size: 32px;
+                line-height: 2.2;
+                text-align: center;
+                direction: rtl;
+                background-color: #fcfbf7; /* Authentic cream page tint */
+                color: #1a1a1a;
+                padding: 30px;
+                border: 1px solid #d4af37; /* Subtle gold border */
+                border-radius: 4px;
+            }
+          </style>'
+          
+          # 3. Inject the styles into your file right before the closing </head> tag
+          sed -i "s|</head>|${MUSHAF_STYLES}</head>|g" "$TARGET_FILE"
+          
+          # 4. Wrap your text content inside the mushaf-container class
+          # (This assumes your file has a generic <body> text that needs wrapping)
+          sed -i 's|<body>|<body><div class="mushaf-container">|g' "$TARGET_FILE"
+          sed -i 's|</body>|</div></body>|g' "$TARGET_FILE"
+
