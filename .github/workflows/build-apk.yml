@@ -61,31 +61,54 @@ jobs:
       - name: Bundle King Fahad Mushaf page images
         run: |
           mkdir -p assets/quran/pages
-          # Source: public GitHub repo with all 604 King Fahad Mushaf pages as WebP.
+          # Primary: our own mushaf-pages branch (populated once by setup-mushaf-pages.yml).
           # GitHub→GitHub raw content is always reachable from GitHub Actions.
-          # Source uses 4-digit page numbers (0001-0604); we save as 3-digit (001-604).
-          BASE="https://raw.githubusercontent.com/abuumairabuaamir/quran.images/main/QuranMajeed-15Lines-SaudiPrint_page-"
+          PRIMARY="https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page"
+          # Fallback: public mirror (SaudiPrint 15-line WebP images, 4-digit naming).
+          FALLBACK="https://raw.githubusercontent.com/abuumairabuaamir/quran.images/main/QuranMajeed-15Lines-SaudiPrint_page-"
 
-          echo "=== Downloading 604 pages from GitHub ==="
+          echo "=== Checking primary source (mushaf-pages branch) ==="
+          HTTP=$(curl -o /tmp/test_page.png -w "%{http_code}" -fsSL --max-time 20 \
+            "${PRIMARY}001.png" 2>/dev/null || echo "000")
+          SZ=$(stat -c%s /tmp/test_page.png 2>/dev/null || echo 0)
+          echo "HTTP ${HTTP}  size ${SZ}"
+
           FAILED=0
-          for i in $(seq 1 604); do
-            NNN=$(printf '%03d' $i)
-            NNNN=$(printf '%04d' $i)
-            URL="${BASE}${NNNN}.webp"
-            DEST="assets/quran/pages/page${NNN}.webp"
-            if curl -fsSL --max-time 60 "$URL" -o "$DEST"; then
-              SZ=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
-              if [ "$SZ" -lt 5000 ]; then
-                echo "Warning: page ${NNN} too small (${SZ} bytes), removing"
-                rm -f "$DEST"
+          if [ "$SZ" -gt 10000 ]; then
+            echo "=== Downloading 604 pages from mushaf-pages branch ==="
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i)
+              if curl -fsSL --max-time 60 "${PRIMARY}${NNN}.png" \
+                -o "assets/quran/pages/page${NNN}.png"; then
+                SZ=$(stat -c%s "assets/quran/pages/page${NNN}.png" 2>/dev/null || echo 0)
+                if [ "$SZ" -lt 5000 ]; then
+                  rm -f "assets/quran/pages/page${NNN}.png"
+                  FAILED=$((FAILED + 1))
+                fi
+              else
                 FAILED=$((FAILED + 1))
               fi
-            else
-              echo "Warning: failed page ${NNN}"
-              FAILED=$((FAILED + 1))
-            fi
-          done
-          COUNT=$(ls assets/quran/pages/page*.webp 2>/dev/null | wc -l)
+            done
+          else
+            echo "=== mushaf-pages branch not ready — using fallback source ==="
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i)
+              NNNN=$(printf '%04d' $i)
+              URL="${FALLBACK}${NNNN}.webp"
+              DEST="assets/quran/pages/page${NNN}.webp"
+              if curl -fsSL --max-time 60 "$URL" -o "$DEST"; then
+                SZ=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
+                if [ "$SZ" -lt 5000 ]; then
+                  rm -f "$DEST"
+                  FAILED=$((FAILED + 1))
+                fi
+              else
+                FAILED=$((FAILED + 1))
+              fi
+            done
+          fi
+
+          COUNT=$(ls assets/quran/pages/page*.png assets/quran/pages/page*.webp 2>/dev/null | wc -l)
           echo "=== Bundled ${COUNT}/604 pages (${FAILED} failures) ==="
           if [ "$COUNT" -lt 550 ]; then
             echo "ERROR: Too few pages bundled — aborting build."
