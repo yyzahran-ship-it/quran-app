@@ -10,6 +10,7 @@ import '../audio/audio_repository.dart';
 import 'mushaf_provider.dart';
 import 'search_screen.dart';
 import 'widgets/juz_jump_dialog.dart';
+import '../settings/settings_screen.dart';
 
 // ─── Helper: page number for a given surah + ayah ────────────────────────────
 
