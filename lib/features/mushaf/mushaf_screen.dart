@@ -225,14 +225,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           : state.ayahs.isEmpty
               ? _buildErrorState()
               : GestureDetector(
-                  // Swipe left → next page, swipe right → previous page.
+                  // RTL: swipe right → next page, swipe left → previous page.
                   onHorizontalDragEnd: (details) {
                     final v = details.primaryVelocity;
                     if (v == null) return;
-                    if (v < -300) {
+                    if (v > 300) {
                       ref.read(mushafProvider.notifier).nextPage();
                       _scrollToTop();
-                    } else if (v > 300) {
+                    } else if (v < -300) {
                       ref.read(mushafProvider.notifier).previousPage();
                       _scrollToTop();
                     }
