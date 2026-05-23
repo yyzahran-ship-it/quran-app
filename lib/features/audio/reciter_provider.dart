@@ -20,11 +20,35 @@ class QAReciter {
 
   factory QAReciter.fromJson(Map<String, dynamic> j) => QAReciter(
         id: j['id'] as int,
-        name: j['name'] as String,
+        name: _cleanName(j['name'] as String),
         arabicName: j['arabic_name'] as String? ?? '',
         // API returns trailing slash — strip it so it works as a URL path segment.
         relativePath: (j['relative_path'] as String).replaceAll('/', ''),
       );
+
+  /// Strips Arabic script and city names so every label is clean English.
+  static String _cleanName(String raw) {
+    var s = raw
+        // Arabic script blocks
+        .replaceAll(RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]+'), '')
+        // City names with optional "Al-" / "Al " prefix
+        .replaceAll(
+          RegExp(r'\b(Al[- ]?)?(Makkah|Makka|Mecca|Madinah|Madina|Medina|Medinah)\b',
+              caseSensitive: false),
+          '',
+        )
+        // "Imam of" left orphaned after city removal
+        .replaceAll(RegExp(r'\bImam\s+of\b\s*', caseSensitive: false), '')
+        // Empty parentheses / brackets
+        .replaceAll(RegExp(r'[(\[]\s*[)\]]'), '')
+        // Trailing and leading separators
+        .replaceAll(RegExp(r'[\s\-–—,]+$'), '')
+        .replaceAll(RegExp(r'^[\s\-–—,]+'), '')
+        // Collapse multiple spaces
+        .replaceAll(RegExp(r' {2,}'), ' ')
+        .trim();
+    return s.isEmpty ? raw : s;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -40,7 +64,7 @@ class _ReciterRepo {
   _ReciterRepo(this._dio);
 
   final Dio _dio;
-  static const _cacheKey = 'qa_reciters_v3'; // v3: no count filter — all reciters
+  static const _cacheKey = 'qa_reciters_v4'; // v4: cleaned names (no Arabic, no city)
   static const _apiUrl   = 'https://quranicaudio.com/api/qaris';
 
   Future<List<QAReciter>> fetchReciters() async {
