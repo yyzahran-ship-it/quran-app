@@ -733,31 +733,15 @@ class _TextFallbackView extends ConsumerWidget {
         padding: const EdgeInsets.only(top: 20, bottom: 4),
         child: Column(
           children: [
-            // Page number in King Fahad Mushaf style: ﴾ ٣ ﴿
             if (pageNumber != null)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('﴾',
-                      style: TextStyle(
-                          fontFamily: 'UthmanicHafs', fontSize: 20, color: gold)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      _toArabicNumerals(pageNumber!),
-                      style: TextStyle(
-                        fontFamily: 'UthmanicHafs',
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: gold,
-                      ),
-                    ),
-                  ),
-                  Text('﴿',
-                      style: TextStyle(
-                          fontFamily: 'UthmanicHafs', fontSize: 20, color: gold)),
-                ],
+              Text(
+                '﴾  $pageNumber  ﴿',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: gold,
+                  letterSpacing: 1,
+                ),
               ),
             const SizedBox(height: 8),
             Row(
@@ -2208,59 +2192,39 @@ class _PageNav extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final gold   = isDark ? const Color(0xFFD4A017) : _kMushafGold;
     final colors = Theme.of(context).colorScheme;
-
-    // Symmetrical layout: fixed-width slot on each side keeps the number centred.
     const double sideW = 44;
 
-    return SizedBox(
-      height: 40,
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        border: Border(
+            top: BorderSide(color: colors.outlineVariant, width: 0.5)),
+      ),
       child: Row(
         children: [
-          // Left slot — empty spacer to balance the right button.
           const SizedBox(width: sideW),
-          // Centre — page number in King Fahad Mushaf style.
           Expanded(
             child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('﴾',
-                      style: TextStyle(fontSize: 18, color: gold)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(
-                      _toArabicNumerals(currentPage),
-                      style: TextStyle(
-                        fontFamily: 'UthmanicHafs',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: gold,
-                      ),
-                    ),
-                  ),
-                  Text('﴿',
-                      style: TextStyle(fontSize: 18, color: gold)),
-                ],
+              // Single Text so the system font handles all glyphs reliably.
+              child: Text(
+                '﴾  $currentPage  ﴿',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: gold,
+                  letterSpacing: 1,
+                ),
               ),
             ),
           ),
-          // Right slot — expand button when reciter strip is hidden, else spacer.
           if (showExpand && onExpand != null)
-            Semantics(
-              label: 'Show reciter bar',
-              button: true,
-              child: InkWell(
-                onTap: onExpand,
-                borderRadius: BorderRadius.circular(4),
-                child: SizedBox(
-                  width: sideW,
-                  height: 40,
-                  child: Icon(
-                    Icons.keyboard_arrow_up,
-                    size: 18,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
+            InkWell(
+              onTap: onExpand,
+              child: SizedBox(
+                width: sideW,
+                height: 36,
+                child: Icon(Icons.keyboard_arrow_up,
+                    size: 18, color: colors.onSurfaceVariant),
               ),
             )
           else
