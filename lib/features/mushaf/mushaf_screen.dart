@@ -272,6 +272,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
       translations: showTx ? state.translations : {},
       secondTranslations: showTx ? secondTranslations : {},
       isDark: isDark,
+      pageNumber: state.currentPage,
     );
 
     return SingleChildScrollView(
@@ -679,6 +680,7 @@ class _TextFallbackView extends ConsumerWidget {
     required this.translations,
     required this.isDark,
     this.secondTranslations = const {},
+    this.pageNumber,
   });
 
   final List<Ayah> ayahs;
@@ -686,6 +688,7 @@ class _TextFallbackView extends ConsumerWidget {
   final Map<int, String> translations;
   final Map<int, String> secondTranslations;
   final bool isDark;
+  final int? pageNumber;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -723,22 +726,54 @@ class _TextFallbackView extends ConsumerWidget {
       ));
     }
 
-    // Very subtle footnote — doesn't interrupt reading.
+    // King Fahad page number footer + offline note.
+    final gold = isDark ? const Color(0xFFD4A017) : _kMushafGold;
     children.add(
       Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        padding: const EdgeInsets.only(top: 20, bottom: 4),
+        child: Column(
           children: [
-            Icon(Icons.wifi_off_rounded, size: 11,
-                color: isDark ? Colors.white24 : Colors.black26),
-            const SizedBox(width: 4),
-            Text(
-              'Text view — page scan unavailable',
-              style: TextStyle(
-                fontSize: 10,
-                color: isDark ? Colors.white24 : Colors.black26,
+            // Page number in King Fahad Mushaf style: ﴾ ٣ ﴿
+            if (pageNumber != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('﴾',
+                      style: TextStyle(
+                          fontFamily: 'UthmanicHafs', fontSize: 20, color: gold)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      _toArabicNumerals(pageNumber!),
+                      style: TextStyle(
+                        fontFamily: 'UthmanicHafs',
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: gold,
+                      ),
+                    ),
+                  ),
+                  Text('﴿',
+                      style: TextStyle(
+                          fontFamily: 'UthmanicHafs', fontSize: 20, color: gold)),
+                ],
               ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off_rounded, size: 10,
+                    color: isDark ? Colors.white24 : Colors.black26),
+                const SizedBox(width: 4),
+                Text(
+                  'Text view — page scan unavailable',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white24 : Colors.black26,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -2123,17 +2158,29 @@ class _PageNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gold = isDark ? const Color(0xFFD4A017) : _kMushafGold;
     return Container(
-      height: 36,
+      height: 40,
       alignment: Alignment.center,
-      child: Text(
-        '$currentPage',
-        style: TextStyle(
-          fontSize: 12,
-          color: colors.outline,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('﴾', style: TextStyle(fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              _toArabicNumerals(currentPage),
+              style: TextStyle(
+                fontFamily: 'UthmanicHafs',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: gold,
+              ),
+            ),
+          ),
+          Text('﴿', style: TextStyle(fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
+        ],
       ),
     );
   }
