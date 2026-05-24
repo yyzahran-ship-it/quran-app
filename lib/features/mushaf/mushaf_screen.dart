@@ -1931,19 +1931,38 @@ class _PageTranslations extends ConsumerWidget {
 
 // ─── Bottom area: audio bar + reciter strip + page number ─────────────────────
 
-class _BottomArea extends ConsumerWidget {
+class _BottomArea extends StatefulWidget {
   const _BottomArea({required this.currentPage});
 
   final int currentPage;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<_BottomArea> createState() => _BottomAreaState();
+}
+
+class _BottomAreaState extends State<_BottomArea> {
+  bool _reciterVisible = true;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const AudioPlayerBar(),
-        const _ReciterStrip(),
-        _PageNav(currentPage: currentPage),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          child: _reciterVisible
+              ? _ReciterStrip(
+                  onCollapse: () => setState(() => _reciterVisible = false),
+                )
+              : const SizedBox.shrink(),
+        ),
+        _PageNav(
+          currentPage: widget.currentPage,
+          showExpand: !_reciterVisible,
+          onExpand: () => setState(() => _reciterVisible = true),
+        ),
       ],
     );
   }
@@ -1952,7 +1971,9 @@ class _BottomArea extends ConsumerWidget {
 // ─── Reciter strip ─────────────────────────────────────────────────────────────
 
 class _ReciterStrip extends ConsumerWidget {
-  const _ReciterStrip();
+  const _ReciterStrip({this.onCollapse});
+
+  final VoidCallback? onCollapse;
 
   void _showPicker(BuildContext context) {
     showModalBottomSheet<void>(
@@ -1977,47 +1998,67 @@ class _ReciterStrip extends ConsumerWidget {
     final reciterSlug = audio.reciter;
     final reciterName = reciterDisplayName(qaReciters, reciterSlug);
 
-    return Semantics(
-      label: 'Reciter: $reciterName. Tap to change reciter.',
-      button: true,
-      child: InkWell(
-      onTap: () => _showPicker(context),
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
-          border: Border(
-            top: BorderSide(color: colors.outlineVariant, width: 0.5),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            Icon(
-              isPlaying ? Icons.volume_up : Icons.headphones,
-              size: 18,
-              color: colors.primary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                reciterName,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: colors.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Icon(
-              Icons.expand_less,
-              size: 20,
-              color: colors.onSurfaceVariant,
-            ),
-          ],
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        border: Border(
+          top: BorderSide(color: colors.outlineVariant, width: 0.5),
         ),
       ),
+      child: Row(
+        children: [
+          // Collapse button — separate tap zone so it never opens the picker.
+          InkWell(
+            onTap: onCollapse,
+            child: SizedBox(
+              width: 40,
+              height: 44,
+              child: Icon(
+                Icons.keyboard_arrow_down,
+                size: 20,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+          // Reciter name area — tap opens the picker.
+          Expanded(
+            child: Semantics(
+              label: 'Reciter: $reciterName. Tap to change reciter.',
+              button: true,
+              child: InkWell(
+                onTap: () => _showPicker(context),
+                child: Row(
+                  children: [
+                    Icon(
+                      isPlaying ? Icons.volume_up : Icons.headphones,
+                      size: 18,
+                      color: colors.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        reciterName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: colors.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.expand_less,
+                      size: 20,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2152,34 +2193,73 @@ class _ReciterPickerSheet extends ConsumerWidget {
 }
 
 class _PageNav extends StatelessWidget {
-  const _PageNav({required this.currentPage});
+  const _PageNav({
+    required this.currentPage,
+    this.showExpand = false,
+    this.onExpand,
+  });
 
   final int currentPage;
+  final bool showExpand;
+  final VoidCallback? onExpand;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final gold = isDark ? const Color(0xFFD4A017) : _kMushafGold;
+    final colors = Theme.of(context).colorScheme;
+
     return Container(
       height: 40,
-      alignment: Alignment.center,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Text('﴾', style: TextStyle(fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              _toArabicNumerals(currentPage),
-              style: TextStyle(
-                fontFamily: 'UthmanicHafs',
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: gold,
+          // Page number centred in gold Mushaf style.
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('﴾',
+                  style: TextStyle(
+                      fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text(
+                  _toArabicNumerals(currentPage),
+                  style: TextStyle(
+                    fontFamily: 'UthmanicHafs',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: gold,
+                  ),
+                ),
+              ),
+              Text('﴿',
+                  style: TextStyle(
+                      fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
+            ],
+          ),
+          // Expand button appears on the right when the reciter strip is hidden.
+          if (showExpand && onExpand != null)
+            Positioned(
+              right: 8,
+              child: Semantics(
+                label: 'Show reciter bar',
+                button: true,
+                child: InkWell(
+                  onTap: onExpand,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    child: Icon(
+                      Icons.keyboard_arrow_up,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-          Text('﴿', style: TextStyle(fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
         ],
       ),
     );
