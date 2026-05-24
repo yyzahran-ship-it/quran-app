@@ -1929,25 +1929,30 @@ class _BottomAreaState extends State<_BottomArea> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const AudioPlayerBar(),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeInOut,
-          child: _reciterVisible
-              ? _ReciterStrip(
-                  onCollapse: () => setState(() => _reciterVisible = false),
-                )
-              : const SizedBox.shrink(),
-        ),
-        _PageNav(
-          currentPage: widget.currentPage,
-          showExpand: !_reciterVisible,
-          onExpand: () => setState(() => _reciterVisible = true),
-        ),
-      ],
+    // SafeArea ensures the page number row is visible above the home indicator
+    // or Android gesture bar — without it the bottom row hides under system UI.
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AudioPlayerBar(),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            child: _reciterVisible
+                ? _ReciterStrip(
+                    onCollapse: () => setState(() => _reciterVisible = false),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          _PageNav(
+            currentPage: widget.currentPage,
+            showExpand: !_reciterVisible,
+            onExpand: () => setState(() => _reciterVisible = true),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2196,7 +2201,8 @@ class _PageNav extends StatelessWidget {
 
     return Container(
       height: 36,
-      decoration: BoxDecoration(
+      color: colors.surface,
+      foregroundDecoration: BoxDecoration(
         border: Border(
             top: BorderSide(color: colors.outlineVariant, width: 0.5)),
       ),
