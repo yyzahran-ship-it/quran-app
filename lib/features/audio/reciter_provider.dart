@@ -1,139 +1,64 @@
-import 'dart:convert';
-
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// A single reciter from the QuranicAudio API (quranicaudio.com/api/qaris).
+/// A single reciter entry.
 class QAReciter {
   const QAReciter({
-    required this.id,
     required this.name,
-    required this.arabicName,
-    required this.relativePath, // folder slug, e.g. "Alafasy_128kbps" (no trailing slash)
+    required this.relativePath,
   });
 
-  final int id;
   final String name;
-  final String arabicName;
+  // Folder slug used in CDN URLs, e.g. "Alafasy_128kbps".
   final String relativePath;
-
-  factory QAReciter.fromJson(Map<String, dynamic> j) => QAReciter(
-        id: j['id'] as int,
-        name: _cleanName(j['name'] as String),
-        arabicName: j['arabic_name'] as String? ?? '',
-        // API returns trailing slash — strip it so it works as a URL path segment.
-        relativePath: (j['relative_path'] as String).replaceAll('/', ''),
-      );
-
-  /// Strips Arabic script and city names so every label is clean English.
-  static String _cleanName(String raw) {
-    var s = raw
-        // Arabic script blocks
-        .replaceAll(RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]+'), '')
-        // "Imam of <city>" and bare city names (no word-boundary — catches all positions)
-        .replaceAll(RegExp(r'\bImam\s+of\b\s*', caseSensitive: false), '')
-        .replaceAll(
-          RegExp(r'(Al[- ])?(Makkah|Makka|Mecca|Madinah|Madina|Medina|Medinah)',
-              caseSensitive: false),
-          '',
-        )
-        // Empty parentheses / brackets
-        .replaceAll(RegExp(r'[(\[]\s*[)\]]'), '')
-        // Trailing and leading separators
-        .replaceAll(RegExp(r'[\s\-–—,]+$'), '')
-        .replaceAll(RegExp(r'^[\s\-–—,]+'), '')
-        // Collapse multiple spaces
-        .replaceAll(RegExp(r' {2,}'), ' ')
-        .trim();
-    return s.isEmpty ? raw : s;
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'arabic_name': arabicName,
-        'relative_path': relativePath,
-      };
 }
 
-// ─── Repository ───────────────────────────────────────────────────────────────
+// ─── Curated reciter list ──────────────────────────────────────────────────────
+//
+// Strategy mirrors Quran for Android (github.com/quran/quran_android):
+//   - Hardcoded, no runtime API call.
+//   - Every slug here is a verified folder name on everyayah.com /
+//     mirrors.quranicaudio.com/everyayah — the same CDN Quran for Android uses.
+//   - Only reciters with a complete Quran recording are included.
+//   - Sorted alphabetically by English name.
 
-class _ReciterRepo {
-  _ReciterRepo(this._dio);
+const List<QAReciter> _kReciters = [
+  QAReciter(name: 'Abdul Basit (Murattal)',     relativePath: 'Abdul_Basit_Murattal_192kbps'),
+  QAReciter(name: 'Abdul Basit (Mujawwad)',     relativePath: 'Abdul_Basit_Mujawwad_128kbps'),
+  QAReciter(name: 'Abdullah Basfar',            relativePath: 'Abdullah_Basfar_192kbps'),
+  QAReciter(name: 'Abdurrahman As-Sudais',      relativePath: 'Abdurrahmaan_As-Sudais_192kbps'),
+  QAReciter(name: 'Abu Bakr Ash-Shatri',        relativePath: 'Abu_Bakr_Ash-Shaatree_128kbps'),
+  QAReciter(name: 'Ahmed ibn Ali Al-Ajamy',     relativePath: 'Ahmed_ibn_Ali_al-Ajamy_128kbps'),
+  QAReciter(name: 'Bandar Baleela',             relativePath: 'Bandar_Baleela'),
+  QAReciter(name: 'Hani Rifai',                 relativePath: 'Hani_Rifai_192kbps'),
+  QAReciter(name: 'Mahmoud Al-Husary',          relativePath: 'Husary_128kbps'),
+  QAReciter(name: 'Maher Al Muaiqly',           relativePath: 'MaherAlMuaiqly128kbps'),
+  QAReciter(name: 'Mishary Rashid Alafasy',     relativePath: 'Alafasy_128kbps'),
+  QAReciter(name: 'Mohamed Siddiq Al-Minshawi', relativePath: 'Minshawi_Murattal_128kbps'),
+  QAReciter(name: 'Mohammad Al-Tablawi',        relativePath: 'Mohammad_al_Tablawi_128kbps'),
+  QAReciter(name: 'Nasser Al-Qatami',           relativePath: 'Nasser_Alqatami_128kbps'),
+  QAReciter(name: "Sa'd Al-Ghamdi",             relativePath: 'Saad_Al-Ghamdi_128kbps'),
+  QAReciter(name: "Sa'ud ash-Shuraym",          relativePath: 'Shuraim_128kbps'),
+  QAReciter(name: 'Yasser Al-Dossary',          relativePath: 'Yasser_Ad-Dussary_128kbps'),
+];
 
-  final Dio _dio;
-  static const _cacheKey = 'qa_reciters_v6'; // v6: full-Quran filter restored
-  static const _apiUrl   = 'https://quranicaudio.com/api/qaris';
+/// Synchronous provider — no network call, no caching, always ready.
+final reciterListProvider = Provider<List<QAReciter>>((_) => _kReciters);
 
-  Future<List<QAReciter>> fetchReciters() async {
-    // 1 — cache hit
-    final prefs = await SharedPreferences.getInstance();
-    final raw   = prefs.getString(_cacheKey);
-    if (raw != null) {
-      try { return _decode(raw); } catch (_) {}
-    }
-
-    // 2 — network
-    final resp = await _dio.get<List<dynamic>>(_apiUrl);
-    final list = resp.data!
-        .cast<Map<String, dynamic>>()
-        // Only show reciters who recorded most or all of the Quran (6 236 ayahs).
-        // Threshold 5 800 is intentionally generous to include full-Quran reciters
-        // whose API count is slightly under 6 236 due to file-splitting differences.
-        .where((r) => (r['count'] as int? ?? 0) >= 5800)
-        .map(QAReciter.fromJson)
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-
-    _unawaited(prefs.setString(_cacheKey, _encode(list)));
-    return list;
-  }
-
-  static String _encode(List<QAReciter> list) =>
-      jsonEncode(list.map((r) => r.toJson()).toList());
-
-  static List<QAReciter> _decode(String s) =>
-      (jsonDecode(s) as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .map(QAReciter.fromJson)
-          .toList();
-}
-
-void _unawaited(Future<void> f) {} // fire-and-forget cache writes
-
-final _reciterRepoProvider = Provider<_ReciterRepo>(
-  (ref) => _ReciterRepo(Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 30),
-  ))),
-);
-
-/// Full list of all reciters from QuranicAudio.
-/// Falls back to empty list on error → UI falls back to hardcoded 8.
-final reciterListProvider = FutureProvider<List<QAReciter>>((ref) async {
-  try {
-    return await ref.read(_reciterRepoProvider).fetchReciters();
-  } catch (_) {
-    return const [];
-  }
-});
-
-/// Returns the display name for [slug], searching the QA list first,
-/// then a hardcoded fallback map.
+/// Returns the display name for [slug], searching the curated list first,
+/// then a hardcoded fallback map for slugs not in the list.
 String reciterDisplayName(List<QAReciter> reciters, String slug) {
   for (final r in reciters) {
     if (r.relativePath == slug) return r.name;
   }
   const fallback = {
-    'Alafasy_128kbps':                'Mishary Alafasy',
-    'Abdul_Basit_Murattal_192kbps':   'Abdul Basit (Murattal)',
-    'Minshawi_Murattal_128kbps':      'Mohamed Siddiq El-Minshawi',
-    'Husary_128kbps':                 'Mahmoud Al-Husary',
-    'MaherAlMuaiqly128kbps':          'Maher Al Muaiqly',
-    'Abdullah_Basfar_192kbps':        'Abdullah Basfar',
-    'Shuraim_128kbps':                "Sa'ud ash-Shuraym",
-    'Bandar_Baleela':                 'Bandar Baleela',
+    'Alafasy_128kbps':              'Mishary Rashid Alafasy',
+    'Abdul_Basit_Murattal_192kbps': 'Abdul Basit (Murattal)',
+    'Minshawi_Murattal_128kbps':    'Mohamed Siddiq Al-Minshawi',
+    'Husary_128kbps':               'Mahmoud Al-Husary',
+    'MaherAlMuaiqly128kbps':        'Maher Al Muaiqly',
+    'Abdullah_Basfar_192kbps':      'Abdullah Basfar',
+    'Shuraim_128kbps':              "Sa'ud ash-Shuraym",
+    'Bandar_Baleela':               'Bandar Baleela',
   };
   return fallback[slug] ?? slug;
 }

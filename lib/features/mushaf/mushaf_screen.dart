@@ -1981,7 +1981,7 @@ class _ReciterStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final audio       = ref.watch(audioProvider);
-    final qaReciters  = ref.watch(reciterListProvider).valueOrNull ?? [];
+    final qaReciters  = ref.watch(reciterListProvider);
     final colors      = Theme.of(context).colorScheme;
     final isPlaying   = audio.isPlaying;
     final reciterSlug = audio.reciter;
@@ -2060,10 +2060,10 @@ class _ReciterPickerSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final audio        = ref.watch(audioProvider);
-    final recitersAsync = ref.watch(reciterListProvider);
-    final notifier     = ref.read(audioProvider.notifier);
-    final colors       = Theme.of(context).colorScheme;
+    final audio    = ref.watch(audioProvider);
+    final reciters = ref.watch(reciterListProvider);
+    final notifier = ref.read(audioProvider.notifier);
+    final colors   = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: Column(
@@ -2092,63 +2092,24 @@ class _ReciterPickerSheet extends ConsumerWidget {
           ),
           const Divider(height: 1),
           Flexible(
-            child: recitersAsync.when(
-              // ── Full QA list ──────────────────────────────────────────────
-              data: (qaList) {
-                if (qaList.isEmpty) {
-                  // QA returned empty — show hardcoded fallback
-                  return _hardcodedList(context, audio, notifier, colors);
-                }
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: qaList.length,
-                  itemBuilder: (_, i) {
-                    final r        = qaList[i];
-                    final selected = audio.reciter == r.relativePath;
-                    return ListTile(
-                      title: Text(r.name),
-                      subtitle: r.arabicName.isNotEmpty
-                          ? Text(
-                              r.arabicName,
-                              textDirection: TextDirection.rtl,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colors.onSurfaceVariant,
-                              ),
-                            )
-                          : null,
-                      trailing: selected
-                          ? Icon(Icons.check, color: colors.primary)
-                          : null,
-                      selected: selected,
-                      onTap: () {
-                        notifier.setReciter(r.relativePath);
-                        Navigator.of(context).pop();
-                      },
-                    );
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: reciters.length,
+              itemBuilder: (_, i) {
+                final r        = reciters[i];
+                final selected = audio.reciter == r.relativePath;
+                return ListTile(
+                  title: Text(r.name),
+                  trailing: selected
+                      ? Icon(Icons.check, color: colors.primary)
+                      : null,
+                  selected: selected,
+                  onTap: () {
+                    notifier.setReciter(r.relativePath);
+                    Navigator.of(context).pop();
                   },
                 );
               },
-              // ── Loading spinner ───────────────────────────────────────────
-              loading: () => SizedBox(
-                height: 160,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Loading reciters…',
-                        style: TextStyle(color: colors.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // ── Network error: hardcoded fallback ────────────────────────
-              error: (_, __) =>
-                  _hardcodedList(context, audio, notifier, colors),
             ),
           ),
           const SizedBox(height: 8),
@@ -2156,29 +2117,6 @@ class _ReciterPickerSheet extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _hardcodedList(
-    BuildContext context,
-    AudioState audio,
-    AudioNotifier notifier,
-    ColorScheme colors,
-  ) =>
-      ListView(
-        shrinkWrap: true,
-        children: [
-          for (final entry in AudioRepository.reciters.entries)
-            ListTile(
-              title: Text(entry.value),
-              trailing: audio.reciter == entry.key
-                  ? Icon(Icons.check, color: colors.primary)
-                  : null,
-              onTap: () {
-                notifier.setReciter(entry.key);
-                Navigator.of(context).pop();
-              },
-            ),
-        ],
-      );
 }
 
 class _PageNav extends StatelessWidget {

@@ -223,11 +223,13 @@ class AudioNotifier extends Notifier<AudioState> {
     globalId += ayahNumber;
 
     // CDNs tried in order — first success wins.
-    // CDN 4 (verses.quran.foundation) is non-empty only for Bandar Baleela.
+    // Follows Quran for Android: mirrors.quranicaudio.com is the primary CDN
+    // for everyayah-style per-ayah files; everyayah.com direct is the fallback.
     final candidates = [
       _audioRepo.ayahUrlIslamicNet(globalId, reciter: state.reciter),
-      _audioRepo.ayahUrl(surah, ayahNumber, reciter: state.reciter),
+      _audioRepo.ayahUrlMirrors(surah, ayahNumber, reciter: state.reciter),
       _audioRepo.ayahFallbackUrl(surah, ayahNumber, reciter: state.reciter),
+      _audioRepo.ayahUrl(surah, ayahNumber, reciter: state.reciter),
       ..._audioRepo.ayahUrlsVersesQf(surah, ayahNumber, reciter: state.reciter),
     ];
 
