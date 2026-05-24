@@ -2206,60 +2206,65 @@ class _PageNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final gold = isDark ? const Color(0xFFD4A017) : _kMushafGold;
+    final gold   = isDark ? const Color(0xFFD4A017) : _kMushafGold;
     final colors = Theme.of(context).colorScheme;
 
-    return Container(
+    // Symmetrical layout: fixed-width slot on each side keeps the number centred.
+    const double sideW = 44;
+
+    return SizedBox(
       height: 40,
-      child: Stack(
-        alignment: Alignment.center,
+      child: Row(
         children: [
-          // Page number centred in gold Mushaf style.
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('﴾',
-                  style: TextStyle(
-                      fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text(
-                  _toArabicNumerals(currentPage),
-                  style: TextStyle(
-                    fontFamily: 'UthmanicHafs',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: gold,
-                  ),
-                ),
-              ),
-              Text('﴿',
-                  style: TextStyle(
-                      fontFamily: 'UthmanicHafs', fontSize: 18, color: gold)),
-            ],
-          ),
-          // Expand button appears on the right when the reciter strip is hidden.
-          if (showExpand && onExpand != null)
-            Positioned(
-              right: 8,
-              child: Semantics(
-                label: 'Show reciter bar',
-                button: true,
-                child: InkWell(
-                  onTap: onExpand,
-                  borderRadius: BorderRadius.circular(4),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    child: Icon(
-                      Icons.keyboard_arrow_up,
-                      size: 18,
-                      color: colors.onSurfaceVariant,
+          // Left slot — empty spacer to balance the right button.
+          const SizedBox(width: sideW),
+          // Centre — page number in King Fahad Mushaf style.
+          Expanded(
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('﴾',
+                      style: TextStyle(fontSize: 18, color: gold)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      _toArabicNumerals(currentPage),
+                      style: TextStyle(
+                        fontFamily: 'UthmanicHafs',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: gold,
+                      ),
                     ),
                   ),
-                ),
+                  Text('﴿',
+                      style: TextStyle(fontSize: 18, color: gold)),
+                ],
               ),
             ),
+          ),
+          // Right slot — expand button when reciter strip is hidden, else spacer.
+          if (showExpand && onExpand != null)
+            Semantics(
+              label: 'Show reciter bar',
+              button: true,
+              child: InkWell(
+                onTap: onExpand,
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  width: sideW,
+                  height: 40,
+                  child: Icon(
+                    Icons.keyboard_arrow_up,
+                    size: 18,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: sideW),
         ],
       ),
     );
