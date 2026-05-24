@@ -63,7 +63,7 @@ class _ReciterRepo {
   _ReciterRepo(this._dio);
 
   final Dio _dio;
-  static const _cacheKey = 'qa_reciters_v5'; // v5: no-boundary city removal
+  static const _cacheKey = 'qa_reciters_v6'; // v6: full-Quran filter restored
   static const _apiUrl   = 'https://quranicaudio.com/api/qaris';
 
   Future<List<QAReciter>> fetchReciters() async {
@@ -78,7 +78,10 @@ class _ReciterRepo {
     final resp = await _dio.get<List<dynamic>>(_apiUrl);
     final list = resp.data!
         .cast<Map<String, dynamic>>()
-        .where((r) => (r['relative_path'] as String? ?? '').isNotEmpty)
+        // Only show reciters who recorded most or all of the Quran (6 236 ayahs).
+        // Threshold 5 800 is intentionally generous to include full-Quran reciters
+        // whose API count is slightly under 6 236 due to file-splitting differences.
+        .where((r) => (r['count'] as int? ?? 0) >= 5800)
         .map(QAReciter.fromJson)
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
