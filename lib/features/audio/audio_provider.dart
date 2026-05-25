@@ -260,6 +260,7 @@ class AudioNotifier extends Notifier<AudioState> {
     final candidates = [
       _audioRepo.ayahUrlIslamicNet(globalId, reciter: state.reciter),
       _audioRepo.ayahUrlMirrors(surah, ayahNumber, reciter: state.reciter),
+      _audioRepo.ayahUrlDownloadQa(surah, ayahNumber, reciter: state.reciter),
       _audioRepo.ayahFallbackUrl(surah, ayahNumber, reciter: state.reciter),
       _audioRepo.ayahUrl(surah, ayahNumber, reciter: state.reciter),
       ..._audioRepo.ayahUrlsVersesQf(surah, ayahNumber, reciter: state.reciter),
