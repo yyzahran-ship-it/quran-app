@@ -374,7 +374,7 @@ class _JuzTab extends ConsumerWidget {
     final async = ref.watch(juzBrowserProvider);
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error:   (_, __) => const Center(child: Text('Could not load juz list')),
+      error:   (err, __) => Center(child: Text('Juz load error: $err')),
       data:    (entries) => _JuzBrowserList(entries: entries),
     );
   }
