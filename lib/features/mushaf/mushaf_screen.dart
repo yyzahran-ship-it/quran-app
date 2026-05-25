@@ -992,9 +992,33 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
   int? _highlightedId;
   Offset _tapPos = Offset.zero;
 
+  // Cached during build so _onTap can compute the ayah's global top edge.
+  final _stackKey = GlobalKey();
+  double _xScale = 1.0;
+  double _yScale = 1.0;
+  Map<int, List<Rect>>? _localCoordsMap;
+
   Future<void> _onTap(Ayah ayah) async {
+    // Anchor the popup above the top edge of the ayah rect (not the tap point),
+    // so it never covers the ayah text.
+    Offset anchor = _tapPos;
+    final coords = _localCoordsMap;
+    if (coords != null) {
+      final mapKey = ayah.surahNumber * 10000 + ayah.ayahNumber;
+      final rects = coords[mapKey];
+      if (rects != null && rects.isNotEmpty) {
+        final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+        if (box != null) {
+          final globalStackTop = box.localToGlobal(Offset.zero).dy;
+          final minLocalY = rects
+              .map((r) => r.top * _yScale)
+              .reduce((a, b) => a < b ? a : b);
+          anchor = Offset(_tapPos.dx, globalStackTop + minLocalY);
+        }
+      }
+    }
     setState(() => _highlightedId = ayah.id);
-    await _showAyahPopup(context, ref, ayah, widget.isDark, _tapPos);
+    await _showAyahPopup(context, ref, ayah, widget.isDark, anchor);
     if (mounted) setState(() => _highlightedId = null);
   }
 
@@ -1017,10 +1041,13 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
     // ── Primary: pixel-precise coords from bundled KingFahad1.db ────────────
     if (coordsMap != null && coordsMap.isNotEmpty) {
       return LayoutBuilder(builder: (ctx, box) {
-        final W      = box.maxWidth;
-        final H      = box.maxHeight;
-        final xScale = W / kDbImageWidth;
-        final yScale = H / kDbImageHeight;
+        // Cache scales + map so _onTap can compute the ayah's global top edge.
+        _xScale = box.maxWidth / kDbImageWidth;
+        _yScale = box.maxHeight / kDbImageHeight;
+        _localCoordsMap = coordsMap;
+
+        final xScale = _xScale;
+        final yScale = _yScale;
 
         final zones = <Widget>[];
         for (final ayah in widget.ayahs) {
@@ -1038,7 +1065,7 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
             ));
           }
         }
-        return Stack(children: zones);
+        return Stack(key: _stackKey, children: zones);
       });
     }
 
@@ -1275,7 +1302,6 @@ class _AyahPopupBar extends ConsumerWidget {
   final bool isDark;
   final Offset tapPos;
 
-  static const _barW = 272.0;
   static const _barH = 52.0;
   static const _arrow = 8.0;
   static const _barColor = Color(0xFF1B6B3A); // deep Quran-green
@@ -1284,11 +1310,15 @@ class _AyahPopupBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final screen = MediaQuery.of(context).size;
     final safePad = MediaQuery.of(context).padding;
+    // Responsive width: ~88 % of the screen, clamped so it never clips on
+    // very small or very wide screens.
+    final barW = (screen.width * 0.88).clamp(240.0, 360.0);
 
     final isBookmarked = ref.watch(
         bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)));
 
-    // Place bar above the tap; flip below if too close to top.
+    // tapPos is the global top edge of the tapped ayah (set by _AyahImageOverlay).
+    // Place bar above it; flip below only if there is no room above.
     final showAbove = tapPos.dy - _barH - _arrow - 8 > safePad.top + 8;
     final double top = showAbove
         ? tapPos.dy - _barH - _arrow - 4
@@ -1296,11 +1326,11 @@ class _AyahPopupBar extends ConsumerWidget {
 
     // Clamp horizontally so the bar stays on screen.
     final double left =
-        (tapPos.dx - _barW / 2).clamp(8.0, screen.width - _barW - 8.0);
+        (tapPos.dx - barW / 2).clamp(8.0, screen.width - barW - 8.0);
 
     // Horizontal position of the downward arrow within the bar.
     final double arrowX =
-        (tapPos.dx - left - _arrow).clamp(_arrow * 2, _barW - _arrow * 4);
+        (tapPos.dx - left - _arrow).clamp(_arrow * 2, barW - _arrow * 4);
 
     return Material(
       color: Colors.transparent,
@@ -1323,7 +1353,7 @@ class _AyahPopupBar extends ConsumerWidget {
               children: [
                 // Toolbar row.
                 Container(
-                  width: _barW,
+                  width: barW,
                   height: _barH,
                   decoration: BoxDecoration(
                     color: _barColor,
