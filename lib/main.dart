@@ -5,7 +5,6 @@ import 'core/theme/theme_provider.dart';
 import 'data/repositories/quran_repository.dart';
 import 'data/sources/local/quran_seeder.dart';
 import 'features/home/home_screen.dart';
-import 'features/onboarding/onboarding_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +42,6 @@ class _AppStartup extends ConsumerStatefulWidget {
 
 class _AppStartupState extends ConsumerState<_AppStartup> {
   bool _ready = false;
-  bool _showOnboarding = false;
 
   @override
   void initState() {
@@ -54,24 +52,12 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
   Future<void> _init() async {
     try {
       final db = ref.read(quranDatabaseProvider);
-      // Seed DB and check onboarding status in parallel.
-      final results = await Future.wait([
+      await Future.wait([
         QuranSeeder(db).seedIfNeeded(),
-        hasSeenOnboarding(),
-        // Load KFGQPC font from cache if available (instant).
-        // On first install, starts a background download and returns false.
         ArabicFontService.tryLoadCached(),
       ]);
-      if (mounted) {
-        setState(() {
-          _showOnboarding = !(results[1] as bool);
-          _ready = true;
-        });
-      }
-      // results[2] is the font-loaded flag — no action needed;
-      // if true the font was overridden via FontLoader already.
+      if (mounted) setState(() => _ready = true);
     } catch (_) {
-      // On any error, still proceed to the app so it doesn't stay stuck.
       if (mounted) setState(() => _ready = true);
     }
   }
@@ -79,13 +65,6 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
   @override
   Widget build(BuildContext context) {
     if (!_ready) return const _SplashScreen();
-
-    if (_showOnboarding) {
-      return OnboardingScreen(
-        onDone: () => setState(() => _showOnboarding = false),
-      );
-    }
-
     return const HomeScreen();
   }
 }
