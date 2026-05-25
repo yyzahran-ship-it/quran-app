@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/dyslexia_provider.dart';
 import '../audio/audio_provider.dart';
-import '../audio/audio_repository.dart';
+import '../audio/reciter_provider.dart';
 import '../mushaf/mushaf_provider.dart';
+import '../mushaf/mushaf_download_provider.dart';
 import '../mushaf/second_translation_provider.dart';
 import '../mushaf/tafsir_repository.dart';
 
@@ -82,6 +83,8 @@ class SettingsScreen extends ConsumerWidget {
     final audio = ref.watch(audioProvider);
     final tafsirId = ref.watch(tafsirIdProvider);
     final mushaf = ref.watch(mushafProvider);
+    final reciters = ref.watch(reciterListProvider);
+    final download = ref.watch(mushafDownloadProvider);
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -230,10 +233,10 @@ class SettingsScreen extends ConsumerWidget {
             trailing: DropdownButton<String>(
               value: audio.reciter,
               underline: const SizedBox.shrink(),
-              items: AudioRepository.reciters.entries
-                  .map((e) => DropdownMenuItem(
-                        value: e.key,
-                        child: Text(e.value,
+              items: reciters
+                  .map((r) => DropdownMenuItem(
+                        value: r.relativePath,
+                        child: Text(r.name,
                             style: const TextStyle(fontSize: 13)),
                       ))
                   .toList(),
@@ -244,6 +247,9 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
           ),
+          // ── Offline ───────────────────────────────────────────────────────
+          _SectionHeader(title: 'Offline', colors: colors),
+          _MushafDownloadTile(download: download, colors: colors),
           // ── About ─────────────────────────────────────────────────────────
           _SectionHeader(title: 'About', colors: colors),
           ListTile(
@@ -260,7 +266,7 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.headphones_outlined),
             title: const Text('Audio'),
             subtitle: const Text(
-                'Streamed from audio.qurancdn.com — requires internet'),
+                'Streamed from mirrors.quranicaudio.com — requires internet'),
           ),
           ListTile(
             leading: const Icon(Icons.font_download_outlined),
@@ -322,6 +328,76 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Mushaf page download tile ────────────────────────────────────────────────
+
+class _MushafDownloadTile extends ConsumerWidget {
+  const _MushafDownloadTile({
+    required this.download,
+    required this.colors,
+  });
+
+  final MushafDownloadState download;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(mushafDownloadProvider.notifier);
+
+    if (download.isDone) {
+      return ListTile(
+        leading: Icon(Icons.check_circle_outline, color: colors.primary),
+        title: const Text('Mushaf pages'),
+        subtitle: const Text('All 604 pages saved for offline reading'),
+      );
+    }
+
+    if (download.isRunning) {
+      return ListTile(
+        leading: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            value: download.progress,
+            strokeWidth: 2.5,
+            color: colors.primary,
+          ),
+        ),
+        title: Text(
+          'Downloading pages… ${download.cached} / $kTotalMushafPages',
+        ),
+        subtitle: LinearProgressIndicator(
+          value: download.progress,
+          minHeight: 3,
+          borderRadius: BorderRadius.circular(2),
+        ),
+        trailing: TextButton(
+          onPressed: notifier.cancel,
+          child: const Text('Cancel'),
+        ),
+      );
+    }
+
+    final cached = download.cached;
+    return ListTile(
+      leading: Icon(
+        Icons.download_outlined,
+        color: cached > 0 ? colors.primary : colors.onSurfaceVariant,
+      ),
+      title: const Text('Mushaf pages (offline)'),
+      subtitle: Text(
+        cached == 0
+            ? 'Download all 604 pages for offline reading'
+            : '$cached of $kTotalMushafPages pages saved — tap to resume',
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: FilledButton.tonal(
+        onPressed: notifier.start,
+        child: const Text('Download'),
       ),
     );
   }

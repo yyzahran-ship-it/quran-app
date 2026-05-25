@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/theme_provider.dart';
@@ -21,6 +20,7 @@ import '../bookmarks/bookmarks_provider.dart';
 import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
 import 'mushaf_provider.dart';
+import 'mushaf_download_provider.dart';
 import 'search_screen.dart';
 import 'ayah_coords_provider.dart';
 import 'second_translation_provider.dart';
@@ -117,6 +117,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(mushafProvider);
     final audio = ref.watch(audioProvider);
+    final pageDownload = ref.watch(mushafDownloadProvider);
 
     // Auto-navigate to the page that contains the currently playing ayah.
     ref.listen<AudioState>(audioProvider, (prev, next) {
@@ -154,6 +155,24 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         title: _AppBarTitle(state: state),
         titleSpacing: 16,
         actions: [
+          // Small spinner while Mushaf page images are being downloaded.
+          if (pageDownload.isRunning)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Tooltip(
+                message:
+                    'Downloading pages ${pageDownload.cached}/$kTotalMushafPages',
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    value: pageDownload.progress,
+                    strokeWidth: 2,
+                    color: isLight ? const Color(0xFF1A1A1A) : null,
+                  ),
+                ),
+              ),
+            ),
           PopupMenuButton<_AppAction>(
             icon: Icon(Icons.more_vert,
                 color: isLight ? const Color(0xFF1A1A1A) : null),
@@ -460,14 +479,8 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
     }
   }
 
-  static Future<File> _cacheFileFor(int page) async {
-    // Use support dir (permanent, not cleared by OS) so pages survive
-    // low-storage cleanup that would wipe getTemporaryDirectory().
-    final dir = await getApplicationSupportDirectory();
-    final cacheDir = Directory('${dir.path}/mushaf_pages');
-    await cacheDir.create(recursive: true);
-    return File('${cacheDir.path}/page${page.toString().padLeft(3, '0')}.png');
-  }
+  static Future<File> _cacheFileFor(int page) =>
+      mushafPageCacheFile(page);
 
   @override
   Widget build(BuildContext context) {
