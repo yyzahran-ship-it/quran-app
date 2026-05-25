@@ -999,8 +999,8 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
   Map<int, List<Rect>>? _localCoordsMap;
 
   Future<void> _onTap(Ayah ayah) async {
-    // Anchor the popup above the top edge of the ayah rect (not the tap point),
-    // so it never covers the ayah text.
+    // Anchor the popup at the BEGINNING of the ayah — in RTL Arabic this is
+    // the right edge of the topmost (first) line rect.
     Offset anchor = _tapPos;
     final coords = _localCoordsMap;
     if (coords != null) {
@@ -1009,11 +1009,17 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
       if (rects != null && rects.isNotEmpty) {
         final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
         if (box != null) {
-          final globalStackTop = box.localToGlobal(Offset.zero).dy;
-          final minLocalY = rects
-              .map((r) => r.top * _yScale)
-              .reduce((a, b) => a < b ? a : b);
-          anchor = Offset(_tapPos.dx, globalStackTop + minLocalY);
+          final globalOrigin = box.localToGlobal(Offset.zero);
+          // Topmost rect = first line of the ayah.
+          final firstRect = rects
+              .reduce((a, b) => a.top <= b.top ? a : b);
+          final topLocalY    = firstRect.top  * _yScale;
+          // Right edge of the first rect = beginning of the ayah in RTL.
+          final beginLocalX  = (firstRect.left + firstRect.width) * _xScale;
+          anchor = Offset(
+            globalOrigin.dx + beginLocalX,
+            globalOrigin.dy + topLocalY,
+          );
         }
       }
     }
@@ -1317,18 +1323,19 @@ class _AyahPopupBar extends ConsumerWidget {
     final isBookmarked = ref.watch(
         bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)));
 
-    // tapPos is the global top edge of the tapped ayah (set by _AyahImageOverlay).
-    // Place bar above it; flip below only if there is no room above.
+    // tapPos.dy = global top edge of the ayah. Place bar above; flip below if
+    // there is no room above.
     final showAbove = tapPos.dy - _barH - _arrow - 8 > safePad.top + 8;
     final double top = showAbove
         ? tapPos.dy - _barH - _arrow - 4
         : tapPos.dy + 20;
 
-    // Clamp horizontally so the bar stays on screen.
+    // tapPos.dx = right edge of the ayah's first line (beginning in RTL).
+    // Right-align the bar to that point so the arrow sits at the ayah start.
     final double left =
-        (tapPos.dx - barW / 2).clamp(8.0, screen.width - barW - 8.0);
+        (tapPos.dx - barW).clamp(8.0, screen.width - barW - 8.0);
 
-    // Horizontal position of the downward arrow within the bar.
+    // Arrow position relative to the bar's left edge — points at the beginning.
     final double arrowX =
         (tapPos.dx - left - _arrow).clamp(_arrow * 2, barW - _arrow * 4);
 
