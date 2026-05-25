@@ -380,6 +380,23 @@ class _JuzTab extends ConsumerWidget {
   }
 }
 
+// Data bundle passed to each Juz section header.
+class _JuzHeaderData {
+  const _JuzHeaderData({
+    required this.juzNumber,
+    required this.startPage,
+    required this.endPage,
+    required this.startSurahName,
+    required this.startAyahNumber,
+  });
+
+  final int juzNumber;
+  final int startPage;
+  final int endPage;
+  final String startSurahName;
+  final int startAyahNumber;
+}
+
 class _JuzBrowserList extends StatelessWidget {
   const _JuzBrowserList({required this.entries});
 
@@ -393,7 +410,14 @@ class _JuzBrowserList extends StatelessWidget {
     int lastJuz = 0;
     for (final e in entries) {
       if (e.juz != lastJuz) {
-        items.add(e.juz); // sentinel: Juz header
+        final endPage = e.juz < 30 ? kJuzStartPages[e.juz] - 1 : 604;
+        items.add(_JuzHeaderData(
+          juzNumber: e.juz,
+          startPage: kJuzStartPages[e.juz - 1],
+          endPage: endPage,
+          startSurahName: e.surahName,
+          startAyahNumber: e.ayahNumber,
+        ));
         lastJuz = e.juz;
       }
       items.add(e);
@@ -405,7 +429,9 @@ class _JuzBrowserList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (ctx, i) {
         final item = items[i];
-        if (item is int) return _JuzHeader(juzNumber: item, colors: colors);
+        if (item is _JuzHeaderData) {
+          return _JuzHeader(data: item, colors: colors);
+        }
         return _RubRow(entry: item as _RubEntry, colors: colors);
       },
     );
@@ -415,9 +441,9 @@ class _JuzBrowserList extends StatelessWidget {
 // ── Juz section header ────────────────────────────────────────────────────────
 
 class _JuzHeader extends StatelessWidget {
-  const _JuzHeader({required this.juzNumber, required this.colors});
+  const _JuzHeader({required this.data, required this.colors});
 
-  final int juzNumber;
+  final _JuzHeaderData data;
   final ColorScheme colors;
 
   @override
@@ -427,18 +453,35 @@ class _JuzHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Text(
-            "Juz' $juzNumber",
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.onSurfaceVariant,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Juz' ${data.juzNumber}",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: colors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                '${data.startSurahName} ${data.startAyahNumber}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
           const Spacer(),
           Text(
-            '${kJuzStartPages[juzNumber - 1]}',
-            style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+            'p.${data.startPage}–${data.endPage}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: colors.onSurfaceVariant,
+            ),
           ),
         ],
       ),
