@@ -317,29 +317,14 @@ class _RubEntry {
   return (114, 1);
 }
 
-// Builds 8 rub' page anchors for a given Juz by dividing its page range
-// into 8 equal slices, then snapping to the first ayah on each slice's page.
+// Loads all 240 Rub' al-Hizb entries from the authoritative kRubStartIds
+// constant (traditional King Fahad Mushaf positions), batch-fetching Arabic
+// texts in a single DB query.
 final juzBrowserProvider = FutureProvider<List<_RubEntry>>((ref) async {
   final repo = ref.read(quranRepositoryProvider);
 
-  // Collect the 240 page anchors (1 per rub') and their global ayah IDs.
-  final pageAnchors = <int>[];     // page number per rub'
-  final globalIds   = <int>[];     // global ayah ID per rub'
-
-  for (int juz = 1; juz <= 30; juz++) {
-    final startPage = kJuzStartPages[juz - 1];
-    final endPage   = juz < 30 ? kJuzStartPages[juz] - 1 : 604;
-    final total     = endPage - startPage + 1;
-    for (int i = 0; i < 8; i++) {
-      final page     = startPage + (i * total ~/ 8);
-      final globalId = kPageFirstAyah[page - 1];
-      pageAnchors.add(page);
-      globalIds.add(globalId);
-    }
-  }
-
   // Batch-fetch all 240 Arabic texts in one DB query.
-  final texts     = await repo.getAyahTextsByIds(globalIds.toSet().toList());
+  final texts     = await repo.getAyahTextsByIds(kRubStartIds.toSet().toList());
   final surahRows = await repo.getAllSurahs();
   final surahNames = {for (final s in surahRows) s.id: s.nameSimple};
 
@@ -348,8 +333,8 @@ final juzBrowserProvider = FutureProvider<List<_RubEntry>>((ref) async {
     final juz     = idx ~/ 8 + 1;
     final hizb    = idx ~/ 4 + 1;   // hizb 1-60
     final quarter = idx  % 4 + 1;   // quarter 1-4
-    final gId     = globalIds[idx];
-    final page    = pageAnchors[idx];
+    final gId     = kRubStartIds[idx];
+    final page    = kAyahPages[gId - 1]; // look up page from global ayah ID
     final (surahNum, ayahNum) = _surahAyahFromGlobalId(gId);
 
     entries.add(_RubEntry(
