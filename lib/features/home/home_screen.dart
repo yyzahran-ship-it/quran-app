@@ -278,67 +278,330 @@ class _SurahRow extends StatelessWidget {
 }
 
 // ─── Juz' tab ─────────────────────────────────────────────────────────────────
+//
+// Shows all 30 Juzs as sticky section headers, each with 8 rub' (quarter-hizb)
+// entries below it. The pie-chart circle shows which quarter of the hizb the
+// entry is; the hizb number is printed inside for Q1 entries (hizb starts).
+// Tapping any row navigates directly to that page in the Mushaf.
+
+// One navigable entry within a Juz.
+class _RubEntry {
+  const _RubEntry({
+    required this.juz,
+    required this.hizb,
+    required this.quarter,
+    required this.surahNumber,
+    required this.ayahNumber,
+    required this.surahName,
+    required this.arabicText,
+    required this.pageNumber,
+  });
+
+  final int juz;
+  final int hizb;
+  final int quarter; // 1-4
+  final int surahNumber;
+  final int ayahNumber;
+  final String surahName;
+  final String arabicText;
+  final int pageNumber;
+}
+
+// Compute (surahNumber, ayahNumber) from a 1-based global ayah ID.
+(int, int) _surahAyahFromGlobalId(int globalId) {
+  int remaining = globalId;
+  for (int s = 0; s < kSurahVerseCounts.length; s++) {
+    if (remaining <= kSurahVerseCounts[s]) return (s + 1, remaining);
+    remaining -= kSurahVerseCounts[s];
+  }
+  return (114, 1);
+}
+
+// Builds 8 rub' page anchors for a given Juz by dividing its page range
+// into 8 equal slices, then snapping to the first ayah on each slice's page.
+final juzBrowserProvider = FutureProvider<List<_RubEntry>>((ref) async {
+  final repo = ref.read(quranRepositoryProvider);
+
+  // Collect the 240 page anchors (1 per rub') and their global ayah IDs.
+  final pageAnchors = <int>[];     // page number per rub'
+  final globalIds   = <int>[];     // global ayah ID per rub'
+
+  for (int juz = 1; juz <= 30; juz++) {
+    final startPage = kJuzStartPages[juz - 1];
+    final endPage   = juz < 30 ? kJuzStartPages[juz] - 1 : 604;
+    final total     = endPage - startPage + 1;
+    for (int i = 0; i < 8; i++) {
+      final page     = startPage + (i * total ~/ 8);
+      final globalId = kPageFirstAyah[page - 1];
+      pageAnchors.add(page);
+      globalIds.add(globalId);
+    }
+  }
+
+  // Batch-fetch all 240 Arabic texts in one DB query.
+  final texts     = await repo.getAyahTextsByIds(globalIds.toSet().toList());
+  final surahRows = await repo.getAllSurahs();
+  final surahNames = {for (final s in surahRows) s.id: s.nameSimple};
+
+  final entries = <_RubEntry>[];
+  for (int idx = 0; idx < 240; idx++) {
+    final juz     = idx ~/ 8 + 1;
+    final hizb    = idx ~/ 4 + 1;   // hizb 1-60
+    final quarter = idx  % 4 + 1;   // quarter 1-4
+    final gId     = globalIds[idx];
+    final page    = pageAnchors[idx];
+    final (surahNum, ayahNum) = _surahAyahFromGlobalId(gId);
+
+    entries.add(_RubEntry(
+      juz:        juz,
+      hizb:       hizb,
+      quarter:    quarter,
+      surahNumber: surahNum,
+      ayahNumber:  ayahNum,
+      surahName:   surahNames[surahNum] ?? 'Surah $surahNum',
+      arabicText:  texts[gId] ?? '',
+      pageNumber:  page,
+    ));
+  }
+  return entries;
+});
 
 class _JuzTab extends ConsumerWidget {
   const _JuzTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final juzsAsync = ref.watch(juzsProvider);
+    final async = ref.watch(juzBrowserProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error:   (_, __) => const Center(child: Text('Could not load juz list')),
+      data:    (entries) => _JuzBrowserList(entries: entries),
+    );
+  }
+}
+
+class _JuzBrowserList extends StatelessWidget {
+  const _JuzBrowserList({required this.entries});
+
+  final List<_RubEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    // Build a flat list of (header | entry) items.
+    // A header row is emitted before the first entry of each Juz.
+    final items = <Object>[];
+    int lastJuz = 0;
+    for (final e in entries) {
+      if (e.juz != lastJuz) {
+        items.add(e.juz); // sentinel: Juz header
+        lastJuz = e.juz;
+      }
+      items.add(e);
+    }
+
     final colors = Theme.of(context).colorScheme;
 
-    return juzsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) =>
-          const Center(child: Text('Could not load juz list')),
-      data: (juzs) => ListView.builder(
-        itemCount: juzs.length,
-        itemBuilder: (context, i) {
-          final juz = juzs[i];
-          return ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.surfaceContainerHighest,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${juz.juzNumber}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (ctx, i) {
+        final item = items[i];
+        if (item is int) return _JuzHeader(juzNumber: item, colors: colors);
+        return _RubRow(entry: item as _RubEntry, colors: colors);
+      },
+    );
+  }
+}
+
+// ── Juz section header ────────────────────────────────────────────────────────
+
+class _JuzHeader extends StatelessWidget {
+  const _JuzHeader({required this.juzNumber, required this.colors});
+
+  final int juzNumber;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: colors.surfaceContainerHighest.withValues(alpha: 0.85),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Text(
+            "Juz' $juzNumber",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurfaceVariant,
             ),
-            title: Text(
-              "Juz' ${juz.juzNumber}",
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              '${juz.versesCount} verses',
-              style:
-                  TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-            ),
-            trailing: Text(
-              'P. ${kJuzStartPages[juz.juzNumber - 1]}',
-              style:
-                  TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
-            ),
-            onTap: () {
-              ref.read(mushafProvider.notifier).navigateToJuz(juz.juzNumber);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MushafScreen()),
-              );
-            },
-          );
-        },
+          ),
+          const Spacer(),
+          Text(
+            '${kJuzStartPages[juzNumber - 1]}',
+            style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
+}
+
+// ── Rub' entry row ────────────────────────────────────────────────────────────
+
+class _RubRow extends ConsumerWidget {
+  const _RubRow({required this.entry, required this.colors});
+
+  final _RubEntry entry;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Truncate long Arabic text with ellipsis.
+    final arabic = entry.arabicText.length > 35
+        ? '${entry.arabicText.substring(0, 35)}...'
+        : entry.arabicText;
+
+    return InkWell(
+      onTap: () {
+        ref.read(mushafProvider.notifier).navigateToPage(entry.pageNumber);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MushafScreen()),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            _HizbPie(
+              quarter: entry.quarter,
+              hizbNumber: entry.quarter == 1 ? entry.hizb : null,
+              color: colors.primary,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    arabic,
+                    textDirection: TextDirection.rtl,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: kArabicFont,
+                      fontSize: 16,
+                      height: 1.6,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Surah ${entry.surahName}, Ayah ${entry.ayahNumber}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${entry.pageNumber}',
+              style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Hizb pie-chart circle ─────────────────────────────────────────────────────
+//
+// Quarter 1 (hizb start): shows hizb number + 1/4 filled arc.
+// Quarter 2 (نصف):        half-filled arc.
+// Quarter 3 (ثلاثة أرباع): 3/4-filled arc.
+// Quarter 4 (end of hizb): fully-filled circle (no number).
+
+class _HizbPie extends StatelessWidget {
+  const _HizbPie({
+    required this.quarter,
+    required this.color,
+    this.hizbNumber,
+  });
+
+  final int quarter;      // 1-4
+  final Color color;
+  final int? hizbNumber;  // non-null only for Q1 (hizb start)
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 42,
+      height: 42,
+      child: CustomPaint(
+        painter: _PiePainter(
+          quarter: quarter,
+          fillColor: color.withValues(alpha: 0.75),
+          trackColor: color.withValues(alpha: 0.18),
+        ),
+        child: Center(
+          child: hizbNumber != null
+              ? Text(
+                  '$hizbNumber',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+class _PiePainter extends CustomPainter {
+  const _PiePainter({
+    required this.quarter,
+    required this.fillColor,
+    required this.trackColor,
+  });
+
+  final int quarter;
+  final Color fillColor;
+  final Color trackColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r  = (size.width / 2) - 2;
+    final rect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+
+    // Background track circle.
+    canvas.drawCircle(Offset(cx, cy), r,
+        Paint()..color = trackColor);
+
+    // Filled arc — start at top (-π/2), sweep clockwise.
+    final sweep = (quarter / 4) * 2 * 3.14159265;
+    canvas.drawArc(
+      rect,
+      -3.14159265 / 2, // start at 12 o'clock
+      sweep,
+      true, // use centre (pie slice)
+      Paint()..color = fillColor,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PiePainter old) =>
+      old.quarter != quarter ||
+      old.fillColor != fillColor ||
+      old.trackColor != trackColor;
 }
 
 // ─── Bookmarks tab ────────────────────────────────────────────────────────────

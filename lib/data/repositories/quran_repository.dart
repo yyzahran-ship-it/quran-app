@@ -101,6 +101,15 @@ class QuranRepository {
     return rows.map(_toAyah).toList();
   }
 
+  /// Fetch Arabic text for a set of global ayah IDs in one query.
+  Future<Map<int, String>> getAyahTextsByIds(List<int> globalIds) async {
+    if (globalIds.isEmpty) return {};
+    final rows = await (_db.select(_db.ayahs)
+          ..where((t) => t.id.isIn(globalIds)))
+        .get();
+    return {for (final r in rows) r.id: r.textUthmani};
+  }
+
   /// Full-text search across Uthmani Arabic text. Returns up to 100 results.
   Future<List<Ayah>> searchAyahs(String query) async {
     if (query.trim().isEmpty) return [];
