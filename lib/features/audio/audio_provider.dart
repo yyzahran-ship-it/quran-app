@@ -136,7 +136,20 @@ class AudioNotifier extends Notifier<AudioState> {
         speed: state.speed,
       );
 
-      ref.read(mushafProvider.notifier).navigateToSurah(surahNumber);
+      // Navigate only if not already on the correct page.
+      // Use the starting ayah's page — not the surah's first page — so
+      // pressing play mid-surah doesn't jump the reader back to verse 1.
+      int gid = 0;
+      for (int i = 0; i < surahNumber - 1; i++) {
+        gid += kSurahVerseCounts[i];
+      }
+      gid += startAyah;
+      final targetPage = kAyahPages[gid - 1];
+      final currentPage = ref.read(mushafProvider).currentPage;
+      if (currentPage != targetPage) {
+        ref.read(mushafProvider.notifier).navigateToPage(targetPage);
+      }
+
       await _playCurrentAyah();
     } catch (_) {
       state = state.copyWith(isLoading: false, hasError: true);
