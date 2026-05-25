@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../mushaf/mushaf_provider.dart';
 import 'audio_repository.dart';
 import 'quran_foundation_repository.dart';
+
+const _kReciterPrefKey = 'selected_reciter';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -95,7 +98,18 @@ class AudioNotifier extends Notifier<AudioState> {
 
     ref.onDispose(() => _player.dispose());
 
+    // Load persisted reciter asynchronously; update state once ready.
+    _loadSavedReciter();
+
     return const AudioState();
+  }
+
+  Future<void> _loadSavedReciter() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_kReciterPrefKey);
+    if (saved != null && saved.isNotEmpty) {
+      state = state.copyWith(reciter: saved);
+    }
   }
 
   QuranRepository get _repo => ref.read(quranRepositoryProvider);
@@ -182,6 +196,9 @@ class AudioNotifier extends Notifier<AudioState> {
     final wasPlaying = state.isPlaying;
     await _player.stop();
     state = state.copyWith(reciter: reciterSlug, isPlaying: false);
+    // Persist selection so it survives app restarts.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kReciterPrefKey, reciterSlug);
     if (wasPlaying && state.hasAudio) {
       await _playCurrentAyah();
     }

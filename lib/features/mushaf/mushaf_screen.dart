@@ -2118,9 +2118,10 @@ class _ReciterStrip extends ConsumerWidget {
 
 // ─── Reciter picker sheet ──────────────────────────────────────────────────────
 //
-// Shows two sections:
-//   1. Curated list (hardcoded, always instant) — everyayah CDN
-//   2. Quran Foundation reciters (fetched once from api.quran.com) — 40+
+// Matches Quran for Android's reciter menu:
+//   - Section headers per recording style (Murattal, Mujawwad)
+//   - Each row: reciter name + style badge; checkmark on selected
+//   - Additional reciters from Quran Foundation API at the bottom
 
 class _ReciterPickerSheet extends ConsumerWidget {
   const _ReciterPickerSheet();
@@ -2133,18 +2134,64 @@ class _ReciterPickerSheet extends ConsumerWidget {
     final notifier = ref.read(audioProvider.notifier);
     final colors   = Theme.of(context).colorScheme;
 
-    // QF reciters de-duped against the hardcoded list by display name.
+    // Group hardcoded reciters by style.
+    final Map<String, List<QAReciter>> byStyle = {};
+    for (final r in reciters) {
+      (byStyle[r.style] ??= []).add(r);
+    }
+    final styleOrder = ['Murattal', 'Mujawwad'];
+    final sortedStyles = [
+      ...styleOrder.where(byStyle.containsKey),
+      ...byStyle.keys.where((s) => !styleOrder.contains(s)),
+    ];
+
+    // QF reciters de-duped against the hardcoded list by name.
     final hardcodedNames = reciters.map((r) => r.name.toLowerCase()).toSet();
     final qfReciters = qfAsync.valueOrNull
-        ?.where((r) => !hardcodedNames.contains(r.displayName.toLowerCase()))
+        ?.where((r) => !hardcodedNames.contains(r.name.toLowerCase()))
         .toList() ?? [];
 
-    Widget buildTile(String slug, String displayName) {
+    // Group QF reciters by style as well.
+    final Map<String, List<QFRecitation>> qfByStyle = {};
+    for (final r in qfReciters) {
+      final s = r.style.isNotEmpty ? r.style : 'Other';
+      (qfByStyle[s] ??= []).add(r);
+    }
+
+    Widget sectionHeader(String label) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
+          child: Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+              color: colors.primary,
+            ),
+          ),
+        );
+
+    Widget reciterTile({
+      required String slug,
+      required String name,
+      required String style,
+    }) {
       final selected = audio.reciter == slug;
       return ListTile(
-        title: Text(displayName),
-        trailing: selected ? Icon(Icons.check, color: colors.primary) : null,
+        dense: true,
+        title: Text(
+          name,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? colors.primary : colors.onSurface,
+          ),
+        ),
+        trailing: selected
+            ? Icon(Icons.check_circle, color: colors.primary, size: 20)
+            : null,
         selected: selected,
+        selectedTileColor: colors.primary.withValues(alpha: 0.06),
         onTap: () {
           notifier.setReciter(slug);
           Navigator.of(context).pop();
@@ -2168,13 +2215,19 @@ class _ReciterPickerSheet extends ConsumerWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              'Select Reciter',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: colors.onSurface,
-              ),
+            child: Row(
+              children: [
+                Icon(Icons.headphones, size: 20, color: colors.primary),
+                const SizedBox(width: 10),
+                Text(
+                  'Select Reciter',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ],
             ),
           ),
           const Divider(height: 1),
@@ -2182,43 +2235,45 @@ class _ReciterPickerSheet extends ConsumerWidget {
             child: ListView(
               shrinkWrap: true,
               children: [
-                // ── Section 1: curated everyayah reciters ──────────────────
-                for (final r in reciters)
-                  buildTile(r.relativePath, r.name),
+                // ── Hardcoded reciters grouped by style ────────────────────
+                for (final style in sortedStyles) ...[
+                  sectionHeader(style),
+                  for (final r in byStyle[style]!)
+                    reciterTile(
+                      slug: r.relativePath,
+                      name: r.name,
+                      style: r.style,
+                    ),
+                ],
 
-                // ── Section 2: Quran Foundation reciters ───────────────────
+                // ── Quran Foundation reciters ──────────────────────────────
                 if (qfAsync.isLoading)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Center(child: CircularProgressIndicator()),
                   )
-                else if (qfReciters.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                    child: Text(
-                      'MORE RECITERS (quran.com)',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
-                        color: colors.primary,
+                else if (qfByStyle.isNotEmpty) ...[
+                  for (final style in qfByStyle.keys) ...[
+                    sectionHeader('$style (quran.com)'),
+                    for (final r in qfByStyle[style]!)
+                      reciterTile(
+                        slug: r.slug,
+                        name: r.name,
+                        style: r.style,
                       ),
-                    ),
-                  ),
-                  for (final r in qfReciters)
-                    buildTile(r.slug, r.displayName),
+                  ],
                 ] else if (qfAsync.hasError)
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Could not load additional reciters — check your connection.',
+                      'Could not load more reciters — check your connection.',
                       style: TextStyle(fontSize: 12, color: colors.outline),
                     ),
                   ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
-          const SizedBox(height: 8),
         ],
       ),
     );
