@@ -16,6 +16,7 @@ import '../audio/audio_player_bar.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_provider.dart';
+import '../audio/quran_foundation_repository.dart';
 import '../bookmarks/bookmarks_provider.dart';
 import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
@@ -1995,10 +1996,22 @@ class _ReciterStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final audio       = ref.watch(audioProvider);
     final qaReciters  = ref.watch(reciterListProvider);
+    final qfAsync     = ref.watch(qfRecitationsProvider);
     final colors      = Theme.of(context).colorScheme;
     final isPlaying   = audio.isPlaying;
     final reciterSlug = audio.reciter;
-    final reciterName = reciterDisplayName(qaReciters, reciterSlug);
+
+    // Resolve display name from hardcoded list first, then QF list.
+    String reciterName = reciterDisplayName(qaReciters, reciterSlug);
+    if (reciterSlug.startsWith('qf_')) {
+      final id = int.tryParse(reciterSlug.substring(3));
+      if (id != null) {
+        final qf = qfAsync.valueOrNull ?? [];
+        for (final r in qf) {
+          if (r.id == id) { reciterName = r.displayName; break; }
+        }
+      }
+    }
 
     return Container(
       height: 44,
@@ -2067,6 +2080,10 @@ class _ReciterStrip extends ConsumerWidget {
 }
 
 // ─── Reciter picker sheet ──────────────────────────────────────────────────────
+//
+// Shows two sections:
+//   1. Curated list (hardcoded, always instant) — everyayah CDN
+//   2. Quran Foundation reciters (fetched once from api.quran.com) — 40+
 
 class _ReciterPickerSheet extends ConsumerWidget {
   const _ReciterPickerSheet();
@@ -2075,8 +2092,28 @@ class _ReciterPickerSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final audio    = ref.watch(audioProvider);
     final reciters = ref.watch(reciterListProvider);
+    final qfAsync  = ref.watch(qfRecitationsProvider);
     final notifier = ref.read(audioProvider.notifier);
     final colors   = Theme.of(context).colorScheme;
+
+    // QF reciters de-duped against the hardcoded list by display name.
+    final hardcodedNames = reciters.map((r) => r.name.toLowerCase()).toSet();
+    final qfReciters = qfAsync.valueOrNull
+        ?.where((r) => !hardcodedNames.contains(r.displayName.toLowerCase()))
+        .toList() ?? [];
+
+    Widget buildTile(String slug, String displayName) {
+      final selected = audio.reciter == slug;
+      return ListTile(
+        title: Text(displayName),
+        trailing: selected ? Icon(Icons.check, color: colors.primary) : null,
+        selected: selected,
+        onTap: () {
+          notifier.setReciter(slug);
+          Navigator.of(context).pop();
+        },
+      );
+    }
 
     return SafeArea(
       child: Column(
@@ -2105,24 +2142,43 @@ class _ReciterPickerSheet extends ConsumerWidget {
           ),
           const Divider(height: 1),
           Flexible(
-            child: ListView.builder(
+            child: ListView(
               shrinkWrap: true,
-              itemCount: reciters.length,
-              itemBuilder: (_, i) {
-                final r        = reciters[i];
-                final selected = audio.reciter == r.relativePath;
-                return ListTile(
-                  title: Text(r.name),
-                  trailing: selected
-                      ? Icon(Icons.check, color: colors.primary)
-                      : null,
-                  selected: selected,
-                  onTap: () {
-                    notifier.setReciter(r.relativePath);
-                    Navigator.of(context).pop();
-                  },
-                );
-              },
+              children: [
+                // ── Section 1: curated everyayah reciters ──────────────────
+                for (final r in reciters)
+                  buildTile(r.relativePath, r.name),
+
+                // ── Section 2: Quran Foundation reciters ───────────────────
+                if (qfAsync.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (qfReciters.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: Text(
+                      'MORE RECITERS (quran.com)',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: colors.primary,
+                      ),
+                    ),
+                  ),
+                  for (final r in qfReciters)
+                    buildTile(r.slug, r.displayName),
+                ] else if (qfAsync.hasError)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Could not load additional reciters — check your connection.',
+                      style: TextStyle(fontSize: 12, color: colors.outline),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 8),

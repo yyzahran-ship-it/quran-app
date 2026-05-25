@@ -5,6 +5,7 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/dyslexia_provider.dart';
 import '../audio/audio_provider.dart';
 import '../audio/reciter_provider.dart';
+import '../audio/quran_foundation_repository.dart';
 import '../mushaf/mushaf_provider.dart';
 import '../mushaf/mushaf_download_provider.dart';
 import '../mushaf/second_translation_provider.dart';
@@ -83,8 +84,15 @@ class SettingsScreen extends ConsumerWidget {
     final audio = ref.watch(audioProvider);
     final tafsirId = ref.watch(tafsirIdProvider);
     final mushaf = ref.watch(mushafProvider);
-    final reciters = ref.watch(reciterListProvider);
-    final download = ref.watch(mushafDownloadProvider);
+    final reciters  = ref.watch(reciterListProvider);
+    final qfAsync   = ref.watch(qfRecitationsProvider);
+    final download  = ref.watch(mushafDownloadProvider);
+
+    // Merged reciter list for the dropdown: hardcoded + QF (de-duped by name).
+    final hardcodedNames = reciters.map((r) => r.name.toLowerCase()).toSet();
+    final qfReciters = qfAsync.valueOrNull
+        ?.where((r) => !hardcodedNames.contains(r.displayName.toLowerCase()))
+        .toList() ?? [];
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -233,13 +241,20 @@ class SettingsScreen extends ConsumerWidget {
             trailing: DropdownButton<String>(
               value: audio.reciter,
               underline: const SizedBox.shrink(),
-              items: reciters
-                  .map((r) => DropdownMenuItem(
-                        value: r.relativePath,
-                        child: Text(r.name,
-                            style: const TextStyle(fontSize: 13)),
-                      ))
-                  .toList(),
+              items: [
+                // Hardcoded curated list (everyayah CDN)
+                ...reciters.map((r) => DropdownMenuItem(
+                      value: r.relativePath,
+                      child: Text(r.name,
+                          style: const TextStyle(fontSize: 13)),
+                    )),
+                // Additional reciters from Quran Foundation API
+                ...qfReciters.map((r) => DropdownMenuItem(
+                      value: r.slug,
+                      child: Text(r.displayName,
+                          style: const TextStyle(fontSize: 13)),
+                    )),
+              ],
               onChanged: (v) {
                 if (v != null) {
                   ref.read(audioProvider.notifier).setReciter(v);

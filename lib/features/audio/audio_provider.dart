@@ -4,6 +4,7 @@ import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../mushaf/mushaf_provider.dart';
 import 'audio_repository.dart';
+import 'quran_foundation_repository.dart';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,11 @@ class AudioState {
 
   // Both A and B are set — loop is running.
   bool get loopActive => loopStart != null && loopEnd != null;
+
+  // Reciter slugs starting with "qf_" come from the Quran Foundation API.
+  bool get isQFReciter => reciter.startsWith('qf_');
+  int? get qfRecitationId =>
+      isQFReciter ? int.tryParse(reciter.substring(3)) : null;
 
   AudioState copyWith({
     int? surahNumber,
@@ -94,6 +100,7 @@ class AudioNotifier extends Notifier<AudioState> {
 
   QuranRepository get _repo => ref.read(quranRepositoryProvider);
   AudioRepository get _audioRepo => ref.read(audioRepositoryProvider);
+  QuranFoundationRepository get _qfRepo => ref.read(qfRepositoryProvider);
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -193,17 +200,14 @@ class AudioNotifier extends Notifier<AudioState> {
   ///   No loop → set A → set B (loop active) → clear
   void tapLoopButton() {
     if (state.loopActive) {
-      // Clear the loop.
       state = state.copyWith(clearLoop: true);
     } else if (state.loopASet) {
-      // Set B to current ayah; if B < A, swap so A is always ≤ B.
       final b = state.currentAyahIndex;
       final a = state.loopStart!;
       state = a <= b
           ? state.copyWith(loopEnd: b)
           : state.copyWith(loopStart: b, loopEnd: a);
     } else {
-      // Set A to current ayah.
       state = state.copyWith(loopStart: state.currentAyahIndex);
     }
   }
@@ -212,9 +216,39 @@ class AudioNotifier extends Notifier<AudioState> {
 
   Future<void> _playCurrentAyah() async {
     if (state.surahNumber == null) return;
-    final surah = state.surahNumber!;
+    final surah      = state.surahNumber!;
     final ayahNumber = state.currentAyahIndex + 1;
 
+    state = state.copyWith(isLoading: true, hasError: false);
+
+    // ── Path A: Quran Foundation API (slug starts with "qf_") ──────────────
+    // Fetches all ayah URLs for the surah in one API call (cached after first
+    // request), then plays the exact URL returned — no folder-guessing.
+    final qfId = state.qfRecitationId;
+    if (qfId != null) {
+      try {
+        final urls = await _qfRepo.fetchSurahAudio(qfId, surah);
+        final url  = urls[ayahNumber];
+        if (url != null) {
+          try {
+            await _player.setUrl(url);
+            await _player.setSpeed(state.speed);
+            await _player.play();
+            state = state.copyWith(
+                isPlaying: true, isLoading: false, hasError: false);
+            return;
+          } catch (_) {
+            // CDN request failed even though we got the URL — fall through.
+          }
+        }
+      } catch (_) {
+        // API call failed (offline / rate-limited).
+      }
+      state = state.copyWith(isPlaying: false, isLoading: false, hasError: true);
+      return;
+    }
+
+    // ── Path B: everyayah CDN chain (hardcoded reciters) ───────────────────
     // Compute global ayah ID (1-indexed, 1-6236) for cdn.islamic.network.
     int globalId = 0;
     for (int i = 0; i < surah - 1; i++) {
@@ -223,8 +257,6 @@ class AudioNotifier extends Notifier<AudioState> {
     globalId += ayahNumber;
 
     // CDNs tried in order — first success wins.
-    // Follows Quran for Android: mirrors.quranicaudio.com is the primary CDN
-    // for everyayah-style per-ayah files; everyayah.com direct is the fallback.
     final candidates = [
       _audioRepo.ayahUrlIslamicNet(globalId, reciter: state.reciter),
       _audioRepo.ayahUrlMirrors(surah, ayahNumber, reciter: state.reciter),
@@ -233,8 +265,6 @@ class AudioNotifier extends Notifier<AudioState> {
       ..._audioRepo.ayahUrlsVersesQf(surah, ayahNumber, reciter: state.reciter),
     ];
 
-    state = state.copyWith(isLoading: true, hasError: false);
-
     bool loaded = false;
     for (final url in candidates) {
       if (loaded) break;
@@ -242,9 +272,7 @@ class AudioNotifier extends Notifier<AudioState> {
       try {
         await _player.setUrl(url);
         loaded = true;
-      } catch (_) {
-        // This CDN failed — try next.
-      }
+      } catch (_) {}
     }
 
     if (!loaded) {
@@ -267,7 +295,6 @@ class AudioNotifier extends Notifier<AudioState> {
 
   void _onAyahComplete() {
     if (state.loopActive) {
-      // When the loop-end ayah finishes, jump back to loop-start.
       if (state.currentAyahIndex >= state.loopEnd!) {
         _seekToAyah(state.loopStart!).then((_) => _playCurrentAyah());
         return;
