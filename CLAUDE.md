@@ -119,3 +119,33 @@ If you can't decide between two valid approaches, write both into `decisions/NNN
 If a library or API behaves unexpectedly, search the web before guessing. Cite the source in code comments.
 
 If you need real Quran data examples (an ayah, a surah structure, a tafsir excerpt), fetch from the Quran.com API rather than typing it from memory.
+
+## gstack
+
+gstack (v1.45.0.0) is installed at `~/.claude/skills/gstack` and its skills are active in this session.
+
+**What it is**: A collection of AI coding workflow skills for Claude Code — code review, QA, shipping, design review, iOS testing, and more.
+
+**Key skills available** (use as slash commands, e.g. `/qa`, `/review`, `/ship`):
+
+| Skill | What it does |
+|---|---|
+| `/qa` | Full QA pass — tests features, finds edge cases, files bug reports |
+| `/review` | Code review — correctness, security, architecture |
+| `/ship` | End-to-end ship checklist: tests, review, changelog, deploy |
+| `/design-review` | Visual audit of a deployed web UI |
+| `/ios-qa` | QA testing on a real iPhone via debug bridge |
+| `/ios-design-review` | Visual design audit against Apple HIG |
+| `/health` | Project health check — test coverage, debt, CI status |
+| `/investigate` | Deep dive into a bug or unexpected behaviour |
+| `/document-release` | Post-ship docs sync (README, CHANGELOG, CLAUDE.md) |
+| `/gstack-upgrade` | Upgrade gstack to latest version |
+| `/browse` | Headless browser — open a URL, screenshot, test a flow |
+| `/autoplan` | Turn a feature request into a structured implementation plan |
+| `/learn` | Capture a lesson learned into project memory |
+
+**Note on browser skills** (`/browse`, `/qa` on web): Playwright Chromium could not be downloaded in this environment (network restriction on `cdn.playwright.dev`). Browser-based skills will not work in this cloud session — they work fine on your local machine.
+
+**Upgrade**: run `/gstack-upgrade` to pull the latest version.
+
+**Installed by**: `git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && ~/.claude/skills/gstack/setup`
