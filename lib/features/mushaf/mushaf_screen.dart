@@ -711,6 +711,9 @@ class _TextFallbackView extends ConsumerWidget {
     final audio = ref.watch(audioProvider);
     // dyslexia_font applies monospace + extra spacing to translation text only.
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
+    // Bookmarked ayah IDs — read once for the whole page build.
+    final bookmarkedIds = ref.watch(
+        bookmarksProvider.select((bms) => bms.map((b) => b.ayahId).toSet()));
 
     final bg = isDark ? const Color(0xFF1C1C1C) : Colors.white;
     final textColor = isDark ? const Color(0xFFEEEEEE) : const Color(0xFF1A1A1A);
@@ -736,6 +739,7 @@ class _TextFallbackView extends ConsumerWidget {
         textColor: textColor,
         isDark: isDark,
         isHighlighted: isHighlighted,
+        isBookmarked: bookmarkedIds.contains(ayah.id),
         dyslexiaFont: dyslexiaFont,
       ));
     }
@@ -877,6 +881,7 @@ class _MushafAyahText extends ConsumerWidget {
     required this.textColor,
     required this.isDark,
     required this.isHighlighted,
+    this.isBookmarked = false,
     this.secondTranslation,
     this.dyslexiaFont = false,
   });
@@ -887,6 +892,7 @@ class _MushafAyahText extends ConsumerWidget {
   final Color textColor;
   final bool isDark;
   final bool isHighlighted;
+  final bool isBookmarked;
   // When true, translation text uses monospace font + extra spacing/height
   // to aid readability for users with dyslexia. Arabic text is unaffected.
   final bool dyslexiaFont;
@@ -949,6 +955,27 @@ class _MushafAyahText extends ConsumerWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: content,
+      );
+    } else if (isBookmarked) {
+      // Amber shade for bookmarked ayahs — same shade as Quran for Android.
+      content = Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.amber.withAlpha(38)
+              : Colors.amber.withAlpha(30),
+          border: Border(
+            left: BorderSide(
+              color: Colors.amber.shade600,
+              width: 3,
+            ),
+          ),
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(4),
+            bottomRight: Radius.circular(4),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(8, 2, 6, 2),
         child: content,
       );
     }
@@ -1871,6 +1898,8 @@ class _PageTranslations extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
     final audio = ref.watch(audioProvider);
+    final bookmarkedIds = ref.watch(
+        bookmarksProvider.select((bms) => bms.map((b) => b.ayahId).toSet()));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1879,7 +1908,8 @@ class _PageTranslations extends ConsumerWidget {
         const SizedBox(height: 4),
         for (final ayah in ayahs)
           if (translations[ayah.id] != null || secondTranslations[ayah.id] != null)
-            _buildAyahRow(context, ref, ayah, audio, colors, dyslexiaFont),
+            _buildAyahRow(context, ref, ayah, audio, colors, dyslexiaFont,
+                bookmarkedIds.contains(ayah.id)),
       ],
     );
   }
@@ -1891,6 +1921,7 @@ class _PageTranslations extends ConsumerWidget {
     AudioState audio,
     ColorScheme colors,
     bool dyslexiaFont,
+    bool isBookmarked,
   ) {
     final isPlaying = audio.hasAudio &&
         audio.surahNumber == ayah.surahNumber &&
@@ -1898,6 +1929,9 @@ class _PageTranslations extends ConsumerWidget {
     final highlightColor = isDark
         ? colors.primary.withAlpha(40)
         : colors.primary.withAlpha(20);
+    final bookmarkColor = isDark
+        ? Colors.amber.withAlpha(38)
+        : Colors.amber.withAlpha(30);
 
     // Capture position on tapDown; trigger popup on tap (so scroll still works).
     Offset tapPos = Offset.zero;
@@ -1907,8 +1941,19 @@ class _PageTranslations extends ConsumerWidget {
       onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        color: isPlaying ? highlightColor : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+        decoration: isPlaying
+            ? BoxDecoration(color: highlightColor)
+            : isBookmarked
+                ? BoxDecoration(
+                    color: bookmarkColor,
+                    border: Border(
+                      left: BorderSide(
+                          color: Colors.amber.shade600, width: 3),
+                    ),
+                  )
+                : const BoxDecoration(),
+        padding: EdgeInsets.fromLTRB(
+            isBookmarked && !isPlaying ? 7 : 4, 5, 4, 5),
         margin: const EdgeInsets.only(bottom: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1918,7 +1963,11 @@ class _PageTranslations extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: isPlaying ? colors.primary : colors.primary.withAlpha(180),
+                color: isPlaying
+                    ? colors.primary
+                    : isBookmarked
+                        ? Colors.amber.shade700
+                        : colors.primary.withAlpha(180),
               ),
             ),
             Expanded(
