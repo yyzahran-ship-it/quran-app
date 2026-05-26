@@ -46,6 +46,18 @@ dependencies:
   # HTTP client with retry + caching
   dio: ^5.8.0+1
 
+  # Prayer times calculation + Qibla direction
+  adhan: ^2.2.1
+
+  # Location for prayer times
+  geolocator: ^13.0.2
+
+  # Compass sensor for Qibla screen
+  flutter_compass: ^0.8.0
+
+  # Hijri (Islamic) calendar
+  hijri: ^2.0.1
+
   # Utilities
   path_provider: ^2.1.5
   shared_preferences: ^2.3.5

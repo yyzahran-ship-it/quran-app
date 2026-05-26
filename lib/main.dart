@@ -4,8 +4,8 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'core/theme/theme_provider.dart';
 import 'data/repositories/quran_repository.dart';
 import 'data/sources/local/quran_seeder.dart';
-import 'features/mushaf/mushaf_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'main_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,7 +82,7 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
       );
     }
 
-    return const MushafScreen();
+    return const MainShell();
   }
 }
 
