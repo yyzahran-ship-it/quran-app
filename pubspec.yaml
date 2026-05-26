@@ -47,16 +47,16 @@ dependencies:
   dio: ^5.8.0+1
 
   # Prayer times calculation + Qibla direction
-  adhan: ^2.2.1
+  adhan: ^2.0.0
 
   # Location for prayer times
-  geolocator: ^13.0.2
+  geolocator: ^9.0.2
 
   # Compass sensor for Qibla screen
-  flutter_compass: ^0.8.0
+  flutter_compass: ^0.7.0
 
   # Hijri (Islamic) calendar
-  hijri: ^2.0.1
+  hijri: ^2.0.0
 
   # Utilities
   path_provider: ^2.1.5
