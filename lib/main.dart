@@ -10,11 +10,15 @@ import 'main_shell.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.quranapp.audio',
-    androidNotificationChannelName: 'Quran Audio',
-    androidNotificationOngoing: true,
-  );
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.quranapp.audio',
+      androidNotificationChannelName: 'Quran Audio',
+      androidNotificationOngoing: true,
+    );
+  } catch (_) {
+    // Audio background init is non-critical; continue without it.
+  }
 
   runApp(
     const ProviderScope(

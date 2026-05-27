@@ -53,19 +53,23 @@ class MushafNotifier extends Notifier<MushafState> {
   QuranRepository get _repo => ref.read(quranRepositoryProvider);
 
   Future<void> _init() async {
-    // Load surah list and first surah's ayahs in parallel.
-    final results = await Future.wait<dynamic>([
-      _repo.getAllSurahs(),
-      _repo.getSurahAyahs(1),
-    ]);
-    final surahs = results[0] as List<Surah>;
-    final ayahs = results[1] as List<Ayah>;
-    state = MushafState(
-      surahs: surahs,
-      currentSurah: surahs.first,
-      ayahs: ayahs,
-      isLoading: false,
-    );
+    try {
+      // Load surah list and first surah's ayahs in parallel.
+      final results = await Future.wait<dynamic>([
+        _repo.getAllSurahs(),
+        _repo.getSurahAyahs(1),
+      ]);
+      final surahs = results[0] as List<Surah>;
+      final ayahs = results[1] as List<Ayah>;
+      state = MushafState(
+        surahs: surahs,
+        currentSurah: surahs.isEmpty ? null : surahs.first,
+        ayahs: ayahs,
+        isLoading: false,
+      );
+    } catch (_) {
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   Future<void> navigateToSurah(int surahNumber) async {
