@@ -15,7 +15,7 @@ if (keyPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.quranapp.quran_app"
+    namespace = "com.salah.app"
     compileSdk = flutter.compileSdkVersion
 
     compileOptions {
@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.quranapp.quran_app"
+        applicationId = "com.salah.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

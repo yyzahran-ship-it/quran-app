@@ -31,7 +31,7 @@ class QuranApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Quran',
+      title: 'Salah',
       debugShowCheckedModeBanner: false,
       theme: themeDataFor(themeMode),
       home: const _AppStartup(),
