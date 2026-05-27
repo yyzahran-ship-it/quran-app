@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../prayer_times/prayer_times_provider.dart';
 
@@ -11,7 +10,6 @@ class QiblaScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prayerState = ref.watch(prayerTimesProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     double? qiblaBearing;
     if (prayerState.latitude != null && prayerState.longitude != null) {
@@ -21,8 +19,7 @@ class QiblaScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor:
-          isDark ? const Color(0xFF0D1117) : const Color(0xFF0A3D2E),
+      backgroundColor: const Color(0xFF0A3D2E),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -35,6 +32,13 @@ class QiblaScreen extends ConsumerWidget {
             letterSpacing: 1.2,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white70),
+            onPressed: () =>
+                ref.read(prayerTimesProvider.notifier).refresh(),
+          ),
+        ],
       ),
       body: Center(
         child: prayerState.isLoading
@@ -44,37 +48,36 @@ class QiblaScreen extends ConsumerWidget {
                     onRefresh: () =>
                         ref.read(prayerTimesProvider.notifier).refresh(),
                   )
-                : _CompassView(qiblaBearing: qiblaBearing!),
+                : _QiblaView(bearing: qiblaBearing!),
       ),
     );
   }
 }
 
-// ─── Compass with live heading ────────────────────────────────────────────────
+// ─── Qibla direction display ──────────────────────────────────────────────────
 
-class _CompassView extends StatelessWidget {
-  const _CompassView({required this.qiblaBearing});
+class _QiblaView extends StatelessWidget {
+  const _QiblaView({required this.bearing});
 
-  final double qiblaBearing;
+  final double bearing;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<CompassEvent>(
-      stream: FlutterCompass.events,
-      builder: (context, snapshot) {
-        final heading = snapshot.data?.heading;
-        final arrowAngle = heading != null
-            ? (qiblaBearing - heading) * (math.pi / 180)
-            : null;
+    final direction = _compassLabel(bearing);
 
-        return Column(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 24),
+            // Arabic label
             const Text(
               'القبلة',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 32,
+                fontSize: 36,
                 fontFamily: 'UthmanicHafs',
               ),
               textDirection: TextDirection.rtl,
@@ -87,76 +90,98 @@ class _CompassView extends StatelessWidget {
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 48),
-            // Compass ring + arrow
+            const SizedBox(height: 40),
+
+            // Compass rose with Qibla arrow
             SizedBox(
               width: 260,
               height: 260,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Compass ring
-                  _CompassRing(deviceHeading: heading),
-                  // Qibla arrow (rotates with compass)
-                  if (arrowAngle != null)
-                    Transform.rotate(
-                      angle: arrowAngle,
-                      child: _KaabaArrow(),
-                    )
-                  else
-                    _StaticArrow(bearing: qiblaBearing),
+                  // Static compass ring
+                  CustomPaint(
+                    size: const Size(260, 260),
+                    painter: _CompassRosePainter(),
+                  ),
+                  // Qibla arrow pointing at the bearing
+                  Transform.rotate(
+                    angle: (bearing - 90) * math.pi / 180,
+                    child: const _QiblaArrow(),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 40),
-            // Bearing text
+            const SizedBox(height: 36),
+
+            // Bearing card
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 28, vertical: 18),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(30),
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2)),
+                    color: Colors.white.withValues(alpha: 0.15)),
               ),
               child: Column(
                 children: [
                   Text(
-                    '${qiblaBearing.toStringAsFixed(1)}°',
+                    '${bearing.toStringAsFixed(1)}°',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 42,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    _bearingLabel(qiblaBearing),
+                    direction,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.65),
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            if (heading == null) ...[
-              const SizedBox(height: 16),
-              Text(
-                'Compass sensor not available on this device',
-                style: TextStyle(
-                  color: Colors.orange.withValues(alpha: 0.8),
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
+            const SizedBox(height: 24),
+
+            // Instruction
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.25)),
               ),
-            ],
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline,
+                      color: Color(0xFFD4AF37), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Face ${bearing.toStringAsFixed(0)}° clockwise from North. '
+                      'Use your phone\'s compass app to find North, then turn to face the Qibla.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  String _bearingLabel(double deg) {
+  String _compassLabel(double deg) {
     if (deg < 22.5 || deg >= 337.5) return 'from North';
     if (deg < 67.5) return 'North-East';
     if (deg < 112.5) return 'from East';
@@ -168,47 +193,26 @@ class _CompassView extends StatelessWidget {
   }
 }
 
-// ─── Compass ring showing N/S/E/W ────────────────────────────────────────────
+// ─── Compass rose (static) ────────────────────────────────────────────────────
 
-class _CompassRing extends StatelessWidget {
-  const _CompassRing({this.deviceHeading});
-
-  final double? deviceHeading;
-
-  @override
-  Widget build(BuildContext context) {
-    final angle =
-        deviceHeading != null ? -deviceHeading! * (math.pi / 180) : 0.0;
-
-    return Transform.rotate(
-      angle: angle,
-      child: CustomPaint(
-        size: const Size(260, 260),
-        painter: _RingPainter(),
-      ),
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
+class _CompassRosePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 4;
 
-    // Outer ring
     final ringPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.15)
+      ..color = Colors.white.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius, ringPaint);
 
     // Tick marks
     final tickPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
+      ..color = Colors.white.withValues(alpha: 0.25)
       ..strokeWidth = 1.5;
     for (int i = 0; i < 72; i++) {
-      final angle = i * (math.pi * 2 / 72);
+      final angle = i * (math.pi * 2 / 72) - math.pi / 2;
       final isCardinal = i % 18 == 0;
       final isMajor = i % 9 == 0;
       final inner = radius - (isCardinal ? 20 : isMajor ? 12 : 6);
@@ -221,51 +225,50 @@ class _RingPainter extends CustomPainter {
 
     // Cardinal labels
     const labels = [('N', 0.0), ('E', 90.0), ('S', 180.0), ('W', 270.0)];
-    const goldColor = Color(0xFFD4AF37);
-
     final tp = TextPainter(textDirection: TextDirection.ltr);
     for (final (label, deg) in labels) {
       final rad = (deg - 90) * math.pi / 180;
       final pos = center +
           Offset(
-            math.cos(rad) * (radius - 32),
-            math.sin(rad) * (radius - 32),
+            math.cos(rad) * (radius - 28),
+            math.sin(rad) * (radius - 28),
           );
       tp.text = TextSpan(
         text: label,
         style: TextStyle(
-          color: label == 'N' ? goldColor : Colors.white.withValues(alpha: 0.8),
+          color: label == 'N'
+              ? const Color(0xFFD4AF37)
+              : Colors.white.withValues(alpha: 0.8),
           fontSize: label == 'N' ? 16 : 13,
           fontWeight:
               label == 'N' ? FontWeight.bold : FontWeight.normal,
         ),
       );
       tp.layout();
-      tp.paint(
-        canvas,
-        pos - Offset(tp.width / 2, tp.height / 2),
-      );
+      tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
     }
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => false;
+  bool shouldRepaint(_CompassRosePainter old) => false;
 }
 
-// ─── Kaaba arrow (green gradient, points to Qibla) ───────────────────────────
+// ─── Qibla arrow ─────────────────────────────────────────────────────────────
 
-class _KaabaArrow extends StatelessWidget {
+class _QiblaArrow extends StatelessWidget {
+  const _QiblaArrow();
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         CustomPaint(
-          size: const Size(40, 80),
+          size: const Size(36, 72),
           painter: _ArrowPainter(),
         ),
-        const SizedBox(height: 4),
-        const Icon(Icons.mosque, color: Color(0xFFD4AF37), size: 26),
+        const SizedBox(height: 2),
+        const Icon(Icons.mosque, color: Color(0xFFD4AF37), size: 22),
       ],
     );
   }
@@ -296,25 +299,6 @@ class _ArrowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ArrowPainter old) => false;
-}
-
-// Static bearing display when no compass available
-class _StaticArrow extends StatelessWidget {
-  const _StaticArrow({required this.bearing});
-
-  final double bearing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: (bearing - 90) * (math.pi / 180),
-      child: Icon(
-        Icons.navigation,
-        color: const Color(0xFF0A7B83),
-        size: 64,
-      ),
-    );
-  }
 }
 
 // ─── No location view ─────────────────────────────────────────────────────────
