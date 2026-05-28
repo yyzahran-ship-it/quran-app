@@ -1,0 +1,28 @@
+name: toric_iol_marker
+description: "Pre-operative toric IOL axis marking using phone camera and gyroscope"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Live camera feed
+  camera: ^0.11.0+2
+  # Accelerometer for level detection
+  sensors_plus: ^6.1.1
+  # File paths for image saving
+  path_provider: ^2.1.5
+  # Share / save captured images
+  share_plus: ^10.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
