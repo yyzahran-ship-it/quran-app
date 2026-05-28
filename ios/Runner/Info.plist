@@ -50,5 +50,11 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<!-- Toric IOL Marker: camera usage -->
+	<key>NSCameraUsageDescription</key>
+	<string>Camera is used to photograph the eye for toric IOL axis marking.</string>
+	<!-- Toric IOL Marker: photo library save -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Marked eye images are saved to your photo library for surgical reference.</string>
 </dict>
 </plist>
