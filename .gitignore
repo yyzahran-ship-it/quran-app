@@ -31,3 +31,4 @@ ios/Runner/GoogleService-Info.plist
 
 # Quran data (large bundled assets - we'll decide later)
 # assets/audio/full/
+toric_iol_app/
