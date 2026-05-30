@@ -2217,6 +2217,13 @@ class _ReciterPickerSheet extends ConsumerWidget {
             color: Colors.white,
           ),
         ),
+        subtitle: Text(
+          style,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.45),
+          ),
+        ),
         trailing: selected
             ? const Icon(Icons.check, color: _cyanCheck, size: 22)
             : null,
