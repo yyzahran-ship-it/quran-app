@@ -984,7 +984,16 @@ class _MushafAyahText extends ConsumerWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (d) => tapPos = d.globalPosition,
-      onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
+      onTap: () {
+        // Pass the ayah widget's top Y so the popup appears strictly above it,
+        // not anchored to wherever the user's finger landed.
+        final box = context.findRenderObject() as RenderBox?;
+        final ayahTopY = (box != null && box.hasSize)
+            ? box.localToGlobal(Offset.zero).dy
+            : tapPos.dy;
+        _showAyahPopup(context, ref, ayah, isDark,
+            Offset(tapPos.dx, ayahTopY));
+      },
       child: content,
     );
   }
@@ -1335,36 +1344,26 @@ class _AyahPopupBar extends ConsumerWidget {
   final bool isDark;
   final Offset tapPos;
 
-  static const _barH = 52.0;
-  static const _arrow = 8.0;
+  static const _barH    = 56.0;
   static const _barColor = Color(0xFF1B6B3A); // deep Quran-green
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final screen = MediaQuery.of(context).size;
+    final screen  = MediaQuery.of(context).size;
     final safePad = MediaQuery.of(context).padding;
-    // Responsive width: ~88 % of the screen, clamped so it never clips on
-    // very small or very wide screens.
-    final barW = (screen.width * 0.88).clamp(240.0, 360.0);
+
+    // Full-width pill, always horizontally centered — matches Q4A style.
+    final barW   = (screen.width * 0.90).clamp(260.0, 420.0);
+    final barLeft = (screen.width - barW) / 2;
+
+    // Vertically: prefer just above the tapped ayah; flip below if too close
+    // to the top of the safe area.
+    final double barTop = tapPos.dy - _barH - 12 > safePad.top + 8
+        ? tapPos.dy - _barH - 12
+        : tapPos.dy + 24;
 
     final isBookmarked = ref.watch(
         bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)));
-
-    // tapPos.dy = global top edge of the ayah. Place bar above; flip below if
-    // there is no room above.
-    final showAbove = tapPos.dy - _barH - _arrow - 8 > safePad.top + 8;
-    final double top = showAbove
-        ? tapPos.dy - _barH - _arrow - 4
-        : tapPos.dy + 20;
-
-    // tapPos.dx = right edge of the ayah's first line (beginning in RTL).
-    // Right-align the bar to that point so the arrow sits at the ayah start.
-    final double left =
-        (tapPos.dx - barW).clamp(8.0, screen.width - barW - 8.0);
-
-    // Arrow position relative to the bar's left edge — points at the beginning.
-    final double arrowX =
-        (tapPos.dx - left - _arrow).clamp(_arrow * 2, barW - _arrow * 4);
 
     return Material(
       color: Colors.transparent,
@@ -1378,102 +1377,88 @@ class _AyahPopupBar extends ConsumerWidget {
               child: const SizedBox.expand(),
             ),
           ),
+          // Floating toolbar — centered, no arrow/caret.
           Positioned(
-            top: top,
-            left: left,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Toolbar row.
-                Container(
-                  width: barW,
-                  height: _barH,
-                  decoration: BoxDecoration(
-                    color: _barColor,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [
-                      BoxShadow(
-                          color: Color(0x44000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 3)),
-                    ],
+            top: barTop,
+            left: barLeft,
+            child: Container(
+              width: barW,
+              height: _barH,
+              decoration: BoxDecoration(
+                color: _barColor,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x55000000),
+                    blurRadius: 14,
+                    offset: Offset(0, 5),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _PopupBtn(
-                        icon: isBookmarked
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        active: isBookmarked,
-                        tooltip: isBookmarked ? 'Remove' : 'Bookmark',
-                        onTap: () {
-                          Navigator.pop(context);
-                          ref.read(bookmarksProvider.notifier).toggle(
-                                ayahId: ayah.id,
-                                surahNumber: ayah.surahNumber,
-                                ayahNumber: ayah.ayahNumber,
-                              );
-                        },
-                      ),
-                      _PopupBtn(
-                        icon: Icons.label_outline,
-                        tooltip: 'Tag',
-                        onTap: () {
-                          Navigator.pop(context);
-                          _showTagPickerFor(context, ref, ayah);
-                        },
-                      ),
-                      _PopupBtn(
-                        icon: Icons.share_outlined,
-                        tooltip: 'Share',
-                        onTap: () {
-                          Navigator.pop(context);
-                          _shareAyah(ayah, ref);
-                        },
-                      ),
-                      _PopupBtn(
-                        icon: Icons.menu_book_outlined,
-                        tooltip: 'Tafsir',
-                        onTap: () {
-                          Navigator.pop(context);
-                          showModalBottomSheet<void>(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.vertical(top: Radius.circular(16)),
-                            ),
-                            builder: (_) =>
-                                TafsirSheet(verseKey: ayah.verseKey),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _PopupBtn(
+                    icon: isBookmarked
+                        ? Icons.bookmark
+                        : Icons.bookmark_border,
+                    active: isBookmarked,
+                    tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ref.read(bookmarksProvider.notifier).toggle(
+                            ayahId: ayah.id,
+                            surahNumber: ayah.surahNumber,
+                            ayahNumber: ayah.ayahNumber,
                           );
-                        },
-                      ),
-                      _PopupBtn(
-                        icon: Icons.play_circle_outline,
-                        tooltip: 'Play',
-                        onTap: () {
-                          Navigator.pop(context);
-                          ref
-                              .read(audioProvider.notifier)
-                              .playAyah(ayah.surahNumber, ayah.ayahNumber);
-                        },
-                      ),
-                    ],
+                    },
                   ),
-                ),
-                // Downward-pointing triangle (only shown when bar is above tap).
-                if (showAbove)
-                  Padding(
-                    padding: EdgeInsets.only(left: arrowX),
-                    child: CustomPaint(
-                      size: const Size(_arrow * 2, _arrow),
-                      painter: _DownArrowPainter(_barColor),
-                    ),
+                  _PopupBtn(
+                    icon: Icons.label_outline,
+                    tooltip: 'Tag',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showTagPickerFor(context, ref, ayah);
+                    },
                   ),
-              ],
+                  _PopupBtn(
+                    icon: Icons.share_outlined,
+                    tooltip: 'Share',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _shareAyah(ayah, ref);
+                    },
+                  ),
+                  _PopupBtn(
+                    icon: Icons.menu_book_outlined,
+                    tooltip: 'Tafsir',
+                    onTap: () {
+                      Navigator.pop(context);
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        useSafeArea: true,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16)),
+                        ),
+                        builder: (_) =>
+                            TafsirSheet(verseKey: ayah.verseKey),
+                      );
+                    },
+                  ),
+                  _PopupBtn(
+                    icon: Icons.play_circle_outline,
+                    tooltip: 'Play',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ref
+                          .read(audioProvider.notifier)
+                          .playAyah(ayah.surahNumber, ayah.ayahNumber);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1513,25 +1498,6 @@ class _PopupBtn extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DownArrowPainter extends CustomPainter {
-  const _DownArrowPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_DownArrowPainter old) => old.color != color;
 }
 
 // Share ayah text + translation as plain text via system share sheet.
@@ -1933,12 +1899,20 @@ class _PageTranslations extends ConsumerWidget {
         ? Colors.amber.withAlpha(38)
         : Colors.amber.withAlpha(30);
 
-    // Capture position on tapDown; trigger popup on tap (so scroll still works).
+    // Capture position on tapDown; use ayah row's top edge for popup placement.
     Offset tapPos = Offset.zero;
-    return GestureDetector(
+    return Builder(
+      builder: (rowCtx) => GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (d) => tapPos = d.globalPosition,
-      onTap: () => _showAyahPopup(context, ref, ayah, isDark, tapPos),
+      onTap: () {
+        final box = rowCtx.findRenderObject() as RenderBox?;
+        final ayahTopY = (box != null && box.hasSize)
+            ? box.localToGlobal(Offset.zero).dy
+            : tapPos.dy;
+        _showAyahPopup(context, ref, ayah, isDark,
+            Offset(tapPos.dx, ayahTopY));
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         decoration: isPlaying
@@ -2009,7 +1983,7 @@ class _PageTranslations extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    )); // closes GestureDetector and Builder
   }
 }
 
