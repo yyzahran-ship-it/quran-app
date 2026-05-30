@@ -2042,6 +2042,7 @@ class _ReciterStrip extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: const Color(0xFF1A1A1A),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -2155,7 +2156,6 @@ class _ReciterPickerSheet extends ConsumerWidget {
     final reciters = ref.watch(reciterListProvider);
     final qfAsync  = ref.watch(qfRecitationsProvider);
     final notifier = ref.read(audioProvider.notifier);
-    final colors   = Theme.of(context).colorScheme;
 
     // Group hardcoded reciters by style.
     final Map<String, List<QAReciter>> byStyle = {};
@@ -2181,15 +2181,21 @@ class _ReciterPickerSheet extends ConsumerWidget {
       (qfByStyle[s] ??= []).add(r);
     }
 
-    Widget sectionHeader(String label) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
+    const Color _sheetBg      = Color(0xFF1A1A1A);
+    const Color _headerBg     = Color(0xFF1E3232);
+    const Color _cyanCheck    = Color(0xFF4DD0E1);
+
+    Widget sectionHeader(String label) => Container(
+          width: double.infinity,
+          color: _headerBg,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Text(
             label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-              color: colors.primary,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+              color: Colors.white,
             ),
           ),
         );
@@ -2202,19 +2208,20 @@ class _ReciterPickerSheet extends ConsumerWidget {
       final selected = audio.reciter == slug;
       return ListTile(
         dense: true,
+        tileColor: _sheetBg,
         title: Text(
           name,
           style: TextStyle(
             fontSize: 14,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: selected ? colors.primary : colors.onSurface,
+            color: Colors.white,
           ),
         ),
         trailing: selected
-            ? Icon(Icons.check_circle, color: colors.primary, size: 20)
+            ? const Icon(Icons.check, color: _cyanCheck, size: 22)
             : null,
         selected: selected,
-        selectedTileColor: colors.primary.withValues(alpha: 0.06),
+        selectedTileColor: Colors.white.withValues(alpha: 0.06),
         onTap: () {
           notifier.setReciter(slug);
           Navigator.of(context).pop();
@@ -2232,7 +2239,7 @@ class _ReciterPickerSheet extends ConsumerWidget {
             height: 4,
             width: 36,
             decoration: BoxDecoration(
-              color: colors.onSurfaceVariant.withAlpha(80),
+              color: Colors.white.withAlpha(60),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -2240,20 +2247,20 @@ class _ReciterPickerSheet extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Row(
               children: [
-                Icon(Icons.headphones, size: 20, color: colors.primary),
+                const Icon(Icons.headphones, size: 20, color: Colors.white),
                 const SizedBox(width: 10),
-                Text(
-                  'Select Reciter',
+                const Text(
+                  'Select a Qari',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: colors.onSurface,
+                    color: Colors.white,
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: Colors.white.withAlpha(30)),
           Flexible(
             child: ListView(
               shrinkWrap: true,
@@ -2290,7 +2297,9 @@ class _ReciterPickerSheet extends ConsumerWidget {
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       'Could not load more reciters — check your connection.',
-                      style: TextStyle(fontSize: 12, color: colors.outline),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.5)),
                     ),
                   ),
                 const SizedBox(height: 8),
