@@ -2147,8 +2147,33 @@ class _ReciterStrip extends ConsumerWidget {
 //   - Each row: reciter name + style badge; checkmark on selected
 //   - Additional reciters from Quran Foundation API at the bottom
 
-class _ReciterPickerSheet extends ConsumerWidget {
+class _ReciterPickerSheet extends ConsumerStatefulWidget {
   const _ReciterPickerSheet();
+
+  @override
+  ConsumerState<_ReciterPickerSheet> createState() =>
+      _ReciterPickerSheetState();
+}
+
+class _ReciterPickerSheetState extends ConsumerState<_ReciterPickerSheet> {
+  bool _immersive = false;
+
+  void _toggleImmersive() {
+    setState(() => _immersive = !_immersive);
+    if (_immersive) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_immersive) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2251,18 +2276,33 @@ class _ReciterPickerSheet extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
             child: Row(
               children: [
                 const Icon(Icons.headphones, size: 20, color: Colors.white),
                 const SizedBox(width: 10),
-                const Text(
-                  'Select a Qari',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                const Expanded(
+                  child: Text(
+                    'Select a Qari',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
+                ),
+                IconButton(
+                  tooltip: _immersive ? 'Exit immersive mode' : 'Immersive mode',
+                  icon: Icon(
+                    _immersive
+                        ? Icons.fullscreen_exit
+                        : Icons.fullscreen,
+                    color: _immersive
+                        ? const Color(0xFF4DD0E1)
+                        : Colors.white.withValues(alpha: 0.6),
+                    size: 24,
+                  ),
+                  onPressed: _toggleImmersive,
                 ),
               ],
             ),
