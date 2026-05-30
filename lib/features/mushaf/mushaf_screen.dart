@@ -1386,7 +1386,7 @@ class _AyahPopupBar extends ConsumerWidget {
               height: _barH,
               decoration: BoxDecoration(
                 color: _barColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(28),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x55000000),
@@ -1430,7 +1430,7 @@ class _AyahPopupBar extends ConsumerWidget {
                     },
                   ),
                   _PopupBtn(
-                    icon: Icons.menu_book_outlined,
+                    icon: Icons.language,
                     tooltip: 'Tafsir',
                     onTap: () {
                       Navigator.pop(context);
@@ -1448,7 +1448,7 @@ class _AyahPopupBar extends ConsumerWidget {
                     },
                   ),
                   _PopupBtn(
-                    icon: Icons.play_circle_outline,
+                    icon: Icons.play_arrow,
                     tooltip: 'Play',
                     onTap: () {
                       Navigator.pop(context);
@@ -1492,7 +1492,7 @@ class _PopupBtn extends StatelessWidget {
           child: Icon(
             icon,
             color: active ? Colors.amber.shade300 : Colors.white,
-            size: 22,
+            size: 26,
           ),
         ),
       ),
