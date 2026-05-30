@@ -2176,7 +2176,7 @@ class _ReciterPickerSheetState extends ConsumerState<_ReciterPickerSheet> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final audio    = ref.watch(audioProvider);
     final reciters = ref.watch(reciterListProvider);
     final qfAsync  = ref.watch(qfRecitationsProvider);
