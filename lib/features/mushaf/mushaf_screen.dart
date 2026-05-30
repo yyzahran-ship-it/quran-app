@@ -1994,7 +1994,7 @@ class _PageTranslations extends ConsumerWidget {
 // ─── Bottom area: audio bar + reciter strip + page number ─────────────────────
 
 class _BottomArea extends StatefulWidget {
-  const _BottomArea({required this.currentPage});
+  const _BottomArea({super.key, required this.currentPage});
 
   final int currentPage;
 
