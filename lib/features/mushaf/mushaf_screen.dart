@@ -68,6 +68,7 @@ class MushafScreen extends ConsumerStatefulWidget {
 
 class _MushafScreenState extends ConsumerState<MushafScreen> {
   final _scrollController = ScrollController();
+  final _bottomAreaKey = GlobalKey<_BottomAreaState>();
 
   @override
   void dispose() {
@@ -257,11 +258,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                       _scrollToTop();
                     }
                   },
+                  // Tap anywhere on the page to show/hide the reciter strip.
+                  onTap: () =>
+                      _bottomAreaKey.currentState?.toggleReciterStrip(),
                   child: _buildReader(state),
                 ),
       bottomNavigationBar: state.ayahs.isEmpty
           ? null
-          : _BottomArea(currentPage: state.currentPage),
+          : _BottomArea(key: _bottomAreaKey, currentPage: state.currentPage),
     );
   }
 
@@ -2001,6 +2005,9 @@ class _BottomArea extends StatefulWidget {
 class _BottomAreaState extends State<_BottomArea> {
   bool _reciterVisible = true;
 
+  void toggleReciterStrip() =>
+      setState(() => _reciterVisible = !_reciterVisible);
+
   @override
   Widget build(BuildContext context) {
     // SafeArea ensures the page number row is visible above the home indicator
@@ -2015,16 +2022,10 @@ class _BottomAreaState extends State<_BottomArea> {
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
             child: _reciterVisible
-                ? _ReciterStrip(
-                    onCollapse: () => setState(() => _reciterVisible = false),
-                  )
+                ? const _ReciterStrip()
                 : const SizedBox.shrink(),
           ),
-          _PageNav(
-            currentPage: widget.currentPage,
-            showExpand: !_reciterVisible,
-            onExpand: () => setState(() => _reciterVisible = true),
-          ),
+          _PageNav(currentPage: widget.currentPage),
         ],
       ),
     );
@@ -2034,9 +2035,7 @@ class _BottomAreaState extends State<_BottomArea> {
 // ─── Reciter strip ─────────────────────────────────────────────────────────────
 
 class _ReciterStrip extends ConsumerWidget {
-  const _ReciterStrip({this.onCollapse});
-
-  final VoidCallback? onCollapse;
+  const _ReciterStrip();
 
   void _showPicker(BuildContext context) {
     showModalBottomSheet<void>(
@@ -2082,59 +2081,36 @@ class _ReciterStrip extends ConsumerWidget {
           top: BorderSide(color: colors.outlineVariant, width: 0.5),
         ),
       ),
-      child: Row(
-        children: [
-          // Collapse button — separate tap zone so it never opens the picker.
-          InkWell(
-            onTap: onCollapse,
-            child: SizedBox(
-              width: 40,
-              height: 44,
-              child: Icon(
-                Icons.keyboard_arrow_down,
-                size: 20,
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          ),
-          // Reciter name area — tap opens the picker.
-          Expanded(
-            child: Semantics(
-              label: 'Reciter: $reciterName. Tap to change reciter.',
-              button: true,
-              child: InkWell(
-                onTap: () => _showPicker(context),
-                child: Row(
-                  children: [
-                    Icon(
-                      isPlaying ? Icons.volume_up : Icons.headphones,
-                      size: 18,
-                      color: colors.primary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        reciterName,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: colors.onSurface,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Icon(
-                      Icons.expand_less,
-                      size: 20,
-                      color: colors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 12),
-                  ],
+      child: Semantics(
+        label: 'Reciter: $reciterName. Tap to change reciter.',
+        button: true,
+        child: InkWell(
+          onTap: () => _showPicker(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(
+                  isPlaying ? Icons.volume_up : Icons.headphones,
+                  size: 18,
+                  color: colors.primary,
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    reciterName,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: colors.onSurface,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2360,15 +2336,9 @@ class _ReciterPickerSheetState extends ConsumerState<_ReciterPickerSheet> {
 }
 
 class _PageNav extends StatelessWidget {
-  const _PageNav({
-    required this.currentPage,
-    this.showExpand = false,
-    this.onExpand,
-  });
+  const _PageNav({required this.currentPage});
 
   final int currentPage;
-  final bool showExpand;
-  final VoidCallback? onExpand;
 
   @override
   Widget build(BuildContext context) {
@@ -2401,18 +2371,7 @@ class _PageNav extends StatelessWidget {
               ),
             ),
           ),
-          if (showExpand && onExpand != null)
-            InkWell(
-              onTap: onExpand,
-              child: SizedBox(
-                width: sideW,
-                height: 36,
-                child: Icon(Icons.keyboard_arrow_up,
-                    size: 18, color: colors.onSurfaceVariant),
-              ),
-            )
-          else
-            const SizedBox(width: sideW),
+          const SizedBox(width: sideW),
         ],
       ),
     );
