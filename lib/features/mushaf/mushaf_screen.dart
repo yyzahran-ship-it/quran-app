@@ -2192,7 +2192,7 @@ class _ReciterPickerSheet extends ConsumerWidget {
           child: Text(
             label.toUpperCase(),
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.1,
               color: Colors.white,
@@ -2207,12 +2207,12 @@ class _ReciterPickerSheet extends ConsumerWidget {
     }) {
       final selected = audio.reciter == slug;
       return ListTile(
-        dense: true,
         tileColor: _sheetBg,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         title: Text(
           name,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             color: Colors.white,
           ),
@@ -2220,12 +2220,12 @@ class _ReciterPickerSheet extends ConsumerWidget {
         subtitle: Text(
           style,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             color: Colors.white.withValues(alpha: 0.45),
           ),
         ),
         trailing: selected
-            ? const Icon(Icons.check, color: _cyanCheck, size: 22)
+            ? const Icon(Icons.check, color: _cyanCheck, size: 24)
             : null,
         selected: selected,
         selectedTileColor: Colors.white.withValues(alpha: 0.06),
