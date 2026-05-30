@@ -213,3 +213,8 @@ class MushafNotifier extends Notifier<MushafState> {
 
 final mushafProvider =
     NotifierProvider<MushafNotifier, MushafState>(MushafNotifier.new);
+
+// Visibility of the reciter strip at the bottom of the Mushaf screen.
+// Any widget with ref access can toggle it — tap blank page to hide/show.
+final reciterStripVisibleProvider = StateProvider<bool>((_) => true);
+

@@ -68,7 +68,6 @@ class MushafScreen extends ConsumerStatefulWidget {
 
 class _MushafScreenState extends ConsumerState<MushafScreen> {
   final _scrollController = ScrollController();
-  final _bottomAreaKey = GlobalKey<_BottomAreaState>();
 
   @override
   void dispose() {
@@ -258,14 +257,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                       _scrollToTop();
                     }
                   },
-                  // Tap anywhere on the page to show/hide the reciter strip.
-                  onTap: () =>
-                      _bottomAreaKey.currentState?.toggleReciterStrip(),
                   child: _buildReader(state),
                 ),
       bottomNavigationBar: state.ayahs.isEmpty
           ? null
-          : _BottomArea(key: _bottomAreaKey, currentPage: state.currentPage),
+          : const _BottomArea(),
     );
   }
 
@@ -786,12 +782,19 @@ class _TextFallbackView extends ConsumerWidget {
       ),
     );
 
-    return Container(
-      color: bg,
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        final v = ref.read(reciterStripVisibleProvider);
+        ref.read(reciterStripVisibleProvider.notifier).state = !v;
+      },
+      child: Container(
+        color: bg,
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       ),
     );
   }
@@ -1095,7 +1098,18 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
         final xScale = _xScale;
         final yScale = _yScale;
 
-        final zones = <Widget>[];
+        final zones = <Widget>[
+          // Full-screen background tap: toggle reciter strip
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                final v = ref.read(reciterStripVisibleProvider);
+                ref.read(reciterStripVisibleProvider.notifier).state = !v;
+              },
+            ),
+          ),
+        ];
         for (final ayah in widget.ayahs) {
           final key   = ayah.surahNumber * 10000 + ayah.ayahNumber;
           final rects = coordsMap[key];
@@ -1116,14 +1130,21 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
     }
 
     // ── Fallback: proportional zones based on character count ────────────────
-    return Column(
-      children: [
-        for (final ayah in widget.ayahs)
-          Expanded(
-            flex: ayah.textUthmani.length.clamp(50, 99999),
-            child: _zone(ayah, tapShade, playShade, isPlaying(ayah)),
-          ),
-      ],
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        final v = ref.read(reciterStripVisibleProvider);
+        ref.read(reciterStripVisibleProvider.notifier).state = !v;
+      },
+      child: Column(
+        children: [
+          for (final ayah in widget.ayahs)
+            Expanded(
+              flex: ayah.textUthmani.length.clamp(50, 99999),
+              child: _zone(ayah, tapShade, playShade, isPlaying(ayah)),
+            ),
+        ],
+      ),
     );
   }
 
@@ -1993,23 +2014,13 @@ class _PageTranslations extends ConsumerWidget {
 
 // ─── Bottom area: audio bar + reciter strip + page number ─────────────────────
 
-class _BottomArea extends StatefulWidget {
-  const _BottomArea({super.key, required this.currentPage});
-
-  final int currentPage;
+class _BottomArea extends ConsumerWidget {
+  const _BottomArea();
 
   @override
-  State<_BottomArea> createState() => _BottomAreaState();
-}
-
-class _BottomAreaState extends State<_BottomArea> {
-  bool _reciterVisible = true;
-
-  void toggleReciterStrip() =>
-      setState(() => _reciterVisible = !_reciterVisible);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visible     = ref.watch(reciterStripVisibleProvider);
+    final currentPage = ref.watch(mushafProvider.select((s) => s.currentPage));
     // SafeArea ensures the page number row is visible above the home indicator
     // or Android gesture bar — without it the bottom row hides under system UI.
     return SafeArea(
@@ -2021,11 +2032,11 @@ class _BottomAreaState extends State<_BottomArea> {
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
-            child: _reciterVisible
+            child: visible
                 ? const _ReciterStrip()
                 : const SizedBox.shrink(),
           ),
-          _PageNav(currentPage: widget.currentPage),
+          _PageNav(currentPage: currentPage),
         ],
       ),
     );
