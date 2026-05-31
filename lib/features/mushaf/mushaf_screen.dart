@@ -992,15 +992,18 @@ class _MushafAyahText extends ConsumerWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (d) => tapPos = d.globalPosition,
-      onTap: () {
+      onTap: () async {
         // Pass the ayah widget's top Y so the popup appears strictly above it,
         // not anchored to wherever the user's finger landed.
         final box = context.findRenderObject() as RenderBox?;
         final ayahTopY = (box != null && box.hasSize)
             ? box.localToGlobal(Offset.zero).dy
             : tapPos.dy;
-        _showAyahPopup(context, ref, ayah, isDark,
+        final result = await _showAyahPopup(context, ref, ayah, isDark,
             Offset(tapPos.dx, ayahTopY));
+        if (result == 'tafsir' && context.mounted) {
+          _showTranslationPanel(context, ayah.verseKey);
+        }
       },
       child: content,
     );
@@ -1068,8 +1071,11 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
       }
     }
     setState(() => _highlightedId = ayah.id);
-    await _showAyahPopup(context, ref, ayah, widget.isDark, anchor);
+    final result = await _showAyahPopup(context, ref, ayah, widget.isDark, anchor);
     if (mounted) setState(() => _highlightedId = null);
+    if (result == 'tafsir' && mounted) {
+      _showTranslationPanel(context, ayah.verseKey);
+    }
   }
 
   @override
@@ -1362,9 +1368,9 @@ class _PageAyahSheet extends ConsumerWidget {
 // Green floating toolbar (bookmark / tag / share / tafsir / play) that appears
 // above the tapped ayah — same UX pattern as Quran for Android.
 
-Future<void> _showAyahPopup(
+Future<String?> _showAyahPopup(
     BuildContext context, WidgetRef ref, Ayah ayah, bool isDark, Offset pos) {
-  return showDialog<void>(
+  return showDialog<String?>(
     context: context,
     barrierColor: Colors.transparent,
     barrierDismissible: true,
@@ -1475,10 +1481,7 @@ class _AyahPopupBar extends ConsumerWidget {
                   _PopupBtn(
                     icon: Icons.language,
                     tooltip: 'Tafsir',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showTranslationPanel(context, ayah.verseKey);
-                    },
+                    onTap: () => Navigator.pop(context, 'tafsir'),
                   ),
                   _PopupBtn(
                     icon: Icons.play_arrow,
@@ -1938,13 +1941,16 @@ class _PageTranslations extends ConsumerWidget {
       builder: (rowCtx) => GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (d) => tapPos = d.globalPosition,
-      onTap: () {
+      onTap: () async {
         final box = rowCtx.findRenderObject() as RenderBox?;
         final ayahTopY = (box != null && box.hasSize)
             ? box.localToGlobal(Offset.zero).dy
             : tapPos.dy;
-        _showAyahPopup(context, ref, ayah, isDark,
+        final result = await _showAyahPopup(context, ref, ayah, isDark,
             Offset(tapPos.dx, ayahTopY));
+        if (result == 'tafsir' && context.mounted) {
+          _showTranslationPanel(context, ayah.verseKey);
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -2567,9 +2573,7 @@ class _TranslationPanelSheetState
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
           child: TextButton.icon(
             onPressed: () {
-              final nav = Navigator.of(context);
-              nav.pop();
-              nav.push(MaterialPageRoute(
+              Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => const TranslationsScreen()));
             },
             icon: const Icon(Icons.library_books_outlined,
@@ -2662,6 +2666,7 @@ class _TranslationPanelSheetState
 
   Widget _buildBookmarkTab() {
     final mushafState = ref.watch(mushafProvider);
+    final allBookmarks = ref.watch(bookmarksProvider);
     // Locate the ayah matching the verseKey this panel was opened for.
     final matches = mushafState.ayahs.where((a) => a.verseKey == widget.verseKey);
     final ayah = matches.isEmpty ? null : matches.first;
@@ -2675,9 +2680,7 @@ class _TranslationPanelSheetState
       );
     }
 
-    final isBookmarked = ref.watch(
-      bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)),
-    );
+    final isBookmarked = allBookmarks.any((b) => b.ayahId == ayah.id);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
