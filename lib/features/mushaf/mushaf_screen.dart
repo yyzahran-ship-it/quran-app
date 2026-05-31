@@ -212,9 +212,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
               PopupMenuItem(
                 value: _AppAction.toggleTranslation,
                 child: Row(children: [
-                  Icon(state.showTranslation
-                      ? Icons.translate
-                      : Icons.translate_outlined),
+                  const Icon(Icons.language),
                   const SizedBox(width: 12),
                   Text(state.showTranslation
                       ? 'Hide translation'
@@ -2152,7 +2150,7 @@ class _ReciterStrip extends ConsumerWidget {
               borderRadius: BorderRadius.circular(4),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Icon(Icons.translate, size: 20, color: colors.primary),
+                child: Icon(Icons.language, size: 20, color: colors.primary),
               ),
             ),
           ),
@@ -2496,7 +2494,7 @@ class _TranslationPanelSheetState
           onTap: () => setState(() => _tab = 1),
         ),
         _TabIcon(
-          icon: Icons.translate_rounded,
+          icon: Icons.language,
           active: _tab == 2,
           onTap: () => setState(() => _tab = 2),
         ),

@@ -110,7 +110,7 @@ class TranslationsScreen extends ConsumerWidget {
   Widget _downloadedTile({required String name, required String subtitle}) =>
       ListTile(
         tileColor: _kBg,
-        leading: const Icon(Icons.translate_rounded, color: _kCyan, size: 22),
+        leading: const Icon(Icons.language, color: _kCyan, size: 22),
         title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 15)),
         subtitle: Text(
           subtitle,
@@ -139,7 +139,7 @@ class TranslationsScreen extends ConsumerWidget {
       children: [
         ListTile(
           tileColor: _kBg,
-          leading: const Icon(Icons.language_rounded, color: Colors.white54, size: 22),
+          leading: const Icon(Icons.language, color: Colors.white54, size: 22),
           title: Text(
             info.name,
             style: TextStyle(
@@ -229,7 +229,7 @@ class TranslationsScreen extends ConsumerWidget {
     final sub = _joinParts(info.authorName, _cap(info.languageName));
     return ListTile(
       tileColor: _kBg,
-      leading: const Icon(Icons.language_rounded, color: Colors.white54, size: 22),
+      leading: const Icon(Icons.language, color: Colors.white54, size: 22),
       title: Text(info.name, style: const TextStyle(color: Colors.white, fontSize: 15)),
       subtitle: sub.isNotEmpty
           ? Text(sub,
