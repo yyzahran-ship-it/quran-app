@@ -155,7 +155,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        toolbarHeight: 44,
+        toolbarHeight: 52,
         title: _AppBarTitle(state: state),
         titleSpacing: 16,
         actions: [
@@ -177,6 +177,23 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 ),
               ),
             ),
+          IconButton(
+            icon: Icon(Icons.bookmark_border, size: 22,
+                color: isLight ? const Color(0xFF1A1A1A) : null),
+            tooltip: 'Bookmarks',
+            onPressed: () => _handleAction(_AppAction.bookmarks),
+          ),
+          IconButton(
+            icon: Icon(Icons.language, size: 22,
+                color: isLight ? const Color(0xFF1A1A1A) : null),
+            tooltip: 'Translations & Tafsir',
+            onPressed: () {
+              final verseKey = state.ayahs.isNotEmpty
+                  ? state.ayahs.first.verseKey
+                  : '1:1';
+              _showTranslationPanel(context, verseKey);
+            },
+          ),
           PopupMenuButton<_AppAction>(
             icon: Icon(Icons.more_vert,
                 color: isLight ? const Color(0xFF1A1A1A) : null),
@@ -1853,27 +1870,25 @@ class _AppBarTitle extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white70 : const Color(0xFF2A2A2A);
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Surah transliteration name — left, plain, matches reference
-        Expanded(
-          child: Text(
-            firstSurah?.nameSimple ?? 'Page ${state.currentPage}',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: textColor,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        // Juz number — right, plain, matches reference
         Text(
-          "Juz\u2019 $juzNumber",
+          firstSurah?.nameSimple ?? 'Quran',
           style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
             color: textColor,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          'Page ${state.currentPage}  ·  Juz\u2019 $juzNumber',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w400,
+            color: textColor.withAlpha(140),
           ),
         ),
       ],
@@ -2045,14 +2060,14 @@ class _BottomArea extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const AudioPlayerBar(),
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
             child: visible
-                ? const _ReciterStrip()
+                ? const AudioPlayerBar()
                 : const SizedBox.shrink(),
           ),
+          const _ReciterStrip(),
           _PageNav(currentPage: currentPage),
         ],
       ),
@@ -2087,6 +2102,7 @@ class _ReciterStrip extends ConsumerWidget {
     final qfAsync     = ref.watch(qfRecitationsProvider);
     final colors      = Theme.of(context).colorScheme;
     final isPlaying   = audio.isPlaying;
+    final expanded    = ref.watch(reciterStripVisibleProvider);
     final reciterSlug = audio.reciter;
 
     // Resolve display name from hardcoded list first, then QF list.
@@ -2102,7 +2118,7 @@ class _ReciterStrip extends ConsumerWidget {
     }
 
     return Container(
-      height: 44,
+      height: 48,
       decoration: BoxDecoration(
         color: colors.surfaceContainerLow,
         border: Border(
@@ -2111,57 +2127,57 @@ class _ReciterStrip extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          // Reciter selector (taps open reciter picker).
+          // Play / pause button.
+          IconButton(
+            icon: Icon(
+              isPlaying ? Icons.pause : Icons.play_arrow,
+              size: 24,
+              color: colors.primary,
+            ),
+            tooltip: isPlaying ? 'Pause' : 'Play',
+            onPressed: () {
+              final a = ref.read(audioProvider);
+              final s = ref.read(mushafProvider);
+              if (a.isPlaying || a.hasAudio) {
+                ref.read(audioProvider.notifier).togglePlayPause();
+              } else if (s.ayahs.isNotEmpty) {
+                ref.read(audioProvider.notifier).playSurah(
+                  s.ayahs.first.surahNumber,
+                  startAyah: s.ayahs.first.ayahNumber,
+                );
+              }
+            },
+          ),
+          // Reciter name — tap to change.
           Expanded(
             child: Semantics(
-              label: 'Reciter: $reciterName. Tap to change reciter.',
+              label: 'Reciter: $reciterName. Tap to change.',
               button: true,
               child: InkWell(
                 onTap: () => _showPicker(context),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isPlaying ? Icons.volume_up : Icons.headphones,
-                        size: 18,
-                        color: colors.primary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          reciterName,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: colors.onSurface,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                child: Text(
+                  reciterName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: colors.onSurface,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
           ),
-          // Translations & Tafsir panel button.
-          Tooltip(
-            message: 'Translations & Tafsir',
-            child: InkWell(
-              onTap: () {
-                final state = ref.read(mushafProvider);
-                final verseKey = state.ayahs.isNotEmpty
-                    ? state.ayahs.first.verseKey
-                    : '1:1';
-                _showTranslationPanel(context, verseKey);
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Icon(Icons.language, size: 20, color: colors.primary),
-              ),
+          // Expand / collapse full player.
+          IconButton(
+            icon: Icon(
+              expanded ? Icons.expand_more : Icons.expand_less,
+              size: 22,
+              color: colors.onSurface.withAlpha(140),
             ),
+            tooltip: expanded ? 'Hide player' : 'Show player',
+            onPressed: () => ref
+                .read(reciterStripVisibleProvider.notifier)
+                .state = !expanded,
           ),
         ],
       ),
