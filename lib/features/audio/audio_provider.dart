@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../mushaf/mushaf_provider.dart';
+import 'audio_download_provider.dart';
 import 'audio_repository.dart';
 import 'quran_foundation_repository.dart';
 
@@ -250,6 +252,21 @@ class AudioNotifier extends Notifier<AudioState> {
     final ayahNumber = state.currentAyahIndex + 1;
 
     state = state.copyWith(isLoading: true, hasError: false);
+
+    // ── Local cache: use downloaded MP3 when available ──────────────────────
+    final downloader = ref.read(audioDownloadProvider.notifier);
+    final localPath = await downloader.getLocalPath(state.reciter, surah, ayahNumber);
+    if (File(localPath).existsSync() && File(localPath).lengthSync() > 512) {
+      try {
+        await _player.setFilePath(localPath);
+        await _player.setSpeed(state.speed);
+        await _player.play();
+        state = state.copyWith(isPlaying: true, isLoading: false, hasError: false);
+        return;
+      } catch (_) {
+        // File corrupt or format error — fall through to streaming.
+      }
+    }
 
     // ── Path A: Quran Foundation API (slug starts with "qf_") ──────────────
     // Fetches all ayah URLs for the surah in one API call (cached after first

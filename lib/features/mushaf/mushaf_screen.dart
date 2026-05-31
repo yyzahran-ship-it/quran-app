@@ -12,8 +12,10 @@ import '../../core/theme/dyslexia_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/surah.dart';
+import '../audio/audio_library_screen.dart';
 import '../audio/audio_player_bar.dart';
 import '../audio/audio_provider.dart';
+import '../audio/audio_download_provider.dart';
 import '../audio/audio_repository.dart';
 import '../audio/reciter_provider.dart';
 import '../audio/quran_foundation_repository.dart';
@@ -58,7 +60,7 @@ int _ayahGlobalPage(int surahNumber, int ayahNumber) {
 
 // ─── Screen actions (overflow menu) ──────────────────────────────────────────
 
-enum _AppAction { playPause, search, juzJump, toggleTranslation, bookmarks, settings }
+enum _AppAction { playPause, audioLibrary, search, juzJump, toggleTranslation, bookmarks, settings }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -101,6 +103,9 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                 startAyah: s.ayahs.first.ayahNumber,
               );
         }
+      case _AppAction.audioLibrary:
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const AudioLibraryScreen()));
       case _AppAction.search:
         Navigator.push(
             context, MaterialPageRoute(builder: (_) => const SearchScreen()));
@@ -208,6 +213,14 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                       : Icons.play_circle_outline),
                   const SizedBox(width: 12),
                   Text(audio.isPlaying ? 'Pause' : 'Play page audio'),
+                ]),
+              ),
+              const PopupMenuItem(
+                value: _AppAction.audioLibrary,
+                child: Row(children: [
+                  Icon(Icons.library_music_outlined),
+                  SizedBox(width: 12),
+                  Text('Audio Library'),
                 ]),
               ),
               const PopupMenuItem(
@@ -2067,9 +2080,149 @@ class _BottomArea extends ConsumerWidget {
                 ? const AudioPlayerBar()
                 : const SizedBox.shrink(),
           ),
+          const _NowPlayingBar(),
           const _ReciterStrip(),
           _PageNav(currentPage: currentPage),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Now-playing bar ──────────────────────────────────────────────────────────
+//
+// Compact strip shown while audio is active, sitting between the full player
+// and the reciter strip.  Shows: surah:ayah label + prev/play-pause/next.
+
+class _NowPlayingBar extends ConsumerWidget {
+  const _NowPlayingBar();
+
+  static const _kGreen = Color(0xFF1B6B3A);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audio    = ref.watch(audioProvider);
+    if (!audio.hasAudio) return const SizedBox.shrink();
+
+    final notifier = ref.read(audioProvider.notifier);
+    final surahs   = ref.watch(mushafProvider.select((s) => s.surahs));
+
+    final surahName = (audio.surahNumber != null &&
+            surahs.isNotEmpty &&
+            audio.surahNumber! <= surahs.length)
+        ? surahs[audio.surahNumber! - 1].nameSimple
+        : 'Surah ${audio.surahNumber}';
+
+    final label = '${audio.surahNumber}:${audio.currentAyahNumber}  ·  $surahName';
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
+      height: 40,
+      decoration: const BoxDecoration(
+        color: _kGreen,
+        boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, -2))],
+      ),
+      child: Row(
+        children: [
+          // Surah:ayah label + download indicator
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.graphic_eq, size: 14, color: Colors.white70),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // Offline indicator (green dot = playing from cache)
+                  _OfflineIndicator(
+                    reciterSlug: audio.reciter,
+                    surahNumber: audio.surahNumber,
+                    ayahNumber: audio.currentAyahNumber,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Controls
+          _NowPlayingBtn(
+            icon: Icons.skip_previous,
+            onTap: audio.isLoading ? null : notifier.previousAyah,
+          ),
+          _NowPlayingBtn(
+            icon: audio.isLoading
+                ? Icons.hourglass_empty
+                : audio.isPlaying
+                    ? Icons.pause
+                    : Icons.play_arrow,
+            onTap: notifier.togglePlayPause,
+          ),
+          _NowPlayingBtn(
+            icon: Icons.skip_next,
+            onTap: audio.isLoading ? null : notifier.nextAyah,
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _NowPlayingBtn extends StatelessWidget {
+  const _NowPlayingBtn({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Icon(icon, size: 20, color: onTap == null ? Colors.white30 : Colors.white),
+      ),
+    );
+  }
+}
+
+// Shows a small indicator when the current ayah is playing from local cache.
+class _OfflineIndicator extends ConsumerWidget {
+  const _OfflineIndicator({
+    required this.reciterSlug,
+    required this.surahNumber,
+    required this.ayahNumber,
+  });
+  final String reciterSlug;
+  final int? surahNumber;
+  final int? ayahNumber;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (surahNumber == null || ayahNumber == null) return const SizedBox.shrink();
+    final dlState = ref.watch(audioDownloadProvider);
+    final info = dlState[reciterSlug]?[surahNumber!];
+    if (info?.isComplete != true) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Tooltip(
+        message: 'Playing offline',
+        child: Container(
+          width: 7, height: 7,
+          decoration: const BoxDecoration(
+            color: Color(0xFF4DD0E1),
+            shape: BoxShape.circle,
+          ),
+        ),
       ),
     );
   }
