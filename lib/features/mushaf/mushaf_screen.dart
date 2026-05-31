@@ -2220,11 +2220,11 @@ class _ReciterPickerSheetState extends ConsumerState<_ReciterPickerSheet> {
       final selected = audio.reciter == slug;
       return ListTile(
         tileColor: _sheetBg,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         title: Text(
           name,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             color: Colors.white,
           ),
@@ -2237,7 +2237,7 @@ class _ReciterPickerSheetState extends ConsumerState<_ReciterPickerSheet> {
           ),
         ),
         trailing: selected
-            ? const Icon(Icons.check, color: _cyanCheck, size: 24)
+            ? const Icon(Icons.check, color: _cyanCheck, size: 26)
             : null,
         selected: selected,
         selectedTileColor: Colors.white.withValues(alpha: 0.06),
