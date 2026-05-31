@@ -25,7 +25,10 @@ import 'mushaf_download_provider.dart';
 import 'search_screen.dart';
 import 'ayah_coords_provider.dart';
 import 'second_translation_provider.dart';
+import 'tafsir_repository.dart';
 import 'tafsir_sheet.dart';
+import 'translations_library.dart';
+import 'translations_screen.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 
@@ -1165,6 +1168,23 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
   }
 }
 
+// ─── Translation + Tafsir panel (opened from reciter strip or ayah popup) ────
+
+void _showTranslationPanel(BuildContext context, String verseKey) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFF1A1A1A),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) => ProviderScope(
+      parent: ProviderScope.containerOf(context),
+      child: _TranslationPanelSheet(verseKey: verseKey),
+    ),
+  );
+}
+
 // ─── Page ayah picker (shown when user taps the page image) ──────────────────
 //
 // Since the page is a flat raster image we cannot detect which individual ayah
@@ -1459,17 +1479,7 @@ class _AyahPopupBar extends ConsumerWidget {
                     tooltip: 'Tafsir',
                     onTap: () {
                       Navigator.pop(context);
-                      showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        useSafeArea: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(16)),
-                        ),
-                        builder: (_) =>
-                            TafsirSheet(verseKey: ayah.verseKey),
-                      );
+                      _showTranslationPanel(context, ayah.verseKey);
                     },
                   ),
                   _PopupBtn(
@@ -2092,36 +2102,61 @@ class _ReciterStrip extends ConsumerWidget {
           top: BorderSide(color: colors.outlineVariant, width: 0.5),
         ),
       ),
-      child: Semantics(
-        label: 'Reciter: $reciterName. Tap to change reciter.',
-        button: true,
-        child: InkWell(
-          onTap: () => _showPicker(context),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(
-                  isPlaying ? Icons.volume_up : Icons.headphones,
-                  size: 18,
-                  color: colors.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    reciterName,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: colors.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+      child: Row(
+        children: [
+          // Reciter selector (taps open reciter picker).
+          Expanded(
+            child: Semantics(
+              label: 'Reciter: $reciterName. Tap to change reciter.',
+              button: true,
+              child: InkWell(
+                onTap: () => _showPicker(context),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isPlaying ? Icons.volume_up : Icons.headphones,
+                        size: 18,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          reciterName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: colors.onSurface,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+          // Translations & Tafsir panel button.
+          Tooltip(
+            message: 'Translations & Tafsir',
+            child: InkWell(
+              onTap: () {
+                final state = ref.read(mushafProvider);
+                final verseKey = state.ayahs.isNotEmpty
+                    ? state.ayahs.first.verseKey
+                    : '1:1';
+                _showTranslationPanel(context, verseKey);
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Icon(Icons.translate, size: 20, color: colors.primary),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2384,6 +2419,372 @@ class _PageNav extends StatelessWidget {
           ),
           const SizedBox(width: sideW),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Translation & Tafsir panel ───────────────────────────────────────────────
+//
+// Four-tab bottom panel matching competitor Q4A UX:
+//   Tab 0: collapse (dismiss sheet)
+//   Tab 1: bookmark
+//   Tab 2: translations / tafsir (default active)
+//   Tab 3: audio / reciter
+
+const _kPanelBg     = Color(0xFF1A1A1A);
+const _kPanelHeader = Color(0xFF1E3232);
+const _kPanelCyan   = Color(0xFF4DD0E1);
+
+class _TranslationPanelSheet extends ConsumerStatefulWidget {
+  const _TranslationPanelSheet({required this.verseKey});
+
+  final String verseKey;
+
+  @override
+  ConsumerState<_TranslationPanelSheet> createState() =>
+      _TranslationPanelSheetState();
+}
+
+class _TranslationPanelSheetState
+    extends ConsumerState<_TranslationPanelSheet> {
+  int _tab = 2; // translations tab active by default
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (ctx, scrollController) => Container(
+        color: _kPanelBg,
+        child: Column(
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(60),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Tab row
+            _buildTabRow(context),
+            Divider(height: 1, color: Colors.white.withAlpha(25)),
+            // Content
+            Expanded(child: _buildContent(context, scrollController)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabRow(BuildContext context) {
+    return Row(
+      children: [
+        _TabIcon(
+          icon: Icons.keyboard_arrow_down_rounded,
+          active: false,
+          onTap: () => Navigator.pop(context),
+        ),
+        _TabIcon(
+          icon: Icons.bookmark_border_rounded,
+          active: _tab == 1,
+          onTap: () => setState(() => _tab = 1),
+        ),
+        _TabIcon(
+          icon: Icons.translate_rounded,
+          active: _tab == 2,
+          onTap: () => setState(() => _tab = 2),
+        ),
+        _TabIcon(
+          icon: Icons.headphones_rounded,
+          active: _tab == 3,
+          onTap: () => setState(() => _tab = 3),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent(BuildContext context, ScrollController sc) {
+    switch (_tab) {
+      case 2:
+        return _buildTranslationsTab(context, sc);
+      case 3:
+        return _ReciterTabContent(onClose: () => Navigator.pop(context));
+      default:
+        return _buildBookmarkTab();
+    }
+  }
+
+  Widget _buildTranslationsTab(BuildContext context, ScrollController sc) {
+    final selectedIds = ref.watch(selectedTafsirsProvider);
+    return ListView(
+      controller: sc,
+      padding: EdgeInsets.zero,
+      children: [
+        // ── Tafsir selection checkboxes ────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+          child: Text(
+            'SELECT TAFSIRS',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+              color: Colors.white.withAlpha(120),
+            ),
+          ),
+        ),
+        for (final t in kTafsirs)
+          CheckboxListTile(
+            tileColor: _kPanelBg,
+            activeColor: _kPanelCyan,
+            checkColor: _kPanelBg,
+            value: selectedIds.contains(t.id),
+            onChanged: (_) =>
+                ref.read(selectedTafsirsProvider.notifier).toggle(t.id),
+            title: Text(
+              t.name,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+            subtitle: Text(
+              t.language,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.45),
+              ),
+            ),
+            controlAffinity: ListTileControlAffinity.leading,
+            dense: false,
+          ),
+        // ── More Translations link ─────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: TextButton.icon(
+            onPressed: () {
+              final nav = Navigator.of(context);
+              nav.pop();
+              nav.push(MaterialPageRoute(
+                  builder: (_) => const TranslationsScreen()));
+            },
+            icon: const Icon(Icons.library_books_outlined,
+                color: _kPanelCyan, size: 18),
+            label: const Text(
+              'More Translations',
+              style: TextStyle(color: _kPanelCyan, fontSize: 14),
+            ),
+          ),
+        ),
+        Divider(height: 1, color: Colors.white.withAlpha(25)),
+        // ── Tafsir content for each selected tafsir ────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+          child: Text(
+            widget.verseKey,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: _kPanelCyan,
+            ),
+          ),
+        ),
+        for (final id in selectedIds) _buildTafsirBlock(id),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildTafsirBlock(int tafsirId) {
+    final info = kTafsirs.firstWhere(
+      (t) => t.id == tafsirId,
+      orElse: () => kTafsirs.first,
+    );
+    final key = (tafsirId: tafsirId, verseKey: widget.verseKey);
+    final async = ref.watch(tafsirTextProvider(key));
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label chip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: _kPanelHeader,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '${info.name}  •  ${info.language}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          async.when(
+            loading: () => const SizedBox(
+              height: 40,
+              child: Center(
+                  child: CircularProgressIndicator(
+                      color: _kPanelCyan, strokeWidth: 2)),
+            ),
+            error: (_, __) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Could not load — check your connection',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.45)),
+              ),
+            ),
+            data: (text) => Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.75,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          Divider(height: 24, color: Colors.white.withAlpha(20)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookmarkTab() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Text(
+          'Tap an ayah and use the bookmark icon\nto save it for later',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.5),
+            height: 1.6,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Single icon tab button with teal active indicator.
+class _TabIcon extends StatelessWidget {
+  const _TabIcon({
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: active ? _kPanelCyan : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: active
+                ? _kPanelCyan
+                : Colors.white.withValues(alpha: 0.55),
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Audio tab content — shows current reciter + change button.
+class _ReciterTabContent extends ConsumerWidget {
+  const _ReciterTabContent({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audio      = ref.watch(audioProvider);
+    final reciters   = ref.watch(reciterListProvider);
+    final qfAsync    = ref.watch(qfRecitationsProvider);
+    String name      = reciterDisplayName(reciters, audio.reciter);
+    if (audio.reciter.startsWith('qf_')) {
+      final id = int.tryParse(audio.reciter.substring(3));
+      if (id != null) {
+        final qf = qfAsync.valueOrNull ?? [];
+        for (final r in qf) {
+          if (r.id == id) { name = r.displayName; break; }
+        }
+      }
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.headphones, size: 52, color: _kPanelCyan),
+            const SizedBox(height: 16),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              audio.isPlaying ? 'Playing' : 'Selected reciter',
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.5)),
+            ),
+            const SizedBox(height: 28),
+            OutlinedButton.icon(
+              onPressed: () {
+                // Close this panel and let the reciter strip handle the picker.
+                onClose();
+              },
+              icon: const Icon(Icons.swap_horiz, color: _kPanelCyan, size: 20),
+              label: const Text(
+                'Change Reciter',
+                style: TextStyle(color: _kPanelCyan),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: _kPanelCyan),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
