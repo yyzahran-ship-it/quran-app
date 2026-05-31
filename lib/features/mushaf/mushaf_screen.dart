@@ -1003,6 +1003,8 @@ class _MushafAyahText extends ConsumerWidget {
             Offset(tapPos.dx, ayahTopY));
         if (result == 'tafsir' && context.mounted) {
           _showTranslationPanel(context, ayah.verseKey);
+        } else if (result == 'tag' && context.mounted) {
+          _showTagPickerFor(context, ref, ayah);
         }
       },
       child: content,
@@ -1075,6 +1077,8 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
     if (mounted) setState(() => _highlightedId = null);
     if (result == 'tafsir' && mounted) {
       _showTranslationPanel(context, ayah.verseKey);
+    } else if (result == 'tag' && mounted) {
+      _showTagPickerFor(context, ref, ayah);
     }
   }
 
@@ -1465,10 +1469,7 @@ class _AyahPopupBar extends ConsumerWidget {
                   _PopupBtn(
                     icon: Icons.label_outline,
                     tooltip: 'Tag',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showTagPickerFor(context, ref, ayah);
-                    },
+                    onTap: () => Navigator.pop(context, 'tag'),
                   ),
                   _PopupBtn(
                     icon: Icons.share_outlined,
@@ -1950,6 +1951,8 @@ class _PageTranslations extends ConsumerWidget {
             Offset(tapPos.dx, ayahTopY));
         if (result == 'tafsir' && context.mounted) {
           _showTranslationPanel(context, ayah.verseKey);
+        } else if (result == 'tag' && context.mounted) {
+          _showTagPickerFor(context, ref, ayah);
         }
       },
       child: AnimatedContainer(
