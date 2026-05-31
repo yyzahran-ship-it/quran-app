@@ -2661,18 +2661,124 @@ class _TranslationPanelSheetState
   }
 
   Widget _buildBookmarkTab() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+    final mushafState = ref.watch(mushafProvider);
+    // Locate the ayah matching the verseKey this panel was opened for.
+    final matches = mushafState.ayahs.where((a) => a.verseKey == widget.verseKey);
+    final ayah = matches.isEmpty ? null : matches.first;
+
+    if (ayah == null) {
+      return Center(
         child: Text(
-          'Tap an ayah and use the bookmark icon\nto save it for later',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withValues(alpha: 0.5),
-            height: 1.6,
-          ),
+          'Ayah ${widget.verseKey} not on this page',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
         ),
+      );
+    }
+
+    final isBookmarked = ref.watch(
+      bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)),
+    );
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Ayah card with amber shade when bookmarked ─────────────────
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              color: isBookmarked
+                  ? Colors.amber.withAlpha(38)
+                  : Colors.white.withAlpha(10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isBookmarked
+                    ? Colors.amber.shade600
+                    : Colors.white.withValues(alpha: 0.12),
+                width: isBookmarked ? 1.5 : 0.8,
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+            child: Column(
+              children: [
+                // Verse key chip
+                Text(
+                  widget.verseKey,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: isBookmarked ? Colors.amber.shade400 : _kPanelCyan,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Arabic text
+                Text(
+                  ayah.textUthmani,
+                  textDirection: TextDirection.rtl,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'UthmanicHafs',
+                    fontSize: 22,
+                    height: 2.1,
+                    color: Colors.white,
+                  ),
+                ),
+                if (isBookmarked) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.bookmark, size: 14, color: Colors.amber.shade400),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Saved to bookmarks',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.amber.shade400,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Bookmark toggle button ─────────────────────────────────────
+          SizedBox(
+            height: 50,
+            child: FilledButton.icon(
+              onPressed: () {
+                ref.read(bookmarksProvider.notifier).toggle(
+                      ayahId: ayah.id,
+                      surahNumber: ayah.surahNumber,
+                      ayahNumber: ayah.ayahNumber,
+                    );
+              },
+              icon: Icon(
+                isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                size: 20,
+              ),
+              label: Text(
+                isBookmarked ? 'Remove Bookmark' : 'Bookmark this Ayah',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor:
+                    isBookmarked ? Colors.amber.shade700 : _kPanelCyan,
+                foregroundColor: Colors.black87,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
