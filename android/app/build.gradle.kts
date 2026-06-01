@@ -4,8 +4,6 @@ import java.io.FileInputStream
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("com.google.dagger.hilt.android")
-    id("com.google.devtools.ksp")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -31,8 +29,7 @@ android {
 
     defaultConfig {
         applicationId = "com.quranapp.quran_app"
-        // Media3/ExoPlayer (used by :feature:audio) requires API 26+.
-        minSdk = 26
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -60,15 +57,4 @@ android {
 
 flutter {
     source = "../.."
-}
-
-dependencies {
-    implementation(project(":feature:audio"))
-
-    val hilt = "2.51.1"
-    implementation("com.google.dagger:hilt-android:$hilt")
-    ksp("com.google.dagger:hilt-compiler:$hilt")
-    ksp("androidx.hilt:hilt-compiler:1.2.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
-    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }

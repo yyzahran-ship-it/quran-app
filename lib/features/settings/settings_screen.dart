@@ -3,9 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/dyslexia_provider.dart';
-import '../audio/audio_provider.dart';
-import '../audio/reciter_provider.dart';
-import '../audio/quran_foundation_repository.dart';
 import '../mushaf/mushaf_provider.dart';
 import '../mushaf/mushaf_download_provider.dart';
 import '../mushaf/second_translation_provider.dart';
@@ -81,18 +78,9 @@ class SettingsScreen extends ConsumerWidget {
     final translationFontSize = ref.watch(translationFontSizeProvider);
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
     final secondTxId = ref.watch(secondTranslationProvider);
-    final audio = ref.watch(audioProvider);
     final tafsirId = ref.watch(tafsirIdProvider);
     final mushaf = ref.watch(mushafProvider);
-    final reciters  = ref.watch(reciterListProvider);
-    final qfAsync   = ref.watch(qfRecitationsProvider);
     final download  = ref.watch(mushafDownloadProvider);
-
-    // Merged reciter list for the dropdown: hardcoded + QF (de-duped by name).
-    final hardcodedNames = reciters.map((r) => r.name.toLowerCase()).toSet();
-    final qfReciters = qfAsync.valueOrNull
-        ?.where((r) => !hardcodedNames.contains(r.displayName.toLowerCase()))
-        .toList() ?? [];
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -233,35 +221,6 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
           ),
-          // ── Audio ─────────────────────────────────────────────────────────
-          _SectionHeader(title: 'Audio', colors: colors),
-          ListTile(
-            leading: const Icon(Icons.mic_none_outlined),
-            title: const Text('Reciter'),
-            trailing: DropdownButton<String>(
-              value: audio.reciter,
-              underline: const SizedBox.shrink(),
-              items: [
-                // Hardcoded curated list (everyayah CDN)
-                ...reciters.map((r) => DropdownMenuItem(
-                      value: r.relativePath,
-                      child: Text(r.name,
-                          style: const TextStyle(fontSize: 13)),
-                    )),
-                // Additional reciters from Quran Foundation API
-                ...qfReciters.map((r) => DropdownMenuItem(
-                      value: r.slug,
-                      child: Text(r.displayName,
-                          style: const TextStyle(fontSize: 13)),
-                    )),
-              ],
-              onChanged: (v) {
-                if (v != null) {
-                  ref.read(audioProvider.notifier).setReciter(v);
-                }
-              },
-            ),
-          ),
           // ── Offline ───────────────────────────────────────────────────────
           _SectionHeader(title: 'Offline', colors: colors),
           _MushafDownloadTile(download: download, colors: colors),
@@ -276,12 +235,6 @@ class SettingsScreen extends ConsumerWidget {
             leading: const Icon(Icons.translate_outlined),
             title: const Text('Translation'),
             subtitle: const Text('Saheeh International'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.headphones_outlined),
-            title: const Text('Audio'),
-            subtitle: const Text(
-                'Streamed from mirrors.quranicaudio.com — requires internet'),
           ),
           ListTile(
             leading: const Icon(Icons.font_download_outlined),

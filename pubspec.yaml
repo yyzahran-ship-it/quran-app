@@ -40,9 +40,6 @@ dependencies:
   sqlite3: ^2.9.4
   sqlite3_flutter_libs: ^0.5.30
 
-  # Audio playback
-  just_audio: ^0.9.46
-
   # HTTP client with retry + caching
   dio: ^5.8.0+1
 

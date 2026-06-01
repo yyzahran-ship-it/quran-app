@@ -12,13 +12,6 @@ import '../../core/theme/dyslexia_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/surah.dart';
-import '../audio/audio_library_screen.dart';
-import '../audio/audio_player_bar.dart';
-import '../audio/audio_provider.dart';
-import '../audio/audio_download_provider.dart';
-import '../audio/audio_repository.dart';
-import '../audio/reciter_provider.dart';
-import '../audio/quran_foundation_repository.dart';
 import '../bookmarks/bookmarks_provider.dart';
 import '../bookmarks/bookmarks_screen.dart';
 import '../bookmarks/note_editor_dialog.dart';
@@ -60,7 +53,7 @@ int _ayahGlobalPage(int surahNumber, int ayahNumber) {
 
 // ─── Screen actions (overflow menu) ──────────────────────────────────────────
 
-enum _AppAction { playPause, audioLibrary, search, juzJump, toggleTranslation, bookmarks, settings }
+enum _AppAction { search, juzJump, toggleTranslation, bookmarks, settings }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -92,20 +85,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
 
   void _handleAction(_AppAction action) {
     switch (action) {
-      case _AppAction.playPause:
-        final s = ref.read(mushafProvider);
-        final a = ref.read(audioProvider);
-        if (a.isPlaying) {
-          ref.read(audioProvider.notifier).togglePlayPause();
-        } else if (s.ayahs.isNotEmpty) {
-          ref.read(audioProvider.notifier).playSurah(
-                s.ayahs.first.surahNumber,
-                startAyah: s.ayahs.first.ayahNumber,
-              );
-        }
-      case _AppAction.audioLibrary:
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const AudioLibraryScreen()));
       case _AppAction.search:
         Navigator.push(
             context, MaterialPageRoute(builder: (_) => const SearchScreen()));
@@ -125,23 +104,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mushafProvider);
-    final audio = ref.watch(audioProvider);
     final pageDownload = ref.watch(mushafDownloadProvider);
-
-    // Auto-navigate to the page that contains the currently playing ayah.
-    ref.listen<AudioState>(audioProvider, (prev, next) {
-      if (next.surahNumber == null || next.currentAyahNumber == null) return;
-      if (prev?.surahNumber == next.surahNumber &&
-          prev?.currentAyahIndex == next.currentAyahIndex) return;
-      final targetPage =
-          _ayahGlobalPage(next.surahNumber!, next.currentAyahNumber!);
-      if (targetPage != ref.read(mushafProvider).currentPage) {
-        ref
-            .read(mushafProvider.notifier)
-            .navigateToAyah(next.surahNumber!, next.currentAyahNumber!);
-        _scrollToTop();
-      }
-    });
 
     final themeMode = ref.watch(themeProvider);
     // highContrast renders as light (white background, black text).
@@ -205,24 +168,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
             tooltip: 'More options',
             onSelected: _handleAction,
             itemBuilder: (_) => [
-              PopupMenuItem(
-                value: _AppAction.playPause,
-                child: Row(children: [
-                  Icon(audio.isPlaying
-                      ? Icons.pause_circle_outline
-                      : Icons.play_circle_outline),
-                  const SizedBox(width: 12),
-                  Text(audio.isPlaying ? 'Pause' : 'Play page audio'),
-                ]),
-              ),
-              const PopupMenuItem(
-                value: _AppAction.audioLibrary,
-                child: Row(children: [
-                  Icon(Icons.library_music_outlined),
-                  SizedBox(width: 12),
-                  Text('Audio Library'),
-                ]),
-              ),
               const PopupMenuItem(
                 value: _AppAction.search,
                 child: Row(children: [
@@ -332,7 +277,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
         pageNum: state.currentPage,
         isDark: isDark,
         textFallback: textFallback,
-        nowPlayingBanner: _NowPlayingBanner(ayahs: state.ayahs, isDark: isDark),
         imageAyahOverlay: state.ayahs.isNotEmpty
             ? _AyahImageOverlay(
                 ayahs: state.ayahs,
@@ -397,7 +341,6 @@ class _MushafPageLoader extends StatefulWidget {
     required this.pageNum,
     required this.isDark,
     this.textFallback,
-    this.nowPlayingBanner,
     this.imageTranslations,
     this.imageAyahOverlay,
   });
@@ -405,7 +348,6 @@ class _MushafPageLoader extends StatefulWidget {
   final int pageNum;
   final bool isDark;
   final Widget? textFallback;
-  final Widget? nowPlayingBanner;
   final Widget? imageTranslations;
   // Transparent per-ayah tap zones stacked over the image.
   final Widget? imageAyahOverlay;
@@ -546,22 +488,11 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
       );
     }
 
-    // Stack per-ayah overlay and now-playing banner on top of the image.
-    final hasOverlay =
-        widget.imageAyahOverlay != null || widget.nowPlayingBanner != null;
-    final imgWithBanner = hasOverlay
+    final imgWithBanner = widget.imageAyahOverlay != null
         ? Stack(
             children: [
               img,
-              if (widget.imageAyahOverlay != null)
-                Positioned.fill(child: widget.imageAyahOverlay!),
-              if (widget.nowPlayingBanner != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: widget.nowPlayingBanner!,
-                ),
+              Positioned.fill(child: widget.imageAyahOverlay!),
             ],
           )
         : img;
@@ -618,88 +549,6 @@ class _MushafPageLoaderState extends State<_MushafPageLoader> {
   }
 }
 
-// ─── Now-playing banner (overlaid on bottom of page image while audio plays) ──
-//
-// Shows the current ayah key + first few words of Arabic text while audio
-// is active. Tapping it opens the action sheet for that ayah so the user
-// can access Tafsir, Bookmark, or Note without switching to text-fallback mode.
-
-class _NowPlayingBanner extends ConsumerWidget {
-  const _NowPlayingBanner({required this.ayahs, required this.isDark});
-
-  final List<Ayah> ayahs;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final audio = ref.watch(audioProvider);
-    if (!audio.hasAudio) return const SizedBox.shrink();
-
-    final currentAyah = ayahs
-        .where((a) =>
-            a.surahNumber == audio.surahNumber &&
-            a.ayahNumber == audio.currentAyahNumber)
-        .firstOrNull;
-
-    if (currentAyah == null) return const SizedBox.shrink();
-
-    final colors = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: () => _showAyahActions(context, ref, currentAyah, isDark),
-      child: Container(
-        decoration: BoxDecoration(
-          // Semi-transparent so the page image is partially visible behind.
-          color: colors.primaryContainer.withAlpha(220),
-          border: Border(
-            top: BorderSide(
-              color: colors.primary.withAlpha(80),
-              width: 0.5,
-            ),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            Icon(
-              audio.isPlaying ? Icons.volume_up : Icons.pause_circle_outline,
-              size: 16,
-              color: colors.primary,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              currentAyah.verseKey,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: colors.primary,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                // Show first ~40 chars of Arabic so users can follow along.
-                currentAyah.textUthmani.length > 40
-                    ? '${currentAyah.textUthmani.substring(0, 40)}…'
-                    : currentAyah.textUthmani,
-                textDirection: TextDirection.rtl,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'UthmanicHafs',
-                  fontSize: 14,
-                  color: colors.onPrimaryContainer,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.menu_book_outlined, size: 16, color: colors.primary),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ─── Arabic-Indic numeral helper ─────────────────────────────────────────────
 
 // Converts e.g. 255 → ٢٥٥ — used in ayah end markers.
@@ -739,7 +588,6 @@ class _TextFallbackView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (ayahs.isEmpty) return const SizedBox.shrink();
 
-    final audio = ref.watch(audioProvider);
     // dyslexia_font applies monospace + extra spacing to translation text only.
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
     // Bookmarked ayah IDs — read once for the whole page build.
@@ -761,15 +609,12 @@ class _TextFallbackView extends ConsumerWidget {
           children.add(_MushafBismillah(textColor: textColor));
         }
       }
-      final isHighlighted = audio.surahNumber == ayah.surahNumber &&
-          audio.currentAyahNumber == ayah.ayahNumber;
       children.add(_MushafAyahText(
         ayah: ayah,
         translation: translations[ayah.id],
         secondTranslation: secondTranslations[ayah.id],
         textColor: textColor,
         isDark: isDark,
-        isHighlighted: isHighlighted,
         isBookmarked: bookmarkedIds.contains(ayah.id),
         dyslexiaFont: dyslexiaFont,
       ));
@@ -813,19 +658,12 @@ class _TextFallbackView extends ConsumerWidget {
       ),
     );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        final v = ref.read(reciterStripVisibleProvider);
-        ref.read(reciterStripVisibleProvider.notifier).state = !v;
-      },
-      child: Container(
-        color: bg,
-        padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
+    return Container(
+      color: bg,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }
@@ -918,7 +756,6 @@ class _MushafAyahText extends ConsumerWidget {
     required this.translation,
     required this.textColor,
     required this.isDark,
-    required this.isHighlighted,
     this.isBookmarked = false,
     this.secondTranslation,
     this.dyslexiaFont = false,
@@ -929,7 +766,6 @@ class _MushafAyahText extends ConsumerWidget {
   final String? secondTranslation;
   final Color textColor;
   final bool isDark;
-  final bool isHighlighted;
   final bool isBookmarked;
   // When true, translation text uses monospace font + extra spacing/height
   // to aid readability for users with dyslexia. Arabic text is unaffected.
@@ -986,16 +822,7 @@ class _MushafAyahText extends ConsumerWidget {
       ],
     );
 
-    if (isHighlighted) {
-      content = Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer.withAlpha(120),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        child: content,
-      );
-    } else if (isBookmarked) {
+    if (isBookmarked) {
       // Amber shade for bookmarked ayahs — same shade as Quran for Android.
       content = Container(
         decoration: BoxDecoration(
@@ -1116,22 +943,13 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
   Widget build(BuildContext context) {
     final colors     = Theme.of(context).colorScheme;
     final tapShade   = colors.primary.withAlpha(55);
-    final playShade  = const Color(0xFF4CAF50).withAlpha(100); // apple green
 
-    final audio      = ref.watch(audioProvider);
     final coordsAsync = ref.watch(ayahCoordsProvider(widget.page));
     final coordsMap   = coordsAsync.valueOrNull;
-
-    bool isPlaying(Ayah ayah) =>
-        (audio.isPlaying || audio.isLoading) &&
-        !audio.hasError &&
-        audio.surahNumber == ayah.surahNumber &&
-        audio.currentAyahNumber == ayah.ayahNumber;
 
     // ── Primary: pixel-precise coords from bundled KingFahad1.db ────────────
     if (coordsMap != null && coordsMap.isNotEmpty) {
       return LayoutBuilder(builder: (ctx, box) {
-        // Cache scales + map so _onTap can compute the ayah's global top edge.
         _xScale = box.maxWidth / kDbImageWidth;
         _yScale = box.maxHeight / kDbImageHeight;
         _localCoordsMap = coordsMap;
@@ -1140,29 +958,19 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
         final yScale = _yScale;
 
         final zones = <Widget>[
-          // Full-screen background tap: toggle reciter strip
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () {
-                final v = ref.read(reciterStripVisibleProvider);
-                ref.read(reciterStripVisibleProvider.notifier).state = !v;
-              },
-            ),
-          ),
+          Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.translucent)),
         ];
         for (final ayah in widget.ayahs) {
           final key   = ayah.surahNumber * 10000 + ayah.ayahNumber;
           final rects = coordsMap[key];
           if (rects == null) continue;
-          final playing = isPlaying(ayah);
           for (final r in rects) {
             zones.add(Positioned(
               left:   r.left   * xScale,
               top:    r.top    * yScale,
               width:  r.width  * xScale,
               height: r.height * yScale,
-              child: _zone(ayah, tapShade, playShade, playing),
+              child: _zone(ayah, tapShade),
             ));
           }
         }
@@ -1171,36 +979,25 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
     }
 
     // ── Fallback: proportional zones based on character count ────────────────
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        final v = ref.read(reciterStripVisibleProvider);
-        ref.read(reciterStripVisibleProvider.notifier).state = !v;
-      },
-      child: Column(
-        children: [
-          for (final ayah in widget.ayahs)
-            Expanded(
-              flex: ayah.textUthmani.length.clamp(50, 99999),
-              child: _zone(ayah, tapShade, playShade, isPlaying(ayah)),
-            ),
-        ],
-      ),
+    return Column(
+      children: [
+        for (final ayah in widget.ayahs)
+          Expanded(
+            flex: ayah.textUthmani.length.clamp(50, 99999),
+            child: _zone(ayah, tapShade),
+          ),
+      ],
     );
   }
 
-  Widget _zone(Ayah ayah, Color tapShade, Color playShade, bool playing) {
+  Widget _zone(Ayah ayah, Color tapShade) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTapDown: (d) => _tapPos = d.globalPosition,
       onTap: () => _onTap(ayah),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
-        color: _highlightedId == ayah.id
-            ? tapShade
-            : playing
-                ? playShade
-                : Colors.transparent,
+        color: _highlightedId == ayah.id ? tapShade : Colors.transparent,
       ),
     );
   }
@@ -1374,17 +1171,6 @@ class _PageAyahSheet extends ConsumerWidget {
                           );
                         },
                       ),
-                      IconButton(
-                        icon: Icon(Icons.play_circle_outline,
-                            color: colors.onSurfaceVariant, size: 20),
-                        tooltip: 'Play',
-                        onPressed: () {
-                          Navigator.pop(context);
-                          ref
-                              .read(audioProvider.notifier)
-                              .playAyah(ayah.surahNumber, ayah.ayahNumber);
-                        },
-                      ),
                     ],
                   ),
                 );
@@ -1513,16 +1299,6 @@ class _AyahPopupBar extends ConsumerWidget {
                     icon: Icons.language,
                     tooltip: 'Tafsir',
                     onTap: () => Navigator.pop(context, 'tafsir'),
-                  ),
-                  _PopupBtn(
-                    icon: Icons.play_arrow,
-                    tooltip: 'Play',
-                    onTap: () {
-                      Navigator.pop(context);
-                      ref
-                          .read(audioProvider.notifier)
-                          .playAyah(ayah.surahNumber, ayah.ayahNumber);
-                    },
                   ),
                 ],
               ),
@@ -1928,7 +1704,6 @@ class _PageTranslations extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
-    final audio = ref.watch(audioProvider);
     final bookmarkedIds = ref.watch(
         bookmarksProvider.select((bms) => bms.map((b) => b.ayahId).toSet()));
 
@@ -1939,7 +1714,7 @@ class _PageTranslations extends ConsumerWidget {
         const SizedBox(height: 4),
         for (final ayah in ayahs)
           if (translations[ayah.id] != null || secondTranslations[ayah.id] != null)
-            _buildAyahRow(context, ref, ayah, audio, colors, dyslexiaFont,
+            _buildAyahRow(context, ref, ayah, colors, dyslexiaFont,
                 bookmarkedIds.contains(ayah.id)),
       ],
     );
@@ -1949,17 +1724,10 @@ class _PageTranslations extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Ayah ayah,
-    AudioState audio,
     ColorScheme colors,
     bool dyslexiaFont,
     bool isBookmarked,
   ) {
-    final isPlaying = audio.hasAudio &&
-        audio.surahNumber == ayah.surahNumber &&
-        audio.currentAyahNumber == ayah.ayahNumber;
-    final highlightColor = isDark
-        ? colors.primary.withAlpha(40)
-        : colors.primary.withAlpha(20);
     final bookmarkColor = isDark
         ? Colors.amber.withAlpha(38)
         : Colors.amber.withAlpha(30);
@@ -1985,19 +1753,16 @@ class _PageTranslations extends ConsumerWidget {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        decoration: isPlaying
-            ? BoxDecoration(color: highlightColor)
-            : isBookmarked
-                ? BoxDecoration(
-                    color: bookmarkColor,
-                    border: Border(
-                      left: BorderSide(
-                          color: Colors.amber.shade600, width: 3),
-                    ),
-                  )
-                : const BoxDecoration(),
-        padding: EdgeInsets.fromLTRB(
-            isBookmarked && !isPlaying ? 7 : 4, 5, 4, 5),
+        decoration: isBookmarked
+            ? BoxDecoration(
+                color: bookmarkColor,
+                border: Border(
+                  left: BorderSide(
+                      color: Colors.amber.shade600, width: 3),
+                ),
+              )
+            : const BoxDecoration(),
+        padding: EdgeInsets.fromLTRB(isBookmarked ? 7 : 4, 5, 4, 5),
         margin: const EdgeInsets.only(bottom: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2007,11 +1772,9 @@ class _PageTranslations extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: isPlaying
-                    ? colors.primary
-                    : isBookmarked
-                        ? Colors.amber.shade700
-                        : colors.primary.withAlpha(180),
+                color: isBookmarked
+                    ? Colors.amber.shade700
+                    : colors.primary.withAlpha(180),
               ),
             ),
             Expanded(
@@ -2044,12 +1807,6 @@ class _PageTranslations extends ConsumerWidget {
                 ],
               ),
             ),
-            if (isPlaying)
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Icon(Icons.volume_up_rounded,
-                    size: 14, color: colors.primary),
-              ),
           ],
         ),
       ),
@@ -2057,508 +1814,17 @@ class _PageTranslations extends ConsumerWidget {
   }
 }
 
-// ─── Bottom area: audio bar + reciter strip + page number ─────────────────────
+// ─── Bottom area: page number ─────────────────────────────────────────────────
 
 class _BottomArea extends ConsumerWidget {
   const _BottomArea();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visible     = ref.watch(reciterStripVisibleProvider);
     final currentPage = ref.watch(mushafProvider.select((s) => s.currentPage));
-    // SafeArea ensures the page number row is visible above the home indicator
-    // or Android gesture bar — without it the bottom row hides under system UI.
     return SafeArea(
       top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeInOut,
-            child: visible
-                ? const AudioPlayerBar()
-                : const SizedBox.shrink(),
-          ),
-          const _NowPlayingBar(),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeInOut,
-            child: visible
-                ? const _ReciterStrip()
-                : const SizedBox.shrink(),
-          ),
-          _PageNav(currentPage: currentPage),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Now-playing bar ──────────────────────────────────────────────────────────
-//
-// Compact strip shown while audio is active, sitting between the full player
-// and the reciter strip.  Shows: surah:ayah label + prev/play-pause/next.
-
-class _NowPlayingBar extends ConsumerWidget {
-  const _NowPlayingBar();
-
-  static const _kGreen = Color(0xFF1B6B3A);
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final audio    = ref.watch(audioProvider);
-    if (!audio.hasAudio) return const SizedBox.shrink();
-
-    final notifier = ref.read(audioProvider.notifier);
-    final surahs   = ref.watch(mushafProvider.select((s) => s.surahs));
-
-    final surahName = (audio.surahNumber != null &&
-            surahs.isNotEmpty &&
-            audio.surahNumber! <= surahs.length)
-        ? surahs[audio.surahNumber! - 1].nameSimple
-        : 'Surah ${audio.surahNumber}';
-
-    final label = '${audio.surahNumber}:${audio.currentAyahNumber}  ·  $surahName';
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 240),
-      height: 40,
-      decoration: const BoxDecoration(
-        color: _kGreen,
-        boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, -2))],
-      ),
-      child: Row(
-        children: [
-          // Surah:ayah label + download indicator
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.graphic_eq, size: 14, color: Colors.white70),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  // Offline indicator (green dot = playing from cache)
-                  _OfflineIndicator(
-                    reciterSlug: audio.reciter,
-                    surahNumber: audio.surahNumber,
-                    ayahNumber: audio.currentAyahNumber,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Controls
-          _NowPlayingBtn(
-            icon: Icons.skip_previous,
-            onTap: audio.isLoading ? null : notifier.previousAyah,
-          ),
-          _NowPlayingBtn(
-            icon: audio.isLoading
-                ? Icons.hourglass_empty
-                : audio.isPlaying
-                    ? Icons.pause
-                    : Icons.play_arrow,
-            onTap: notifier.togglePlayPause,
-          ),
-          _NowPlayingBtn(
-            icon: Icons.skip_next,
-            onTap: audio.isLoading ? null : notifier.nextAyah,
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-    );
-  }
-}
-
-class _NowPlayingBtn extends StatelessWidget {
-  const _NowPlayingBtn({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Icon(icon, size: 20, color: onTap == null ? Colors.white30 : Colors.white),
-      ),
-    );
-  }
-}
-
-// Shows a small indicator when the current ayah is playing from local cache.
-class _OfflineIndicator extends ConsumerWidget {
-  const _OfflineIndicator({
-    required this.reciterSlug,
-    required this.surahNumber,
-    required this.ayahNumber,
-  });
-  final String reciterSlug;
-  final int? surahNumber;
-  final int? ayahNumber;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (surahNumber == null || ayahNumber == null) return const SizedBox.shrink();
-    final dlState = ref.watch(audioDownloadProvider);
-    final info = dlState[reciterSlug]?[surahNumber!];
-    if (info?.isComplete != true) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: Tooltip(
-        message: 'Playing offline',
-        child: Container(
-          width: 7, height: 7,
-          decoration: const BoxDecoration(
-            color: Color(0xFF4DD0E1),
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Reciter strip ─────────────────────────────────────────────────────────────
-
-class _ReciterStrip extends ConsumerWidget {
-  const _ReciterStrip();
-
-  void _showPicker(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1A1A1A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.75,
-      ),
-      builder: (_) => const _ReciterPickerSheet(),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final audio       = ref.watch(audioProvider);
-    final qaReciters  = ref.watch(reciterListProvider);
-    final qfAsync     = ref.watch(qfRecitationsProvider);
-    final colors      = Theme.of(context).colorScheme;
-    final isPlaying   = audio.isPlaying;
-    final expanded    = ref.watch(reciterStripVisibleProvider);
-    final reciterSlug = audio.reciter;
-
-    // Resolve display name from hardcoded list first, then QF list.
-    String reciterName = reciterDisplayName(qaReciters, reciterSlug);
-    if (reciterSlug.startsWith('qf_')) {
-      final id = int.tryParse(reciterSlug.substring(3));
-      if (id != null) {
-        final qf = qfAsync.valueOrNull ?? [];
-        for (final r in qf) {
-          if (r.id == id) { reciterName = r.displayName; break; }
-        }
-      }
-    }
-
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        border: Border(
-          top: BorderSide(color: colors.outlineVariant, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Play / pause button.
-          IconButton(
-            icon: Icon(
-              isPlaying ? Icons.pause : Icons.play_arrow,
-              size: 24,
-              color: colors.primary,
-            ),
-            tooltip: isPlaying ? 'Pause' : 'Play',
-            onPressed: () {
-              final a = ref.read(audioProvider);
-              final s = ref.read(mushafProvider);
-              if (a.isPlaying || a.hasAudio) {
-                ref.read(audioProvider.notifier).togglePlayPause();
-              } else if (s.ayahs.isNotEmpty) {
-                ref.read(audioProvider.notifier).playSurah(
-                  s.ayahs.first.surahNumber,
-                  startAyah: s.ayahs.first.ayahNumber,
-                );
-              }
-            },
-          ),
-          // Reciter name — tap to change.
-          Expanded(
-            child: Semantics(
-              label: 'Reciter: $reciterName. Tap to change.',
-              button: true,
-              child: InkWell(
-                onTap: () => _showPicker(context),
-                child: Text(
-                  reciterName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: colors.onSurface,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ),
-          // Expand / collapse full player.
-          IconButton(
-            icon: Icon(
-              expanded ? Icons.expand_more : Icons.expand_less,
-              size: 22,
-              color: colors.onSurface.withAlpha(140),
-            ),
-            tooltip: expanded ? 'Hide player' : 'Show player',
-            onPressed: () => ref
-                .read(reciterStripVisibleProvider.notifier)
-                .state = !expanded,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Reciter picker sheet ──────────────────────────────────────────────────────
-//
-// Matches Quran for Android's reciter menu:
-//   - Section headers per recording style (Murattal, Mujawwad)
-//   - Each row: reciter name + style badge; checkmark on selected
-//   - Additional reciters from Quran Foundation API at the bottom
-
-class _ReciterPickerSheet extends ConsumerStatefulWidget {
-  const _ReciterPickerSheet();
-
-  @override
-  ConsumerState<_ReciterPickerSheet> createState() =>
-      _ReciterPickerSheetState();
-}
-
-class _ReciterPickerSheetState extends ConsumerState<_ReciterPickerSheet> {
-  bool _immersive = false;
-
-  void _toggleImmersive() {
-    setState(() => _immersive = !_immersive);
-    if (_immersive) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    } else {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
-  }
-
-  @override
-  void dispose() {
-    if (_immersive) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final audio    = ref.watch(audioProvider);
-    final reciters = ref.watch(reciterListProvider);
-    final qfAsync  = ref.watch(qfRecitationsProvider);
-    final notifier = ref.read(audioProvider.notifier);
-
-    // Group hardcoded reciters by style.
-    final Map<String, List<QAReciter>> byStyle = {};
-    for (final r in reciters) {
-      (byStyle[r.style] ??= []).add(r);
-    }
-    final styleOrder = ['Murattal', 'Mujawwad'];
-    final sortedStyles = [
-      ...styleOrder.where(byStyle.containsKey),
-      ...byStyle.keys.where((s) => !styleOrder.contains(s)),
-    ];
-
-    // QF reciters de-duped against the hardcoded list by name.
-    final hardcodedNames = reciters.map((r) => r.name.toLowerCase()).toSet();
-    final qfReciters = qfAsync.valueOrNull
-        ?.where((r) => !hardcodedNames.contains(r.name.toLowerCase()))
-        .toList() ?? [];
-
-    // Group QF reciters by style as well.
-    final Map<String, List<QFRecitation>> qfByStyle = {};
-    for (final r in qfReciters) {
-      final s = r.style.isNotEmpty ? r.style : 'Other';
-      (qfByStyle[s] ??= []).add(r);
-    }
-
-    const Color _sheetBg      = Color(0xFF1A1A1A);
-    const Color _headerBg     = Color(0xFF1E3232);
-    const Color _cyanCheck    = Color(0xFF4DD0E1);
-
-    Widget sectionHeader(String label) => Container(
-          width: double.infinity,
-          color: _headerBg,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-              color: Colors.white,
-            ),
-          ),
-        );
-
-    Widget reciterTile({
-      required String slug,
-      required String name,
-      required String style,
-    }) {
-      final selected = audio.reciter == slug;
-      return ListTile(
-        tileColor: _sheetBg,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(
-          name,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: Colors.white,
-          ),
-        ),
-        subtitle: Text(
-          style,
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.white.withValues(alpha: 0.45),
-          ),
-        ),
-        trailing: selected
-            ? const Icon(Icons.check, color: _cyanCheck, size: 26)
-            : null,
-        selected: selected,
-        selectedTileColor: Colors.white.withValues(alpha: 0.06),
-        onTap: () {
-          notifier.setReciter(slug);
-          Navigator.of(context).pop();
-        },
-      );
-    }
-
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Drag handle
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            height: 4,
-            width: 36,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(60),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
-            child: Row(
-              children: [
-                const Icon(Icons.headphones, size: 20, color: Colors.white),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Select a Qari',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: _immersive ? 'Exit immersive mode' : 'Immersive mode',
-                  icon: Icon(
-                    _immersive
-                        ? Icons.fullscreen_exit
-                        : Icons.fullscreen,
-                    color: _immersive
-                        ? const Color(0xFF4DD0E1)
-                        : Colors.white.withValues(alpha: 0.6),
-                    size: 24,
-                  ),
-                  onPressed: _toggleImmersive,
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: Colors.white.withAlpha(30)),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                // ── Hardcoded reciters grouped by style ────────────────────
-                for (final style in sortedStyles) ...[
-                  sectionHeader(style),
-                  for (final r in byStyle[style]!)
-                    reciterTile(
-                      slug: r.relativePath,
-                      name: r.name,
-                      style: r.style,
-                    ),
-                ],
-
-                // ── Quran Foundation reciters ──────────────────────────────
-                if (qfAsync.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (qfByStyle.isNotEmpty) ...[
-                  for (final style in qfByStyle.keys) ...[
-                    sectionHeader('$style (quran.com)'),
-                    for (final r in qfByStyle[style]!)
-                      reciterTile(
-                        slug: r.slug,
-                        name: r.name,
-                        style: r.style,
-                      ),
-                  ],
-                ] else if (qfAsync.hasError)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Could not load more reciters — check your connection.',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.5)),
-                    ),
-                  ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        ],
-      ),
+      child: _PageNav(currentPage: currentPage),
     );
   }
 }
@@ -2682,24 +1948,13 @@ class _TranslationPanelSheetState
           active: _tab == 2,
           onTap: () => setState(() => _tab = 2),
         ),
-        _TabIcon(
-          icon: Icons.headphones_rounded,
-          active: _tab == 3,
-          onTap: () => setState(() => _tab = 3),
-        ),
       ],
     );
   }
 
   Widget _buildContent(BuildContext context, ScrollController sc) {
-    switch (_tab) {
-      case 2:
-        return _buildTranslationsTab(context, sc);
-      case 3:
-        return _ReciterTabContent(onClose: () => Navigator.pop(context));
-      default:
-        return _buildBookmarkTab();
-    }
+    if (_tab == 2) return _buildTranslationsTab(context, sc);
+    return _buildBookmarkTab();
   }
 
   Widget _buildTranslationsTab(BuildContext context, ScrollController sc) {
@@ -2999,76 +2254,6 @@ class _TabIcon extends StatelessWidget {
                 : Colors.white.withValues(alpha: 0.55),
             size: 24,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// Audio tab content — shows current reciter + change button.
-class _ReciterTabContent extends ConsumerWidget {
-  const _ReciterTabContent({required this.onClose});
-
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final audio      = ref.watch(audioProvider);
-    final reciters   = ref.watch(reciterListProvider);
-    final qfAsync    = ref.watch(qfRecitationsProvider);
-    String name      = reciterDisplayName(reciters, audio.reciter);
-    if (audio.reciter.startsWith('qf_')) {
-      final id = int.tryParse(audio.reciter.substring(3));
-      if (id != null) {
-        final qf = qfAsync.valueOrNull ?? [];
-        for (final r in qf) {
-          if (r.id == id) { name = r.displayName; break; }
-        }
-      }
-    }
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.headphones, size: 52, color: _kPanelCyan),
-            const SizedBox(height: 16),
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              audio.isPlaying ? 'Playing' : 'Selected reciter',
-              style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.5)),
-            ),
-            const SizedBox(height: 28),
-            OutlinedButton.icon(
-              onPressed: () {
-                // Close this panel and let the reciter strip handle the picker.
-                onClose();
-              },
-              icon: const Icon(Icons.swap_horiz, color: _kPanelCyan, size: 20),
-              label: const Text(
-                'Change Reciter',
-                style: TextStyle(color: _kPanelCyan),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: _kPanelCyan),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-            ),
-          ],
         ),
       ),
     );
