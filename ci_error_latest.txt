@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Mon Jun  1 04:34:39 UTC 2026
-Run: 26735090152
+Date: Mon Jun  1 04:46:20 UTC 2026
+Run: 26735409410
 
 ## flutter analyze output:
 ```
@@ -31,7 +31,7 @@ warning • A value for optional parameter 'key' isn't ever given. Try removing 
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:79:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-24 issues found. (ran in 12.1s)
+24 issues found. (ran in 11.8s)
 ```
 
 ## Gradle error lines:
@@ -41,86 +41,86 @@ Starting process 'Gradle build daemon'. Working directory: /home/runner/.gradle/
   Attempt to define local of type long as element$iv:java.lang.Object
   java.lang.Object kotlinx.coroutines.flow.FlowKt__BuildersKt$asFlow$$inlined$unsafeFlow$9.collect(kotlinx.coroutines.flow.FlowCollector, kotlin.coroutines.Continuation)
   Attempt to define local of type int as element$iv:java.lang.Object
-e: [ksp] /home/runner/work/quran-app/quran-app/android/app/src/main/kotlin/com/quranapp/quran_app/MainActivity.kt:10: [Hilt] Activities annotated with @AndroidEntryPoint must be a subclass of androidx.activity.ComponentActivity. (e.g. FragmentActivity, AppCompatActivity, etc.)
-e: Error occurred in KSP, check log for detail
 FAILURE: Build failed with an exception.
-Execution failed for task ':app:kspDebugKotlin'.
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:kspDebugKotlin'.
+Execution failed for task ':app:hiltJavaCompileDebug'.
+> java.lang.IllegalStateException: Unable to read Kotlin metadata due to unsupported metadata version.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:hiltJavaCompileDebug'.
 	at java.base/java.lang.Thread.run(Thread.java:840)
-Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+Caused by: java.lang.RuntimeException: java.lang.IllegalStateException: Unable to read Kotlin metadata due to unsupported metadata version.
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
 	at java.base/java.lang.Thread.run(Thread.java:840)
-Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+Caused by: java.lang.IllegalStateException: Unable to read Kotlin metadata due to unsupported metadata version.
 ```
 
 ## Last 100 lines of build_log.txt:
 ```
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-[        ] 	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
-[        ] 	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
-[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
-[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
-[        ] 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
-[        ] 	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
-[        ] 	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
-[        ] 	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
-[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
-[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-[        ] 	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
-[        ] 	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
-[        ] 	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
-[        ] 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
-[        ] 	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
-[        ] 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
-[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
-[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 [        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
-[        ] Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
-[        ] 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
-[        ] 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:119)
-[        ] 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
-[        ] 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
-[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
-[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
-[        ] 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
-[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
-[        ] 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
-[        ] 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-[        ] 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
-[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
-[        ] 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
-[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
-[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
-[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
-[        ] 	at org.gradle.internal.Factories$1.create(Factories.java:31)
-[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
-[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
-[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
-[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
-[        ] 	... 7 more
-[        ] BUILD FAILED in 5m 24s
+[        ] Caused by: java.lang.IllegalStateException: Unable to read Kotlin metadata due to unsupported metadata version.
+[        ] 	at dagger.internal.codegen.kotlin.KotlinMetadata.metadataOf(KotlinMetadata.java:180)
+[        ] 	at dagger.internal.codegen.kotlin.KotlinMetadata.from(KotlinMetadata.java:157)
+[        ] 	at java.base/java.util.HashMap.computeIfAbsent(HashMap.java:1220)
+[        ] 	at dagger.internal.codegen.kotlin.KotlinMetadataFactory.create(KotlinMetadataFactory.java:55)
+[        ] 	at dagger.internal.codegen.kotlin.KotlinMetadataUtil.isMissingSyntheticPropertyForAnnotations(KotlinMetadataUtil.java:75)
+[        ] 	at dagger.internal.codegen.validation.DependencyRequestValidator.missingQualifierMetadata(DependencyRequestValidator.java:108)
+[        ] 	at dagger.internal.codegen.validation.DependencyRequestValidator.validateDependencyRequest(DependencyRequestValidator.java:81)
+[        ] 	at dagger.internal.codegen.validation.InjectValidator.validateDependencyRequest(InjectValidator.java:358)
+[        ] 	at dagger.internal.codegen.validation.InjectValidator.validateField(InjectValidator.java:309)
+[        ] 	at dagger.internal.codegen.validation.InjectValidator.validateForMembersInjectionInternalUncached(InjectValidator.java:382)
+[        ] 	at dagger.internal.codegen.base.Util.reentrantComputeIfAbsent(Util.java:33)
+[        ] 	at dagger.internal.codegen.validation.InjectValidator.validateForMembersInjectionInternal(InjectValidator.java:369)
+[        ] 	at dagger.internal.codegen.validation.InjectValidator.validateForMembersInjection(InjectValidator.java:365)
+[        ] 	at dagger.internal.codegen.validation.InjectBindingRegistryImpl.tryRegisterMembersInjectedType(InjectBindingRegistryImpl.java:314)
+[        ] 	at dagger.internal.codegen.validation.InjectBindingRegistryImpl.getOrFindMembersInjectionBinding(InjectBindingRegistryImpl.java:381)
+[        ] 	at dagger.internal.codegen.binding.BindingGraphFactory$Resolver.lookUpMembersInjectionBinding(BindingGraphFactory.java:523)
+[        ] 	at dagger.internal.codegen.binding.BindingGraphFactory$Resolver.resolveMembersInjection(BindingGraphFactory.java:826)
+[        ] 	at dagger.internal.codegen.binding.BindingGraphFactory$Resolver.access$1200(BindingGraphFactory.java:355)
+[        ] 	at dagger.internal.codegen.binding.BindingGraphFactory.lambda$createLegacyBindingGraph$5(BindingGraphFactory.java:218)
+[        ] 	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:183)
+[        ] 	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+[        ] 	at java.base/java.util.Spliterators$ArraySpliterator.forEachRemaining(Spliterators.java:992)
+[        ] 	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+[        ] 	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+[        ] 	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:150)
+[        ] 	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:173)
+[        ] 	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+[        ] 	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+[        ] 	at dagger.internal.codegen.binding.BindingGraphFactory.createLegacyBindingGraph(BindingGraphFactory.java:215)
+[        ] 	at dagger.internal.codegen.binding.BindingGraphFactory.create(BindingGraphFactory.java:115)
+[        ] 	at dagger.internal.codegen.processingstep.ComponentProcessingStep.processRootComponent(ComponentProcessingStep.java:116)
+[        ] 	at dagger.internal.codegen.processingstep.ComponentProcessingStep.process(ComponentProcessingStep.java:87)
+[        ] 	at dagger.internal.codegen.processingstep.ComponentProcessingStep.process(ComponentProcessingStep.java:49)
+[        ] 	at dagger.internal.codegen.processingstep.TypeCheckingProcessingStep.lambda$process$0(TypeCheckingProcessingStep.java:94)
+[        ] 	at com.google.common.collect.RegularImmutableMap.forEach(RegularImmutableMap.java:297)
+[        ] 	at dagger.internal.codegen.processingstep.TypeCheckingProcessingStep.process(TypeCheckingProcessingStep.java:72)
+[        ] 	at dagger.internal.codegen.processingstep.TypeCheckingProcessingStep.process(TypeCheckingProcessingStep.java:49)
+[        ] 	at dagger.spi.internal.shaded.androidx.room.compiler.processing.XProcessingStep.process(XProcessingStep.kt:59)
+[        ] 	at dagger.spi.internal.shaded.androidx.room.compiler.processing.CommonProcessorDelegate.processRound(XBasicAnnotationProcessor.kt:132)
+[        ] 	at dagger.spi.internal.shaded.androidx.room.compiler.processing.javac.JavacBasicAnnotationProcessor.process(JavacBasicAnnotationProcessor.kt:73)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.DelegatingProcessor.process(DelegatingProcessor.java:62)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.IsolatingProcessor.process(IsolatingProcessor.java:50)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.DelegatingProcessor.process(DelegatingProcessor.java:62)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.TimeTrackingProcessor.access$401(TimeTrackingProcessor.java:37)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.TimeTrackingProcessor$5.create(TimeTrackingProcessor.java:99)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.TimeTrackingProcessor$5.create(TimeTrackingProcessor.java:96)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.TimeTrackingProcessor.track(TimeTrackingProcessor.java:117)
+[        ] 	at org.gradle.api.internal.tasks.compile.processing.TimeTrackingProcessor.process(TimeTrackingProcessor.java:96)
+[        ] 	at jdk.compiler/com.sun.tools.javac.processing.JavacProcessingEnvironment.callProcessor(JavacProcessingEnvironment.java:1023)
+[        ] 	at jdk.compiler/com.sun.tools.javac.processing.JavacProcessingEnvironment.discoverAndRunProcs(JavacProcessingEnvironment.java:939)
+[        ] 	at jdk.compiler/com.sun.tools.javac.processing.JavacProcessingEnvironment$Round.run(JavacProcessingEnvironment.java:1267)
+[        ] 	at jdk.compiler/com.sun.tools.javac.processing.JavacProcessingEnvironment.doProcessing(JavacProcessingEnvironment.java:1382)
+[        ] 	at jdk.compiler/com.sun.tools.javac.main.JavaCompiler.processAnnotations(JavaCompiler.java:1234)
+[        ] 	at jdk.compiler/com.sun.tools.javac.main.JavaCompiler.compile(JavaCompiler.java:916)
+[        ] 	at jdk.compiler/com.sun.tools.javac.api.JavacTaskImpl.lambda$doCall$0(JavacTaskImpl.java:104)
+[        ] 	at jdk.compiler/com.sun.tools.javac.api.JavacTaskImpl.invocationHelper(JavacTaskImpl.java:152)
+[        ] 	... 194 more
+[        ] BUILD FAILED in 5m 31s
 [        ] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
 [        ] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
 [        ] For more on this, please refer to https://docs.gradle.org/8.12/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
-[        ] 149 actionable tasks: 144 executed, 5 up-to-date
-[ +467 ms] Running Gradle task 'assembleDebug'... (completed in 325.2s)
-[   +1 ms] "flutter apk" took 325,720ms.
-[   +7 ms] Gradle task assembleDebug failed with exit code 1
+[        ] 157 actionable tasks: 152 executed, 5 up-to-date
+[ +406 ms] Running Gradle task 'assembleDebug'... (completed in 331.7s)
+[   +1 ms] "flutter apk" took 332,285ms.
+[   +8 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
            #1      AndroidGradleBuilder.buildGradleApp (package:flutter_tools/src/android/gradle.dart:595:7)
