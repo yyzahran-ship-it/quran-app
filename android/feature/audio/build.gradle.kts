@@ -35,6 +35,12 @@ android {
     }
 }
 
+ksp {
+    // Required for Hilt in library modules: suppresses validation that would otherwise
+    // fail because MediaSessionService is not itself annotated with @AndroidEntryPoint.
+    arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+}
+
 dependencies {
     // ── Media3 ───────────────────────────────────────────────────────────────
     val media3 = "1.3.1"

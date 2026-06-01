@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout code
@@ -130,17 +134,21 @@ jobs:
       - name: Post build error as PR comment
         if: failure()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ERRORS=$(grep -E "^e: |FAILURE:|> What went wrong:|Caused by:|> Task :" build_log.txt 2>/dev/null | head -40 || echo "(no specific error lines found)")
+          ERRORS=$(grep -E "^e: |FAILURE:|> What went wrong:|Caused by:|> Task :" build_log.txt 2>/dev/null | head -40 || echo "(no build_log.txt — failure may be in an earlier step)")
           TAIL=$(tail -40 build_log.txt 2>/dev/null || echo "(no build_log.txt)")
-          COMMENT=$(jq -n --arg e "$ERRORS" --arg t "$TAIL" \
-            '"## CI Build Failure\n\n**Error lines:**\n```\n" + $e + "\n```\n\n**Last 40 log lines:**\n```\n" + $t + "\n```"')
-          curl -s -X POST \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/1/comments" \
-            -d "{\"body\": $COMMENT}"
+          gh pr comment 1 --repo "$GITHUB_REPOSITORY" --body "## CI Build Failure
+
+**Error / Kotlin lines:**
+\`\`\`
+$ERRORS
+\`\`\`
+
+**Last 40 build log lines:**
+\`\`\`
+$TAIL
+\`\`\`"
 
       - name: Upload APKs (all ABIs)
         if: success()
