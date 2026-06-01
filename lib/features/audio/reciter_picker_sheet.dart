@@ -140,13 +140,37 @@ class _ReciterTile extends StatelessWidget {
         color: isSelected ? colors.primary : colors.outline,
         size: 22,
       ),
-      title: Text(
-        reciter.name,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          color: isSelected ? colors.primary : null,
+      title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                reciter.name,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? colors.primary : null,
+                ),
+              ),
+            ),
+            if (reciter.supportsVerseTracking) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.green.withAlpha(30),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '⟨ tracking ⟩',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
-      ),
       subtitle: reciter.style != null
           ? Text(
               reciter.style!,
