@@ -13,7 +13,14 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
-    project.evaluationDependsOn(":app")
+    // Flutter plugin subprojects need app to be evaluated first so they can read
+    // flutter.compileSdkVersion / flutter.minSdkVersion from the FlutterExtension.
+    // Local library modules (e.g. :feature:*) are pure Android libraries that don't
+    // use Flutter properties, and :app already depends on them — so excluding them
+    // here prevents a circular evaluation-dependency.
+    if (!project.path.startsWith(":feature")) {
+        project.evaluationDependsOn(":app")
+    }
 }
 
 tasks.register<Delete>("clean") {
