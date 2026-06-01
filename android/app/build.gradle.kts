@@ -62,13 +62,6 @@ flutter {
     source = "../.."
 }
 
-// dagger-compiler:2.51.1 bundles kotlinx-metadata-jvm:0.9.0 (non-shaded),
-// which only supports metadata up to {2,0,0}. Kotlin 2.1.0 emits {2,1,0}.
-// Force the newer version so hiltJavaCompileDebug can read our classes.
-configurations.all {
-    resolutionStrategy.force("org.jetbrains.kotlinx:kotlinx-metadata-jvm:2.1.0")
-}
-
 dependencies {
     implementation(project(":feature:audio"))
 
