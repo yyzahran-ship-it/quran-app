@@ -4,22 +4,25 @@ import 'audio_models.dart';
 
 const _kApiBase = 'https://api.quranicaudio.com';
 
-// ── Built-in reciter list (21 verified reciters) ──────────────────────────────
+// ── Verified reciter list (35 reciters) ───────────────────────────────────────
+//
+// Sources used for verification:
+//  • Islamic Network edition codes: faha1999/al-quran-database editions.json
+//    (cross-checked against alquran.cloud API)
+//  • QuranicAudio paths: spa5k/quran-timings-api data/reciters.json
+//    (actual API response data)
 //
 // Two CDN tiers:
 //  • islamicNetworkEdition set  → cdn.islamic.network (verse-by-verse + tracking)
 //  • islamicNetworkEdition null → download.quranicaudio.com (surah-level only)
-//
-// Islamic Network edition identifiers are verified against the al-Quran Cloud API
-// (api.alquran.cloud) and corroborated across 50+ open-source Quran apps.
-// QuranicAudio relative_path values are verified from multiple open-source apps.
+
 const _kBuiltInReciters = <QuranicReciter>[
 
-  // ── 15 reciters — verse-by-verse tracking via Islamic Network CDN ─────────
+  // ── 18 reciters — verse-by-verse tracking via Islamic Network CDN ─────────
 
   QuranicReciter(
     id: 1, name: 'Mishary Rashid Al-Afasy', arabicName: 'مشاري راشد العفاسي',
-    relativePath: 'mishaari_raashid_al_3afaasee/',
+    relativePath: 'mishari_rashid_al_afasy/',
     islamicNetworkEdition: 'ar.alafasy',
   ),
   QuranicReciter(
@@ -29,95 +32,155 @@ const _kBuiltInReciters = <QuranicReciter>[
   ),
   QuranicReciter(
     id: 3, name: 'Abdul Basit (Murattal)', arabicName: 'عبدالباسط عبدالصمد',
-    relativePath: 'abdulbasit_abdussamed_murattal/', style: 'Murattal',
+    relativePath: 'abdul_basit_murattal/', style: 'Murattal',
     islamicNetworkEdition: 'ar.abdulbasitmurattal',
   ),
   QuranicReciter(
-    id: 4, name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري',
+    id: 4, name: 'Abdul Basit (Abdul Samad)', arabicName: 'عبدالباسط عبدالصمد',
+    relativePath: 'abdulbasit_abdussamed/', style: 'Murattal',
+    islamicNetworkEdition: 'ar.abdulsamad',
+  ),
+  QuranicReciter(
+    id: 5, name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري',
     relativePath: 'mahmoud_khalil_al_husaree/', style: 'Murattal',
     islamicNetworkEdition: 'ar.husary',
   ),
   QuranicReciter(
-    id: 5, name: 'Al-Husary (Mujawwad)', arabicName: 'محمود خليل الحصري',
+    id: 6, name: 'Al-Husary (Mujawwad)', arabicName: 'محمود خليل الحصري',
     relativePath: 'mahmoud_khalil_al_husaree_mujawwad/', style: 'Mujawwad',
     islamicNetworkEdition: 'ar.husarymujawwad',
   ),
   QuranicReciter(
-    id: 6, name: 'Abu Bakr Al-Shatri', arabicName: 'أبو بكر الشاطري',
-    relativePath: 'abu_bakr_al-shatree/',
+    id: 7, name: 'Abu Bakr Al-Shatri', arabicName: 'أبو بكر الشاطري',
+    relativePath: 'abu_bakr_ash-shaatree/',
     islamicNetworkEdition: 'ar.shaatree',
   ),
   QuranicReciter(
-    id: 7, name: 'Ahmad ibn Ali Al-Ajamy', arabicName: 'أحمد بن علي العجمي',
+    id: 8, name: 'Ahmad ibn Ali Al-Ajamy', arabicName: 'أحمد بن علي العجمي',
     relativePath: 'ahmed_ibn_3ali_al-3ajamy/',
     islamicNetworkEdition: 'ar.ahmedajamy',
   ),
   QuranicReciter(
-    id: 8, name: 'Hani Ar-Rifai', arabicName: 'هاني الرفاعي',
+    id: 9, name: 'Hani Ar-Rifai', arabicName: 'هاني الرفاعي',
     relativePath: 'hani_ar-rifai/',
     islamicNetworkEdition: 'ar.hanirifai',
   ),
   QuranicReciter(
-    id: 9, name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي',
-    relativePath: 'muhammad_siddeeq_al-minshaawee/', style: 'Murattal',
+    id: 10, name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي',
+    relativePath: 'siddiq_al-minshawi/', style: 'Murattal',
     islamicNetworkEdition: 'ar.minshawi',
   ),
   QuranicReciter(
-    id: 10, name: 'Al-Minshawi (Mujawwad)', arabicName: 'محمد صديق المنشاوي',
-    relativePath: 'muhammad_siddeeq_al-minshaawee_mujawwad/', style: 'Mujawwad',
+    id: 11, name: 'Al-Minshawi (Mujawwad)', arabicName: 'محمد صديق المنشاوي',
+    relativePath: 'siddiq_al-minshawi/', style: 'Mujawwad',
     islamicNetworkEdition: 'ar.minshawimujawwad',
   ),
   QuranicReciter(
-    id: 11, name: 'Muhammad Ayyoob', arabicName: 'محمد أيوب',
+    id: 12, name: 'Muhammad Ayyoob', arabicName: 'محمد أيوب',
     relativePath: 'muhammad_ayyoob/',
     islamicNetworkEdition: 'ar.muhammadayyoub',
   ),
   QuranicReciter(
-    id: 12, name: 'Abdullah Basfar', arabicName: 'عبدالله بصفر',
+    id: 13, name: 'Abdullah Basfar', arabicName: 'عبدالله بصفر',
     relativePath: 'abdullaah_basfar/',
     islamicNetworkEdition: 'ar.abdullahbasfar',
   ),
   QuranicReciter(
-    id: 13, name: 'Maher Al-Muaiqly', arabicName: 'ماهر المعيقلي',
-    relativePath: 'maher_al_meaqli/',
+    id: 14, name: 'Maher Al-Muaiqly', arabicName: 'ماهر المعيقلي',
+    relativePath: 'maher_al_muaiqly/',
     islamicNetworkEdition: 'ar.mahermuaiqly',
   ),
   QuranicReciter(
-    id: 14, name: 'Muhammad Jibreel', arabicName: 'محمد جبريل',
+    id: 15, name: 'Muhammad Jibreel', arabicName: 'محمد جبريل',
     relativePath: 'muhammad_jibreel/',
     islamicNetworkEdition: 'ar.muhammadjibreel',
   ),
   QuranicReciter(
-    id: 15, name: 'Ali Al-Hudhaifi', arabicName: 'علي الحذيفي',
-    relativePath: 'ali_bin_abdurrahman_al-huthayfee/',
+    id: 16, name: 'Ali Al-Hudhaifi', arabicName: 'علي الحذيفي',
+    relativePath: 'huthayfi/',
     islamicNetworkEdition: 'ar.hudhaify',
   ),
+  QuranicReciter(
+    id: 17, name: 'Ibrahim Akhdar', arabicName: 'إبراهيم الأخضر',
+    relativePath: 'ibrahim_al-akhdar/',
+    islamicNetworkEdition: 'ar.ibrahimakhbar',
+  ),
+  QuranicReciter(
+    id: 18, name: 'Saud Al-Shuraim', arabicName: 'سعود الشريم',
+    relativePath: 'saoud_ash-shuraim/',
+    islamicNetworkEdition: 'ar.saoodshuraym',
+  ),
 
-  // ── 6 reciters — surah-level only via QuranicAudio CDN ───────────────────
+  // ── 17 reciters — surah-level only via QuranicAudio CDN ──────────────────
+  // Paths verified from spa5k/quran-timings-api data/reciters.json
 
   QuranicReciter(
-    id: 16, name: 'Abdul Basit (Mujawwad)', arabicName: 'عبدالباسط عبدالصمد',
+    id: 19, name: 'Abdul Basit (Mujawwad)', arabicName: 'عبدالباسط عبدالصمد',
     relativePath: 'abdulbaset_mujawwad/', style: 'Mujawwad',
   ),
   QuranicReciter(
-    id: 17, name: 'Saad Al-Ghamdi', arabicName: 'سعد الغامدي',
+    id: 20, name: 'Saad Al-Ghamdi', arabicName: 'سعد الغامدي',
     relativePath: 'sa3d_al-ghaamdi/',
   ),
   QuranicReciter(
-    id: 18, name: 'Yasser Al-Dosari', arabicName: 'ياسر الدوسري',
-    relativePath: 'yasser_ad-dussary/',
+    id: 21, name: 'Yasser Al-Dosari', arabicName: 'ياسر الدوسري',
+    relativePath: 'yasser_ad_dussary/',
   ),
   QuranicReciter(
-    id: 19, name: 'Nasser Al-Qatami', arabicName: 'ناصر القطامي',
-    relativePath: 'naasir_al-qaatami/',
+    id: 22, name: 'Nasser Al-Qatami', arabicName: 'ناصر القطامي',
+    relativePath: 'nasser_al-qatami/',
   ),
   QuranicReciter(
-    id: 20, name: 'Saud Al-Shuraim', arabicName: 'سعود الشريم',
-    relativePath: 'saoud_ash-shuraym/',
-  ),
-  QuranicReciter(
-    id: 21, name: 'Abdullah Awad Al-Juhani', arabicName: 'عبدالله عواد الجهني',
+    id: 23, name: 'Abdullah Awad Al-Juhani', arabicName: 'عبدالله عواد الجهني',
     relativePath: 'abdullaah_3awwaad_al-juhaynee/',
+  ),
+  QuranicReciter(
+    id: 24, name: 'Al-Husary (Muallam)', arabicName: 'محمود خليل الحصري',
+    relativePath: 'husary_muallim/', style: 'Teaching',
+  ),
+  QuranicReciter(
+    id: 25, name: 'Imad Zuhair Hafez', arabicName: 'عماد زهير حافظ',
+    relativePath: 'imad_zuhair_hafez/',
+  ),
+  QuranicReciter(
+    id: 26, name: 'Fares Abbad', arabicName: 'فارس عباد',
+    relativePath: 'fares/',
+  ),
+  QuranicReciter(
+    id: 27, name: 'Ibrahim Al-Jibrin', arabicName: 'إبراهيم الجبرين',
+    relativePath: 'jibreen/',
+  ),
+  QuranicReciter(
+    id: 28, name: 'Muhammad Al-Tablawi', arabicName: 'محمد الطبلاوي',
+    relativePath: 'muhammad_al_tablawi/',
+  ),
+  QuranicReciter(
+    id: 29, name: 'Salah Al-Budair', arabicName: 'صلاح البدير',
+    relativePath: 'salah_al_budair/',
+  ),
+  QuranicReciter(
+    id: 30, name: 'Sudais and Shuraim', arabicName: 'السديس والشريم',
+    relativePath: 'sudais_and_shuraim/',
+  ),
+  QuranicReciter(
+    id: 31, name: 'AbdulAzeez Al-Ahmad', arabicName: 'عبدالعزيز الأحمد',
+    relativePath: 'abdulazeez_al-ahmad/',
+  ),
+  QuranicReciter(
+    id: 32, name: 'Abdur-Razaq Al-Dulaimi', arabicName: 'عبدالرزاق بن عبطان الدليمي',
+    relativePath: 'abdulrazaq_bin_abtan_al_dulaimi/', style: 'Mujawwad',
+  ),
+  QuranicReciter(
+    id: 33, name: "Al-Hussayni (with Children)", arabicName: "الحسيني العزازي",
+    relativePath: 'alhusaynee_al3azazee_with_children/',
+  ),
+  QuranicReciter(
+    id: 34, name: 'Salaah Abu Ismail', arabicName: 'صلاح أبو إسماعيل',
+    relativePath: 'salaah_abu_ismail/',
+  ),
+  QuranicReciter(
+    id: 35, name: 'Hamad Sinan', arabicName: 'حمد سنان',
+    relativePath: 'hamad_sinan/',
   ),
 ];
 
@@ -136,13 +199,19 @@ class QuranicAudioRepository {
       );
       final list = response.data as List<dynamic>;
       // Append live-API reciters not already covered by the built-in list.
-      // Built-in reciters keep their islamicNetworkEdition mappings.
+      // Built-in reciters keep their verified paths and islamicNetworkEdition.
       final knownPaths = {for (final r in _kBuiltInReciters) r.relativePath};
       final extras = <QuranicReciter>[];
       int extraId = 1000;
       for (final item in list) {
         final map = item as Map<String, dynamic>;
-        final path = (map['relative_path'] as String?) ?? '';
+        final rawPath = (map['relative_path'] as String?) ?? '';
+        // Normalise: ensure trailing slash.
+        final path = rawPath.isEmpty
+            ? ''
+            : rawPath.endsWith('/')
+                ? rawPath
+                : '$rawPath/';
         if (path.isNotEmpty && !knownPaths.contains(path)) {
           extras.add(QuranicReciter(
             id: extraId++,
