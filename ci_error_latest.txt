@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Mon Jun  1 04:46:20 UTC 2026
-Run: 26735409410
+Date: Mon Jun  1 05:02:22 UTC 2026
+Run: 26735870899
 
 ## flutter analyze output:
 ```
@@ -31,7 +31,7 @@ warning • A value for optional parameter 'key' isn't ever given. Try removing 
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:79:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-24 issues found. (ran in 11.8s)
+24 issues found. (ran in 11.3s)
 ```
 
 ## Gradle error lines:
@@ -112,14 +112,14 @@ Caused by: java.lang.IllegalStateException: Unable to read Kotlin metadata due t
 [        ] 	at jdk.compiler/com.sun.tools.javac.main.JavaCompiler.compile(JavaCompiler.java:916)
 [        ] 	at jdk.compiler/com.sun.tools.javac.api.JavacTaskImpl.lambda$doCall$0(JavacTaskImpl.java:104)
 [        ] 	at jdk.compiler/com.sun.tools.javac.api.JavacTaskImpl.invocationHelper(JavacTaskImpl.java:152)
-[        ] 	... 194 more
-[        ] BUILD FAILED in 5m 31s
+[        ] 	... 163 more
+[        ] BUILD FAILED in 5m 24s
 [        ] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
 [        ] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
 [        ] For more on this, please refer to https://docs.gradle.org/8.12/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 [        ] 157 actionable tasks: 152 executed, 5 up-to-date
-[ +406 ms] Running Gradle task 'assembleDebug'... (completed in 331.7s)
-[   +1 ms] "flutter apk" took 332,285ms.
+[ +382 ms] Running Gradle task 'assembleDebug'... (completed in 325.1s)
+[   +1 ms] "flutter apk" took 325,643ms.
 [   +8 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
