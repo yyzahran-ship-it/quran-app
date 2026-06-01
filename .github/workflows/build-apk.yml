@@ -127,6 +127,15 @@ jobs:
       - name: Build debug APK (with full log)
         run: flutter build apk --debug --split-per-abi -v 2>&1 | tee build_log.txt; exit ${PIPESTATUS[0]}
 
+      - name: Show build error summary (on failure)
+        if: failure()
+        run: |
+          echo "=== Kotlin/Gradle error lines ==="
+          grep -E "^e: |error:|FAILURE:|> What went wrong:|Caused by:|Exception|> Task :" build_log.txt 2>/dev/null | head -60 || echo "(no build_log.txt found)"
+          echo ""
+          echo "=== Last 50 lines of build log ==="
+          tail -50 build_log.txt 2>/dev/null || echo "(no build_log.txt found)"
+
       - name: Upload APKs (all ABIs)
         if: success()
         uses: actions/upload-artifact@v4
