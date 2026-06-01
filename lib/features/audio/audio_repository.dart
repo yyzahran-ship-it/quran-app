@@ -182,6 +182,167 @@ const _kBuiltInReciters = <QuranicReciter>[
     id: 35, name: 'Hamad Sinan', arabicName: 'حمد سنان',
     relativePath: 'hamad_sinan/',
   ),
+
+  // ── Additional gapless reciters — surah-level via QuranicAudio CDN ──────────
+  // Sourced from quran/quran_android readers.xml + CDN path verification.
+  // Verified = direct CDN URL evidence; high-conf = archive.org/search snippets.
+
+  QuranicReciter(
+    id: 36, name: 'Aziz Alili', arabicName: 'عزيز عليلي',
+    relativePath: 'aziz_alili/',
+  ),
+  QuranicReciter(
+    id: 37, name: 'Mostafa Ismaeel', arabicName: 'مصطفى إسماعيل',
+    relativePath: 'mostafa_ismaeel/',
+  ),
+  QuranicReciter(
+    id: 38, name: 'Wadee Al-Yamani', arabicName: 'وديع اليماني',
+    relativePath: 'wadee_hammadi_al-yamani/',
+  ),
+  QuranicReciter(
+    id: 39, name: 'Tawfeeq as-Sawaigh', arabicName: 'توفيق الصايغ',
+    relativePath: 'tawfeeq_bin_saeed-as-sawaaigh/',
+  ),
+  QuranicReciter(
+    id: 40, name: 'Akram Al-Alaqmi',
+    relativePath: 'akram_al_alaqmi/',
+  ),
+  QuranicReciter(
+    id: 41, name: 'Alzain Mohammad Ahmad',
+    relativePath: 'alzain_mohammad_ahmad/',
+  ),
+  QuranicReciter(
+    id: 42, name: 'Muhammad Al-Luhaidan', arabicName: 'محمد اللحيدان',
+    relativePath: 'muhammad_al-luhaidan/',
+  ),
+  QuranicReciter(
+    id: 43, name: 'AbdulHadi Kanakeri',
+    relativePath: 'abdulhadi_kanakeri/',
+  ),
+  QuranicReciter(
+    id: 44, name: 'Bandar Baleela', arabicName: 'بندر بليلة',
+    relativePath: 'bandar_baleela/complete/',
+  ),
+  QuranicReciter(
+    id: 45, name: 'Sahl Yaseen',
+    relativePath: 'sahl_yaseen/',
+  ),
+  QuranicReciter(
+    id: 46, name: 'Ahmad Nauina',
+    relativePath: 'ahmad_nauina/',
+  ),
+  QuranicReciter(
+    id: 47, name: 'Ali Hajjaj Alsouasi',
+    relativePath: 'ali_hajjaj_alsouasi/',
+  ),
+  QuranicReciter(
+    id: 48, name: 'Mahmoud Ali al-Bana', arabicName: 'محمود علي البنا',
+    relativePath: 'mahmoud_ali_al_bana/',
+  ),
+  QuranicReciter(
+    id: 49, name: 'Abdulrahman Al-Shahat',
+    relativePath: 'abdulrahman_al-shahat/',
+  ),
+  QuranicReciter(
+    id: 50, name: 'Abdur-Rashid Sufi',
+    relativePath: 'abdur-rashid_sufi/',
+  ),
+  QuranicReciter(
+    id: 51, name: 'Abdulaziz Az-Zahrani', arabicName: 'عبدالعزيز الزهراني',
+    relativePath: 'abdulaziz_az-zahrani/',
+  ),
+  QuranicReciter(
+    id: 52, name: 'Dr. Ayman Suwaid', arabicName: 'أيمن سويد',
+    relativePath: 'ayman_suwaid/',
+  ),
+  QuranicReciter(
+    id: 53, name: 'Mishari Al-Afasy (California)', arabicName: 'مشاري راشد العفاسي',
+    relativePath: 'mishari_rashid_al_afasy_california/',
+  ),
+  QuranicReciter(
+    id: 54, name: 'Ali Jaber', arabicName: 'علي جابر',
+    relativePath: 'ali_jaber/',
+  ),
+  QuranicReciter(
+    id: 55, name: 'Maher Al-Muaiqly (Haramain)', arabicName: 'ماهر المعيقلي',
+    relativePath: 'maher_al_muaiqly_2012/',
+  ),
+  QuranicReciter(
+    id: 56, name: 'AbdulMuhsin al-Qasim', arabicName: 'عبدالمحسن القاسم',
+    relativePath: 'abdulmuhsin_al-qasim/',
+  ),
+  QuranicReciter(
+    id: 57, name: 'Khalifa Altunaiji',
+    relativePath: 'khalifa_altunaiji/',
+  ),
+  QuranicReciter(
+    id: 58, name: 'Abdullah Matroud', arabicName: 'عبدالله مطرود',
+    relativePath: 'abdullaah_matrood/',
+  ),
+  QuranicReciter(
+    id: 59, name: 'Salah Bukhatir', arabicName: 'صلاح بوخاطر',
+    relativePath: 'salah_bukhatir/',
+  ),
+  QuranicReciter(
+    id: 60, name: 'Khalid Al-Qahtani', arabicName: 'خالد القحطاني',
+    relativePath: 'khalid_al-qahtani/',
+  ),
+  QuranicReciter(
+    id: 61, name: 'Abdulrahman Aloosi',
+    relativePath: 'abdulrahman_aloosi/',
+  ),
+  QuranicReciter(
+    id: 62, name: 'Muhammad Rashad Al-Shereef',
+    relativePath: 'muhammad_rashad_al-shereef/',
+  ),
+  QuranicReciter(
+    id: 63, name: 'Hady Toure', arabicName: 'هادي توري',
+    relativePath: 'hady_toure/',
+  ),
+  QuranicReciter(
+    id: 64, name: 'Khalid Al-Jalil', arabicName: 'خالد الجليل',
+    relativePath: 'khalid_al-jalil/',
+  ),
+  QuranicReciter(
+    id: 65, name: 'Nabil Ar-Rifai', arabicName: 'نبيل الرفاعي',
+    relativePath: 'nabil_ar-rifai/',
+  ),
+  QuranicReciter(
+    id: 66, name: 'Noreen Siddiq',
+    relativePath: 'noreen_siddiq/',
+  ),
+  QuranicReciter(
+    id: 67, name: 'Badr Al-Turki', arabicName: 'بدر التركي',
+    relativePath: 'badr_al-turki/',
+  ),
+  QuranicReciter(
+    id: 68, name: 'Idrees Abkar', arabicName: 'إدريس أبكر',
+    relativePath: 'idrees_abkar/',
+  ),
+  QuranicReciter(
+    id: 69, name: 'Raad Al-Kurdi', arabicName: 'رعد الكردي',
+    relativePath: 'raad_al-kurdi/',
+  ),
+  QuranicReciter(
+    id: 70, name: 'Ahmed Al-Nufais',
+    relativePath: 'ahmed_al_nufais/',
+  ),
+  QuranicReciter(
+    id: 71, name: 'Peshewa Qadir al-Kurdi',
+    relativePath: 'peshawa_qadir_al-kurdi/',
+  ),
+  QuranicReciter(
+    id: 72, name: 'Farman Shawani',
+    relativePath: 'farman_shawani/',
+  ),
+  QuranicReciter(
+    id: 73, name: 'Yasser Salama', style: 'Hadr',
+    relativePath: 'yasser_salama/',
+  ),
+  QuranicReciter(
+    id: 74, name: 'Ibrahim Walk (English)',
+    relativePath: 'ibrahim_walk_saheeh_intl/',
+  ),
 ];
 
 class QuranicAudioRepository {
