@@ -1,10 +1,12 @@
 package com.quranapp.quran_app
 
 import android.content.Intent
+import dagger.hilt.android.AndroidEntryPoint
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
+@AndroidEntryPoint
 class MainActivity : FlutterActivity() {
     private val channel = "com.quranapp.quran_app/share"
 
