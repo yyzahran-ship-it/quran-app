@@ -2081,7 +2081,13 @@ class _BottomArea extends ConsumerWidget {
                 : const SizedBox.shrink(),
           ),
           const _NowPlayingBar(),
-          const _ReciterStrip(),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            child: visible
+                ? const _ReciterStrip()
+                : const SizedBox.shrink(),
+          ),
           _PageNav(currentPage: currentPage),
         ],
       ),
