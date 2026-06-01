@@ -149,12 +149,12 @@ jobs:
             echo ""
             echo "## Gradle error lines:"
             echo '```'
-            grep -E "^e: |FAILURE:|> What went wrong:|Caused by:|> Task :|error:" build_log.txt 2>/dev/null | head -60 || echo "(no build_log.txt — failure was before the Gradle build step)"
+            sed 's/^\[[ +0-9ms]*\] //' build_log.txt 2>/dev/null | grep -E "^e: |FAILURE:|Execution failed for task|> What went wrong:|Caused by:|Exception in thread|java\.lang\.|error:|Error:" | head -80 || echo "(no build_log.txt — failure was before the Gradle build step)"
             echo '```'
             echo ""
-            echo "## Last 60 lines of build_log.txt:"
+            echo "## Last 100 lines of build_log.txt:"
             echo '```'
-            tail -60 build_log.txt 2>/dev/null || echo "(none)"
+            tail -100 build_log.txt 2>/dev/null || echo "(none)"
             echo '```'
           } > ci_error_latest.txt
           git config user.name "github-actions[bot]"
