@@ -26,6 +26,9 @@ import 'translations_library.dart';
 import 'translations_screen.dart';
 import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
+import '../audio/audio_provider.dart';
+import '../audio/audio_player_bar.dart';
+import '../audio/reciter_picker_sheet.dart';
 
 // CDN base URLs for King Fahad Mushaf page images, tried in order.
 // The GitHub raw URL is a fallback served from GitHub's CDN (Fastly/Azure)
@@ -1822,17 +1825,43 @@ class _BottomArea extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentPage = ref.watch(mushafProvider.select((s) => s.currentPage));
+    // Only rebuild when audio active/inactive changes, not on every position tick.
+    final isAudioActive =
+        ref.watch(audioProvider.select((s) => s.isActive));
+    final ayahs = ref.watch(mushafProvider.select((s) => s.ayahs));
+    final surahNumber = ayahs.isNotEmpty ? ayahs.first.surahNumber : 1;
+
     return SafeArea(
       top: false,
-      child: _PageNav(currentPage: currentPage),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: isAudioActive
+                ? AudioPlayerBar(surahNumber: surahNumber)
+                : const SizedBox.shrink(),
+          ),
+          _PageNav(
+            currentPage: currentPage,
+            onAudioTap: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => ReciterPickerSheet(surahNumber: surahNumber),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _PageNav extends StatelessWidget {
-  const _PageNav({required this.currentPage});
+  const _PageNav({required this.currentPage, this.onAudioTap});
 
   final int currentPage;
+  final VoidCallback? onAudioTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1865,7 +1894,15 @@ class _PageNav extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: sideW),
+          SizedBox(
+            width: sideW,
+            child: IconButton(
+              icon: Icon(Icons.headphones_rounded, size: 18, color: gold),
+              padding: EdgeInsets.zero,
+              tooltip: 'Audio',
+              onPressed: onAudioTap,
+            ),
+          ),
         ],
       ),
     );
