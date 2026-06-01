@@ -1,0 +1,163 @@
+# CI Build Error
+Date: Mon Jun  1 04:12:54 UTC 2026
+Run: 26734572739
+
+## flutter analyze output:
+```
+Analyzing quran-app...                                          
+
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/services.dart'. Try removing the import directive • lib/core/services/arabic_font_service.dart:2:8 • unnecessary_import
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • lib/features/audio/audio_download_provider.dart:191:51 • curly_braces_in_flow_control_structures
+warning • Unused import: '../../core/constants/app_constants.dart'. Try removing the import directive • lib/features/audio/audio_library_screen.dart:3:8 • unused_import
+warning • Unused import: '../mushaf/mushaf_provider.dart'. Try removing the import directive • lib/features/audio/audio_library_screen.dart:6:8 • unused_import
+warning • The declaration '_kGold' isn't referenced. Try removing the declaration of '_kGold' • lib/features/audio/audio_library_screen.dart:16:7 • unused_element
+warning • The value of the local variable 'hasError' isn't used. Try removing the variable or using it • lib/features/audio/audio_library_screen.dart:289:11 • unused_local_variable
+   info • Unnecessary braces in a string interpolation. Try removing the braces • lib/features/memorization/khatma_planner.dart:209:53 • unnecessary_brace_in_string_interps
+   info • The local variable '_pageFile' starts with an underscore. Try renaming the variable to not start with an underscore • lib/features/mushaf/mushaf_download_provider.dart:97:10 • no_leading_underscores_for_local_identifiers
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/services.dart'. Try removing the import directive • lib/features/mushaf/mushaf_screen.dart:2:8 • unnecessary_import
+warning • Unused import: '../audio/audio_repository.dart'. Try removing the import directive • lib/features/mushaf/mushaf_screen.dart:19:8 • unused_import
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/features/mushaf/mushaf_screen.dart:135:60 • curly_braces_in_flow_control_structures
+   info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1220:7 • deprecated_member_use
+warning • The declaration '_showPageAyahSheet' isn't referenced. Try removing the declaration of '_showPageAyahSheet' • lib/features/mushaf/mushaf_screen.dart:1232:6 • unused_element
+   info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1242:7 • deprecated_member_use
+   info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1412:7 • deprecated_member_use
+warning • A value for optional parameter 'key' isn't ever given. Try removing the unused parameter • lib/features/mushaf/mushaf_screen.dart:1423:11 • unused_element_parameter
+   info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1589:7 • deprecated_member_use
+   info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1667:7 • deprecated_member_use
+   info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1770:25 • deprecated_member_use
+   info • The local variable '_sheetBg' starts with an underscore. Try renaming the variable to not start with an underscore • lib/features/mushaf/mushaf_screen.dart:2407:17 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_headerBg' starts with an underscore. Try renaming the variable to not start with an underscore • lib/features/mushaf/mushaf_screen.dart:2408:17 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_cyanCheck' starts with an underscore. Try renaming the variable to not start with an underscore • lib/features/mushaf/mushaf_screen.dart:2409:17 • no_leading_underscores_for_local_identifiers
+warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:79:11 • unused_local_variable
+   info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
+
+24 issues found. (ran in 11.7s)
+```
+
+## Gradle error lines:
+```
+[        ] > Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[+1996 ms] > Task :gradle:compileKotlin
+[        ] > Task :gradle:compileKotlin UP-TO-DATE
+[        ] > Task :gradle:compileJava NO-SOURCE
+[        ] > Task :gradle:compileGroovy NO-SOURCE
+[        ] > Task :gradle:pluginDescriptors UP-TO-DATE
+[        ] > Task :gradle:processResources UP-TO-DATE
+[        ] > Task :gradle:classes UP-TO-DATE
+[        ] > Task :gradle:jar UP-TO-DATE
+[        ] > Task :app:DebugMinSdkCheck
+[        ] > Task :app:preBuild UP-TO-DATE
+[        ] > Task :app:preDebugBuild UP-TO-DATE
+[        ] > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+[        ] > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[        ] > Task :audio_session:preBuild UP-TO-DATE
+[        ] > Task :audio_session:preDebugBuild UP-TO-DATE
+[        ] > Task :just_audio:preBuild UP-TO-DATE
+[        ] > Task :just_audio:preDebugBuild UP-TO-DATE
+[        ] > Task :audio_session:writeDebugAarMetadata
+[        ] > Task :just_audio:writeDebugAarMetadata
+[        ] > Task :path_provider_android:preBuild UP-TO-DATE
+[        ] > Task :path_provider_android:preDebugBuild UP-TO-DATE
+[        ] > Task :share_plus:preBuild UP-TO-DATE
+[        ] > Task :share_plus:preDebugBuild UP-TO-DATE
+[        ] > Task :path_provider_android:writeDebugAarMetadata
+[        ] > Task :shared_preferences_android:preBuild UP-TO-DATE
+[        ] > Task :shared_preferences_android:preDebugBuild UP-TO-DATE
+[        ] > Task :share_plus:writeDebugAarMetadata
+[        ] > Task :sqlite3_flutter_libs:preBuild UP-TO-DATE
+[        ] > Task :sqlite3_flutter_libs:preDebugBuild UP-TO-DATE
+[        ] > Task :shared_preferences_android:writeDebugAarMetadata
+[        ] > Task :sqlite3_flutter_libs:writeDebugAarMetadata
+[        ] > Task :feature:audio:preBuild UP-TO-DATE
+[        ] > Task :feature:audio:preDebugBuild UP-TO-DATE
+[        ] > Task :feature:audio:writeDebugAarMetadata
+[        ] > Task :app:cleanMergeDebugAssets UP-TO-DATE
+[+1999 ms] > Task :app:checkDebugAarMetadata
+[+1998 ms] > Task :app:compileFlutterBuildDebug
+[        ] > Task :app:mergeDebugShaders
+[        ] > Task :app:compileDebugShaders NO-SOURCE
+[        ] > Task :app:generateDebugAssets UP-TO-DATE
+[        ] > Task :audio_session:mergeDebugShaders
+[        ] > Task :audio_session:compileDebugShaders NO-SOURCE
+[        ] > Task :audio_session:generateDebugAssets UP-TO-DATE
+[        ] > Task :audio_session:packageDebugAssets
+[  +99 ms] > Task :just_audio:mergeDebugShaders
+[        ] > Task :just_audio:compileDebugShaders NO-SOURCE
+[        ] > Task :just_audio:generateDebugAssets UP-TO-DATE
+[        ] > Task :just_audio:packageDebugAssets
+[        ] > Task :path_provider_android:mergeDebugShaders
+[        ] > Task :path_provider_android:compileDebugShaders NO-SOURCE
+[        ] > Task :path_provider_android:generateDebugAssets UP-TO-DATE
+[        ] > Task :path_provider_android:packageDebugAssets
+[        ] > Task :share_plus:mergeDebugShaders
+[        ] > Task :share_plus:compileDebugShaders NO-SOURCE
+[        ] > Task :share_plus:generateDebugAssets UP-TO-DATE
+[        ] > Task :share_plus:packageDebugAssets
+[        ] > Task :shared_preferences_android:mergeDebugShaders
+[        ] > Task :shared_preferences_android:compileDebugShaders NO-SOURCE
+[        ] > Task :shared_preferences_android:generateDebugAssets UP-TO-DATE
+```
+
+## Last 60 lines of build_log.txt:
+```
+[        ] 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+[        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
+[        ] BUILD FAILED in 2m 36s
+[ +466 ms] Running Gradle task 'assembleDebug'... (completed in 156.9s)
+[   +2 ms] 
+           ┌─ Flutter Fix ─────────────────────────────────────────────────────────────────────────────────┐
+           │ The plugin feature:audio requires a higher Android SDK version.                               │
+           │ Fix this issue by adding the following to the file                                            │
+           │ /home/runner/work/quran-app/quran-app/android/app/build.gradle.kts:                           │
+           │ android {                                                                                     │
+           │   defaultConfig {                                                                             │
+           │     minSdkVersion 26                                                                          │
+           │   }                                                                                           │
+           │ }                                                                                             │
+           │                                                                                               │
+           │ Following this change, your app will not be available to users running Android SDKs below 26. │
+           │ Consider searching for a version of this plugin that supports these lower versions of the     │
+           │ Android SDK instead.                                                                          │
+           │ For more information, see: https://flutter.dev/to/review-gradle-config                        │
+           └───────────────────────────────────────────────────────────────────────────────────────────────┘
+
+[   +2 ms] "flutter apk" took 157,388ms.
+[   +6 ms] Gradle task assembleDebug failed with exit code 1
+[        ] 
+           #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
+           #1      AndroidGradleBuilder.buildGradleApp (package:flutter_tools/src/android/gradle.dart:595:7)
+           <asynchronous suspension>
+           #2      AndroidGradleBuilder.buildApk (package:flutter_tools/src/android/gradle.dart:236:5)
+           <asynchronous suspension>
+           #3      BuildApkCommand.runCommand (package:flutter_tools/src/commands/build_apk.dart:132:5)
+           <asynchronous suspension>
+           #4      FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1630:27)
+           <asynchronous suspension>
+           #5      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #6      CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+           <asynchronous suspension>
+           #7      FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:496:9)
+           <asynchronous suspension>
+           #8      AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #9      FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:431:5)
+           <asynchronous suspension>
+           #10     FlutterCommandRunner.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:307:33)
+           <asynchronous suspension>
+           #11     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+           <asynchronous suspension>
+           #12     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+           <asynchronous suspension>
+           #13     main (package:flutter_tools/executable.dart:103:3)
+           <asynchronous suspension>
+
+
+[        ] Running 1 shutdown hook
+[        ] Shutdown hooks complete
+[        ] exiting with code 1
+```
