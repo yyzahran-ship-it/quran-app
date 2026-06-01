@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Mon Jun  1 04:23:52 UTC 2026
-Run: 26734785219
+Date: Mon Jun  1 04:34:39 UTC 2026
+Run: 26735090152
 
 ## flutter analyze output:
 ```
@@ -31,75 +31,67 @@ warning • A value for optional parameter 'key' isn't ever given. Try removing 
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:79:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-24 issues found. (ran in 12.0s)
+24 issues found. (ran in 12.1s)
 ```
 
 ## Gradle error lines:
 ```
-[        ] > Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
-[+1999 ms] > Task :gradle:compileKotlin
-[        ] > Task :gradle:compileKotlin UP-TO-DATE
-[        ] > Task :gradle:compileJava NO-SOURCE
-[        ] > Task :gradle:compileGroovy NO-SOURCE
-[  +96 ms] > Task :gradle:pluginDescriptors UP-TO-DATE
-[        ] > Task :gradle:processResources UP-TO-DATE
-[        ] > Task :gradle:classes UP-TO-DATE
-[        ] > Task :gradle:jar UP-TO-DATE
-[        ] > Task :app:DebugMinSdkCheck
-[        ] > Task :app:preBuild UP-TO-DATE
-[        ] > Task :app:preDebugBuild UP-TO-DATE
-[        ] > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
-[        ] > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
-[        ] > Task :audio_session:preBuild UP-TO-DATE
-[        ] > Task :audio_session:preDebugBuild UP-TO-DATE
-[        ] > Task :just_audio:preBuild UP-TO-DATE
-[        ] > Task :just_audio:preDebugBuild UP-TO-DATE
-[        ] > Task :just_audio:writeDebugAarMetadata
-[        ] > Task :audio_session:writeDebugAarMetadata
-[        ] > Task :path_provider_android:preBuild UP-TO-DATE
-[        ] > Task :path_provider_android:preDebugBuild UP-TO-DATE
-[        ] > Task :share_plus:preBuild UP-TO-DATE
-[        ] > Task :share_plus:preDebugBuild UP-TO-DATE
-[        ] > Task :path_provider_android:writeDebugAarMetadata
-[        ] > Task :shared_preferences_android:preBuild UP-TO-DATE
-[        ] > Task :shared_preferences_android:preDebugBuild UP-TO-DATE
-[        ] > Task :share_plus:writeDebugAarMetadata
-[        ] > Task :sqlite3_flutter_libs:preBuild UP-TO-DATE
-[        ] > Task :sqlite3_flutter_libs:preDebugBuild UP-TO-DATE
-[        ] > Task :shared_preferences_android:writeDebugAarMetadata
-[        ] > Task :feature:audio:preBuild UP-TO-DATE
-[        ] > Task :sqlite3_flutter_libs:writeDebugAarMetadata
-[        ] > Task :feature:audio:preDebugBuild UP-TO-DATE
-[        ] > Task :feature:audio:writeDebugAarMetadata
-[        ] > Task :app:cleanMergeDebugAssets UP-TO-DATE
-[+1996 ms] > Task :app:checkDebugAarMetadata
-[+1998 ms] > Task :app:compileFlutterBuildDebug
-[ +102 ms] > Task :app:mergeDebugShaders
-[        ] > Task :app:compileDebugShaders NO-SOURCE
-[        ] > Task :app:generateDebugAssets UP-TO-DATE
-[        ] > Task :audio_session:mergeDebugShaders
-[        ] > Task :audio_session:compileDebugShaders NO-SOURCE
-[        ] > Task :audio_session:generateDebugAssets UP-TO-DATE
-[        ] > Task :audio_session:packageDebugAssets
-[        ] > Task :just_audio:mergeDebugShaders
-[        ] > Task :just_audio:compileDebugShaders NO-SOURCE
-[        ] > Task :just_audio:generateDebugAssets UP-TO-DATE
-[        ] > Task :just_audio:packageDebugAssets
-[        ] > Task :path_provider_android:mergeDebugShaders
-[        ] > Task :path_provider_android:compileDebugShaders NO-SOURCE
-[        ] > Task :path_provider_android:generateDebugAssets UP-TO-DATE
-[        ] > Task :path_provider_android:packageDebugAssets
-[        ] > Task :share_plus:mergeDebugShaders
-[        ] > Task :share_plus:compileDebugShaders NO-SOURCE
-[        ] > Task :share_plus:generateDebugAssets UP-TO-DATE
-[        ] > Task :share_plus:packageDebugAssets
-[        ] > Task :shared_preferences_android:mergeDebugShaders
-[        ] > Task :shared_preferences_android:compileDebugShaders NO-SOURCE
-[        ] > Task :shared_preferences_android:generateDebugAssets UP-TO-DATE
+Starting process 'Gradle build daemon'. Working directory: /home/runner/.gradle/daemon/8.12 Command: /usr/lib/jvm/temurin-17-jdk-amd64/bin/java --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=256m -Xmx4g -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -cp /home/runner/.gradle/wrapper/dists/gradle-8.12-all/ejduaidbjup3bmmkhw3rie4zb/gradle-8.12/lib/gradle-daemon-main-8.12.jar -javaagent:/home/runner/.gradle/wrapper/dists/gradle-8.12-all/ejduaidbjup3bmmkhw3rie4zb/gradle-8.12/lib/agents/gradle-instrumentation-agent-8.12.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.12
+  java.lang.Object kotlinx.coroutines.flow.FlowKt__BuildersKt$asFlow$$inlined$unsafeFlow$10.collect(kotlinx.coroutines.flow.FlowCollector, kotlin.coroutines.Continuation)
+  Attempt to define local of type long as element$iv:java.lang.Object
+  java.lang.Object kotlinx.coroutines.flow.FlowKt__BuildersKt$asFlow$$inlined$unsafeFlow$9.collect(kotlinx.coroutines.flow.FlowCollector, kotlin.coroutines.Continuation)
+  Attempt to define local of type int as element$iv:java.lang.Object
+e: [ksp] /home/runner/work/quran-app/quran-app/android/app/src/main/kotlin/com/quranapp/quran_app/MainActivity.kt:10: [Hilt] Activities annotated with @AndroidEntryPoint must be a subclass of androidx.activity.ComponentActivity. (e.g. FragmentActivity, AppCompatActivity, etc.)
+e: Error occurred in KSP, check log for detail
+FAILURE: Build failed with an exception.
+Execution failed for task ':app:kspDebugKotlin'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:kspDebugKotlin'.
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
 ```
 
-## Last 60 lines of build_log.txt:
+## Last 100 lines of build_log.txt:
 ```
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+[        ] 	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+[        ] 	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
+[        ] 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+[        ] 	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
+[        ] 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
+[        ] 	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+[        ] 	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
+[        ] 	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
+[        ] 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
+[        ] 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+[        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
+[        ] Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+[        ] 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
+[        ] 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:119)
+[        ] 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
+[        ] 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+[        ] 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+[        ] 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+[        ] 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
@@ -120,12 +112,14 @@ warning • The value of the local variable 'colors' isn't used. Try removing th
 [        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
 [        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
 [        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
-[        ] 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
-[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-[        ] 	... 5 more
-[        ] BUILD FAILED in 5m 20s
-[ +458 ms] Running Gradle task 'assembleDebug'... (completed in 320.5s)
-[   +1 ms] "flutter apk" took 321,035ms.
+[        ] 	... 7 more
+[        ] BUILD FAILED in 5m 24s
+[        ] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+[        ] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+[        ] For more on this, please refer to https://docs.gradle.org/8.12/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+[        ] 149 actionable tasks: 144 executed, 5 up-to-date
+[ +467 ms] Running Gradle task 'assembleDebug'... (completed in 325.2s)
+[   +1 ms] "flutter apk" took 325,720ms.
 [   +7 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
