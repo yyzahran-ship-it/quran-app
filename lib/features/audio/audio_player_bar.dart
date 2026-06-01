@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'audio_provider.dart';
 import 'reciter_picker_sheet.dart';
 
-// Compact bar shown above the page nav when audio is active.
 class AudioPlayerBar extends ConsumerWidget {
   const AudioPlayerBar({super.key, required this.surahNumber});
 
@@ -19,33 +18,52 @@ class AudioPlayerBar extends ConsumerWidget {
       height: 52,
       decoration: BoxDecoration(
         color: colors.primaryContainer,
-        border: Border(
-          top: BorderSide(color: colors.outlineVariant, width: 0.5),
-        ),
+        border: Border(top: BorderSide(color: colors.outlineVariant, width: 0.5)),
       ),
       child: Row(
         children: [
           const SizedBox(width: 12),
-          Icon(
-            Icons.headphones_rounded,
-            size: 18,
-            color: colors.onPrimaryContainer,
-          ),
+          Icon(Icons.headphones_rounded, size: 18, color: colors.onPrimaryContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  audio.reciter?.name ?? '',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: colors.onPrimaryContainer,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        audio.reciter?.name ?? '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: colors.onPrimaryContainer,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (audio.verseTracking) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: colors.onPrimaryContainer.withAlpha(40),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'TRACKING',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: colors.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 3),
                 _ProgressBar(audio: audio, colors: colors),
@@ -53,7 +71,6 @@ class AudioPlayerBar extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 4),
-          // Play / Pause / Loading
           if (isLoading)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -69,28 +86,21 @@ class AudioPlayerBar extends ConsumerWidget {
           else
             IconButton(
               icon: Icon(
-                audio.isPlaying
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
+                audio.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                 color: colors.onPrimaryContainer,
               ),
-              onPressed: () =>
-                  ref.read(audioProvider.notifier).togglePlayPause(),
+              onPressed: () => ref.read(audioProvider.notifier).togglePlayPause(),
             ),
-          // Stop
           IconButton(
             icon: Icon(Icons.stop_rounded, color: colors.onPrimaryContainer),
             onPressed: () => ref.read(audioProvider.notifier).stop(),
           ),
-          // Change reciter
           IconButton(
-            icon: Icon(Icons.queue_music_rounded,
-                color: colors.onPrimaryContainer),
+            icon: Icon(Icons.queue_music_rounded, color: colors.onPrimaryContainer),
             onPressed: () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
-              builder: (_) =>
-                  ReciterPickerSheet(surahNumber: surahNumber),
+              builder: (_) => ReciterPickerSheet(surahNumber: surahNumber),
             ),
           ),
           const SizedBox(width: 4),

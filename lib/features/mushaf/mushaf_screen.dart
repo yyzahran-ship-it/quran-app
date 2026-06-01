@@ -776,6 +776,10 @@ class _MushafAyahText extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final playingAyahId =
+        ref.watch(audioProvider.select((s) => s.currentPlayingAyahId));
+    final isPlaying = playingAyahId != null && ayah.id == playingAyahId;
+
     // U+06DD = ARABIC END OF AYAH ornament + Arabic-Indic numeral
     final marker = '۝${_toArabicNumerals(ayah.ayahNumber)}';
 
@@ -825,7 +829,25 @@ class _MushafAyahText extends ConsumerWidget {
       ],
     );
 
-    if (isBookmarked) {
+    if (isPlaying) {
+      content = AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF1B4332).withAlpha(180)
+              : const Color(0xFFD1FAE5),
+          border: Border(
+            left: BorderSide(color: Colors.green.shade600, width: 3),
+          ),
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(4),
+            bottomRight: Radius.circular(4),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(8, 2, 6, 2),
+        child: content,
+      );
+    } else if (isBookmarked) {
       // Amber shade for bookmarked ayahs — same shade as Quran for Android.
       content = Container(
         decoration: BoxDecoration(
@@ -1709,6 +1731,8 @@ class _PageTranslations extends ConsumerWidget {
     final dyslexiaFont = ref.watch(dyslexiaFontProvider);
     final bookmarkedIds = ref.watch(
         bookmarksProvider.select((bms) => bms.map((b) => b.ayahId).toSet()));
+    final playingAyahId =
+        ref.watch(audioProvider.select((s) => s.currentPlayingAyahId));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1718,7 +1742,8 @@ class _PageTranslations extends ConsumerWidget {
         for (final ayah in ayahs)
           if (translations[ayah.id] != null || secondTranslations[ayah.id] != null)
             _buildAyahRow(context, ref, ayah, colors, dyslexiaFont,
-                bookmarkedIds.contains(ayah.id)),
+                bookmarkedIds.contains(ayah.id),
+                isPlaying: ayah.id == playingAyahId),
       ],
     );
   }
@@ -1729,11 +1754,15 @@ class _PageTranslations extends ConsumerWidget {
     Ayah ayah,
     ColorScheme colors,
     bool dyslexiaFont,
-    bool isBookmarked,
-  ) {
+    bool isBookmarked, {
+    bool isPlaying = false,
+  }) {
     final bookmarkColor = isDark
         ? Colors.amber.withAlpha(38)
         : Colors.amber.withAlpha(30);
+    final playColor = isDark
+        ? const Color(0xFF1B4332).withAlpha(200)  // deep green, dark mode
+        : const Color(0xFFD1FAE5);               // light green, light mode
 
     // Capture position on tapDown; use ayah row's top edge for popup placement.
     Offset tapPos = Offset.zero;
@@ -1756,16 +1785,23 @@ class _PageTranslations extends ConsumerWidget {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        decoration: isBookmarked
+        decoration: isPlaying
             ? BoxDecoration(
-                color: bookmarkColor,
+                color: playColor,
                 border: Border(
-                  left: BorderSide(
-                      color: Colors.amber.shade600, width: 3),
+                  left: BorderSide(color: Colors.green.shade600, width: 3),
                 ),
               )
-            : const BoxDecoration(),
-        padding: EdgeInsets.fromLTRB(isBookmarked ? 7 : 4, 5, 4, 5),
+            : isBookmarked
+                ? BoxDecoration(
+                    color: bookmarkColor,
+                    border: Border(
+                      left: BorderSide(
+                          color: Colors.amber.shade600, width: 3),
+                    ),
+                  )
+                : const BoxDecoration(),
+        padding: EdgeInsets.fromLTRB(isPlaying || isBookmarked ? 7 : 4, 5, 4, 5),
         margin: const EdgeInsets.only(bottom: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1775,9 +1811,11 @@ class _PageTranslations extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: isBookmarked
-                    ? Colors.amber.shade700
-                    : colors.primary.withAlpha(180),
+                color: isPlaying
+                    ? Colors.green.shade700
+                    : isBookmarked
+                        ? Colors.amber.shade700
+                        : colors.primary.withAlpha(180),
               ),
             ),
             Expanded(

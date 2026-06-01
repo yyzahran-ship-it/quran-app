@@ -1,6 +1,12 @@
-// Reciter data from the QuranicAudio API (api.quranicaudio.com).
-// Audio files live at:
-//   https://download.quranicaudio.com/quran/{relativePath}{surah:03d}.mp3
+// Reciter data. Two CDN strategies:
+//
+// 1. Islamic Network CDN (islamicNetworkEdition != null):
+//    - Surah:  https://cdn.islamic.network/quran/audio-surah/128/{edition}/{surah}.mp3
+//    - Verse:  https://cdn.islamic.network/quran/audio/128/{edition}/{globalAyahId}.mp3
+//    Supports verse-by-verse playback and live ayah highlighting.
+//
+// 2. QuranicAudio CDN (fallback, surah-level only):
+//    - Surah:  https://download.quranicaudio.com/quran/{relativePath}{surah:03d}.mp3
 class QuranicReciter {
   const QuranicReciter({
     required this.id,
@@ -8,17 +14,34 @@ class QuranicReciter {
     this.arabicName,
     required this.relativePath,
     this.style,
+    this.islamicNetworkEdition,
   });
 
   final int id;
   final String name;
   final String? arabicName;
-  final String relativePath; // e.g. "mishaari_raashid_al_3afaasee/"
-  final String? style; // "Murattal" | "Mujawwad" | null
+  final String relativePath;
+  final String? style;
+  // al-Quran Cloud edition identifier (e.g. "ar.alafasy").
+  // When set, verse-by-verse playback and ayah highlighting are enabled.
+  final String? islamicNetworkEdition;
 
+  bool get supportsVerseTracking => islamicNetworkEdition != null;
+
+  // Full surah audio URL. Prefers Islamic Network CDN when edition is known.
   String surahAudioUrl(int surahNumber) {
+    if (islamicNetworkEdition != null) {
+      return 'https://cdn.islamic.network/quran/audio-surah/128/$islamicNetworkEdition/$surahNumber.mp3';
+    }
     final padded = surahNumber.toString().padLeft(3, '0');
     return 'https://download.quranicaudio.com/quran/$relativePath$padded.mp3';
+  }
+
+  // Single verse audio URL. Only valid when [supportsVerseTracking] is true.
+  // [globalAyahId] is the cumulative ayah index 1–6236.
+  String verseAudioUrl(int globalAyahId) {
+    assert(islamicNetworkEdition != null);
+    return 'https://cdn.islamic.network/quran/audio/128/$islamicNetworkEdition/$globalAyahId.mp3';
   }
 
   factory QuranicReciter.fromJson(Map<String, dynamic> json) => QuranicReciter(
