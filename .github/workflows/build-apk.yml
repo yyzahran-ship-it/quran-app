@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
 
@@ -128,27 +128,40 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Flutter analyze
+        run: flutter analyze --no-fatal-infos 2>&1 | tee flutter_analyze.txt || true
+
       - name: Build debug APK (with full log)
         run: flutter build apk --debug --split-per-abi -v 2>&1 | tee build_log.txt; exit ${PIPESTATUS[0]}
 
-      - name: Post build error as PR comment
+      - name: Commit error log to branch
         if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ERRORS=$(grep -E "^e: |FAILURE:|> What went wrong:|Caused by:|> Task :" build_log.txt 2>/dev/null | head -40 || echo "(no build_log.txt — failure may be in an earlier step)")
-          TAIL=$(tail -40 build_log.txt 2>/dev/null || echo "(no build_log.txt)")
-          gh pr comment 1 --repo "$GITHUB_REPOSITORY" --body "## CI Build Failure
-
-**Error / Kotlin lines:**
-\`\`\`
-$ERRORS
-\`\`\`
-
-**Last 40 build log lines:**
-\`\`\`
-$TAIL
-\`\`\`"
+          {
+            echo "# CI Build Error"
+            echo "Date: $(date -u)"
+            echo "Run: $GITHUB_RUN_ID"
+            echo ""
+            echo "## flutter analyze output:"
+            echo '```'
+            cat flutter_analyze.txt 2>/dev/null || echo "(no analyze output)"
+            echo '```'
+            echo ""
+            echo "## Gradle error lines:"
+            echo '```'
+            grep -E "^e: |FAILURE:|> What went wrong:|Caused by:|> Task :|error:" build_log.txt 2>/dev/null | head -60 || echo "(no build_log.txt — failure was before the Gradle build step)"
+            echo '```'
+            echo ""
+            echo "## Last 60 lines of build_log.txt:"
+            echo '```'
+            tail -60 build_log.txt 2>/dev/null || echo "(none)"
+            echo '```'
+          } > ci_error_latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ci_error_latest.txt
+          git commit -m "ci: save error log for debugging [skip ci]" || true
+          git push origin HEAD:"$GITHUB_REF_NAME" || true
 
       - name: Upload APKs (all ABIs)
         if: success()
