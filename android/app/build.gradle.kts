@@ -31,7 +31,8 @@ android {
 
     defaultConfig {
         applicationId = "com.quranapp.quran_app"
-        minSdk = flutter.minSdkVersion
+        // Media3/ExoPlayer (used by :feature:audio) requires API 26+.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
