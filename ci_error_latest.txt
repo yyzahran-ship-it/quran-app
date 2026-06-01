@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Mon Jun  1 04:12:54 UTC 2026
-Run: 26734572739
+Date: Mon Jun  1 04:23:52 UTC 2026
+Run: 26734785219
 
 ## flutter analyze output:
 ```
@@ -31,17 +31,17 @@ warning • A value for optional parameter 'key' isn't ever given. Try removing 
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:79:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-24 issues found. (ran in 11.7s)
+24 issues found. (ran in 12.0s)
 ```
 
 ## Gradle error lines:
 ```
 [        ] > Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
-[+1996 ms] > Task :gradle:compileKotlin
+[+1999 ms] > Task :gradle:compileKotlin
 [        ] > Task :gradle:compileKotlin UP-TO-DATE
 [        ] > Task :gradle:compileJava NO-SOURCE
 [        ] > Task :gradle:compileGroovy NO-SOURCE
-[        ] > Task :gradle:pluginDescriptors UP-TO-DATE
+[  +96 ms] > Task :gradle:pluginDescriptors UP-TO-DATE
 [        ] > Task :gradle:processResources UP-TO-DATE
 [        ] > Task :gradle:classes UP-TO-DATE
 [        ] > Task :gradle:jar UP-TO-DATE
@@ -54,8 +54,8 @@ warning • The value of the local variable 'colors' isn't used. Try removing th
 [        ] > Task :audio_session:preDebugBuild UP-TO-DATE
 [        ] > Task :just_audio:preBuild UP-TO-DATE
 [        ] > Task :just_audio:preDebugBuild UP-TO-DATE
-[        ] > Task :audio_session:writeDebugAarMetadata
 [        ] > Task :just_audio:writeDebugAarMetadata
+[        ] > Task :audio_session:writeDebugAarMetadata
 [        ] > Task :path_provider_android:preBuild UP-TO-DATE
 [        ] > Task :path_provider_android:preDebugBuild UP-TO-DATE
 [        ] > Task :share_plus:preBuild UP-TO-DATE
@@ -67,21 +67,21 @@ warning • The value of the local variable 'colors' isn't used. Try removing th
 [        ] > Task :sqlite3_flutter_libs:preBuild UP-TO-DATE
 [        ] > Task :sqlite3_flutter_libs:preDebugBuild UP-TO-DATE
 [        ] > Task :shared_preferences_android:writeDebugAarMetadata
-[        ] > Task :sqlite3_flutter_libs:writeDebugAarMetadata
 [        ] > Task :feature:audio:preBuild UP-TO-DATE
+[        ] > Task :sqlite3_flutter_libs:writeDebugAarMetadata
 [        ] > Task :feature:audio:preDebugBuild UP-TO-DATE
 [        ] > Task :feature:audio:writeDebugAarMetadata
 [        ] > Task :app:cleanMergeDebugAssets UP-TO-DATE
-[+1999 ms] > Task :app:checkDebugAarMetadata
+[+1996 ms] > Task :app:checkDebugAarMetadata
 [+1998 ms] > Task :app:compileFlutterBuildDebug
-[        ] > Task :app:mergeDebugShaders
+[ +102 ms] > Task :app:mergeDebugShaders
 [        ] > Task :app:compileDebugShaders NO-SOURCE
 [        ] > Task :app:generateDebugAssets UP-TO-DATE
 [        ] > Task :audio_session:mergeDebugShaders
 [        ] > Task :audio_session:compileDebugShaders NO-SOURCE
 [        ] > Task :audio_session:generateDebugAssets UP-TO-DATE
 [        ] > Task :audio_session:packageDebugAssets
-[  +99 ms] > Task :just_audio:mergeDebugShaders
+[        ] > Task :just_audio:mergeDebugShaders
 [        ] > Task :just_audio:compileDebugShaders NO-SOURCE
 [        ] > Task :just_audio:generateDebugAssets UP-TO-DATE
 [        ] > Task :just_audio:packageDebugAssets
@@ -100,33 +100,33 @@ warning • The value of the local variable 'colors' isn't used. Try removing th
 
 ## Last 60 lines of build_log.txt:
 ```
-[        ] 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
-[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
-[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
-[        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
-[        ] BUILD FAILED in 2m 36s
-[ +466 ms] Running Gradle task 'assembleDebug'... (completed in 156.9s)
-[   +2 ms] 
-           ┌─ Flutter Fix ─────────────────────────────────────────────────────────────────────────────────┐
-           │ The plugin feature:audio requires a higher Android SDK version.                               │
-           │ Fix this issue by adding the following to the file                                            │
-           │ /home/runner/work/quran-app/quran-app/android/app/build.gradle.kts:                           │
-           │ android {                                                                                     │
-           │   defaultConfig {                                                                             │
-           │     minSdkVersion 26                                                                          │
-           │   }                                                                                           │
-           │ }                                                                                             │
-           │                                                                                               │
-           │ Following this change, your app will not be available to users running Android SDKs below 26. │
-           │ Consider searching for a version of this plugin that supports these lower versions of the     │
-           │ Android SDK instead.                                                                          │
-           │ For more information, see: https://flutter.dev/to/review-gradle-config                        │
-           └───────────────────────────────────────────────────────────────────────────────────────────────┘
-
-[   +2 ms] "flutter apk" took 157,388ms.
-[   +6 ms] Gradle task assembleDebug failed with exit code 1
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+[        ] 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+[        ] 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
+[        ] 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
+[        ] 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+[        ] 	... 5 more
+[        ] BUILD FAILED in 5m 20s
+[ +458 ms] Running Gradle task 'assembleDebug'... (completed in 320.5s)
+[   +1 ms] "flutter apk" took 321,035ms.
+[   +7 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
            #1      AndroidGradleBuilder.buildGradleApp (package:flutter_tools/src/android/gradle.dart:595:7)
