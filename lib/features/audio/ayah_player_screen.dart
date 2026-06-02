@@ -115,7 +115,9 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
 
 // ── Ayah list ─────────────────────────────────────────────────────────────────
 
-class _AyahList extends StatelessWidget {
+// Watches audioProvider directly so it rebuilds immediately on audio changes,
+// then passes isActive/isPlaying as props so rows never need their own watch.
+class _AyahList extends ConsumerWidget {
   const _AyahList({
     required this.surah,
     required this.ayahs,
@@ -131,7 +133,8 @@ class _AyahList extends StatelessWidget {
   final Map<int, GlobalKey> keys;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audio = ref.watch(audioProvider);
     return ListView.builder(
       controller: scrollController,
       itemCount: ayahs.length,
@@ -139,11 +142,17 @@ class _AyahList extends StatelessWidget {
       itemBuilder: (context, i) {
         final ayah = ayahs[i];
         keys.putIfAbsent(ayah.ayahNumber, GlobalKey.new);
-        // ValueKey (not GlobalKey) so Riverpod subscriptions are not broken.
-        // GlobalKey is passed as scrollKey for ensureVisible anchoring.
+        final isPlaying = audio.surahNumber == surah.id &&
+            audio.currentAyahNumber == ayah.ayahNumber &&
+            audio.isPlaying;
+        final isActive = audio.surahNumber == surah.id &&
+            audio.currentAyahNumber == ayah.ayahNumber &&
+            audio.isActive;
         return _AyahRow(
           key: ValueKey(ayah.ayahNumber),
           ayah: ayah,
+          isPlaying: isPlaying,
+          isActive: isActive,
           reciter: reciter,
           surah: surah,
           scrollKey: keys[ayah.ayahNumber]!,
@@ -159,26 +168,22 @@ class _AyahRow extends ConsumerWidget {
   const _AyahRow({
     super.key,
     required this.ayah,
+    required this.isPlaying,
+    required this.isActive,
     required this.reciter,
     required this.surah,
     required this.scrollKey,
   });
 
   final Ayah ayah;
+  final bool isPlaying;
+  final bool isActive;
   final QuranicReciter? reciter;
   final Surah surah;
   final GlobalKey scrollKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final audio = ref.watch(audioProvider);
-    final isPlaying = audio.surahNumber == surah.id &&
-        audio.currentAyahNumber == ayah.ayahNumber &&
-        audio.isPlaying;
-    final isActive = audio.surahNumber == surah.id &&
-        audio.currentAyahNumber == ayah.ayahNumber &&
-        audio.isActive;
-
     final colors = Theme.of(context).colorScheme;
 
     const _kGreen = Color(0xFF34A853);
