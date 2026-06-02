@@ -100,7 +100,6 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
               data: (ayahs) => _AyahList(
                 surah: widget.surah,
                 ayahs: ayahs,
-                audioState: audioState,
                 reciter: reciter,
                 scrollController: _scrollController,
                 keys: _keys,
@@ -116,11 +115,10 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
 
 // ── Ayah list ─────────────────────────────────────────────────────────────────
 
-class _AyahList extends ConsumerWidget {
+class _AyahList extends StatelessWidget {
   const _AyahList({
     required this.surah,
     required this.ayahs,
-    required this.audioState,
     required this.reciter,
     required this.scrollController,
     required this.keys,
@@ -128,13 +126,12 @@ class _AyahList extends ConsumerWidget {
 
   final Surah surah;
   final List<Ayah> ayahs;
-  final AudioPlaybackState audioState;
   final QuranicReciter? reciter;
   final ScrollController scrollController;
   final Map<int, GlobalKey> keys;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return ListView.builder(
       controller: scrollController,
       itemCount: ayahs.length,
@@ -142,17 +139,10 @@ class _AyahList extends ConsumerWidget {
       itemBuilder: (context, i) {
         final ayah = ayahs[i];
         keys.putIfAbsent(ayah.ayahNumber, GlobalKey.new);
-        final isPlaying = audioState.surahNumber == surah.id &&
-            audioState.currentAyahNumber == ayah.ayahNumber &&
-            audioState.isPlaying;
-        final isActive = audioState.surahNumber == surah.id &&
-            audioState.currentAyahNumber == ayah.ayahNumber &&
-            audioState.isActive;
+        // Each row watches audioProvider directly so it rebuilds independently.
         return _AyahRow(
           key: keys[ayah.ayahNumber],
           ayah: ayah,
-          isPlaying: isPlaying,
-          isActive: isActive,
           reciter: reciter,
           surah: surah,
         );
@@ -167,20 +157,24 @@ class _AyahRow extends ConsumerWidget {
   const _AyahRow({
     super.key,
     required this.ayah,
-    required this.isPlaying,
-    required this.isActive,
     required this.reciter,
     required this.surah,
   });
 
   final Ayah ayah;
-  final bool isPlaying;
-  final bool isActive;
   final QuranicReciter? reciter;
   final Surah surah;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final audio = ref.watch(audioProvider);
+    final isPlaying = audio.surahNumber == surah.id &&
+        audio.currentAyahNumber == ayah.ayahNumber &&
+        audio.isPlaying;
+    final isActive = audio.surahNumber == surah.id &&
+        audio.currentAyahNumber == ayah.ayahNumber &&
+        audio.isActive;
+
     final colors = Theme.of(context).colorScheme;
 
     const _kGreen = Color(0xFF34A853);
