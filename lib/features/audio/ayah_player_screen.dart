@@ -183,13 +183,25 @@ class _AyahRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
 
+    // Option C: warm gold gradient + left amber border (Mushaf-style).
+    const _kGold = Color(0xFFF9A825);
+    const _kGoldDark = Color(0xFF3E2723);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
-      color: isActive
-          ? colors.primaryContainer.withValues(alpha: 0.45)
-          : Colors.transparent,
+      decoration: isActive
+          ? const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFF8E1), Color(0xFFFFF3C4), Color(0xFFFFF8E1)],
+                stops: [0.0, 0.6, 1.0],
+              ),
+              border: Border(
+                left: BorderSide(color: _kGold, width: 4),
+              ),
+            )
+          : const BoxDecoration(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.fromLTRB(isActive ? 12 : 16, 10, 16, 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -222,15 +234,14 @@ class _AyahRow extends ConsumerWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isActive
-                      ? colors.primary
+                      ? _kGold
                       : colors.surfaceContainerHighest,
                 ),
                 child: Center(
                   child: isPlaying
-                      ? Icon(Icons.pause, size: 18, color: colors.onPrimary)
+                      ? const Icon(Icons.pause, size: 18, color: _kGoldDark)
                       : isActive
-                          ? Icon(Icons.play_arrow,
-                              size: 18, color: colors.onPrimary)
+                          ? const Icon(Icons.play_arrow, size: 18, color: _kGoldDark)
                           : Text(
                               '${ayah.ayahNumber}',
                               style: TextStyle(
@@ -254,7 +265,7 @@ class _AyahRow extends ConsumerWidget {
                   fontSize: 22,
                   height: 1.8,
                   color: isActive
-                      ? colors.onSurface
+                      ? _kGoldDark
                       : colors.onSurface.withValues(alpha: 0.85),
                 ),
               ),
@@ -290,12 +301,22 @@ class _PlayerBar extends ConsumerWidget {
         ? 'Ayah ${audio.currentAyahNumber} of ${surah.versesCount}'
         : reciter?.name ?? 'No reciter selected';
 
+    const _kGold = Color(0xFFF9A825);
+    const _kGoldDark = Color(0xFF3E2723);
+    const _kGoldBg = Color(0xFFFFFDE7);
+    const _kGoldBorder = Color(0xFFFFE082);
+
     return SafeArea(
       top: false,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
-          border: Border(top: BorderSide(color: colors.outlineVariant)),
+          color: isActive ? _kGoldBg : colors.surfaceContainerLow,
+          border: Border(
+            top: BorderSide(
+              color: isActive ? _kGoldBorder : colors.outlineVariant,
+            ),
+          ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Column(
@@ -327,10 +348,12 @@ class _PlayerBar extends ConsumerWidget {
                   children: [
                     Text(_fmt(audio.position),
                         style: TextStyle(
-                            fontSize: 11, color: colors.onSurfaceVariant)),
+                            fontSize: 11,
+                            color: isActive ? _kGoldDark : colors.onSurfaceVariant)),
                     Text(_fmt(audio.duration),
                         style: TextStyle(
-                            fontSize: 11, color: colors.onSurfaceVariant)),
+                            fontSize: 11,
+                            color: isActive ? _kGoldDark : colors.onSurfaceVariant)),
                   ],
                 ),
               ),
@@ -343,7 +366,7 @@ class _PlayerBar extends ConsumerWidget {
                     ayahLabel,
                     style: TextStyle(
                       fontSize: 13,
-                      color: colors.onSurfaceVariant,
+                      color: isActive ? _kGoldDark : colors.onSurfaceVariant,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                     ),
                     maxLines: 1,
@@ -352,7 +375,8 @@ class _PlayerBar extends ConsumerWidget {
                 ),
                 // Previous ayah.
                 IconButton(
-                  icon: const Icon(Icons.skip_previous_rounded),
+                  icon: Icon(Icons.skip_previous_rounded,
+                      color: isActive ? _kGold : null),
                   tooltip: 'Previous ayah',
                   onPressed: isActive && supportsVerse
                       ? () => notifier.previousAyah()
@@ -379,6 +403,8 @@ class _PlayerBar extends ConsumerWidget {
                               notifier.playSurah(surah.id, reciter: reciter);
                             },
                   style: FilledButton.styleFrom(
+                    backgroundColor: isActive ? _kGold : null,
+                    foregroundColor: isActive ? _kGoldDark : null,
                     minimumSize: const Size(56, 44),
                     shape: const CircleBorder(),
                     padding: const EdgeInsets.all(12),
@@ -389,7 +415,7 @@ class _PlayerBar extends ConsumerWidget {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: colors.onPrimary,
+                            color: isActive ? _kGoldDark : colors.onPrimary,
                           ),
                         )
                       : Icon(isPlaying ? Icons.pause : Icons.play_arrow,
@@ -397,7 +423,8 @@ class _PlayerBar extends ConsumerWidget {
                 ),
                 // Next ayah.
                 IconButton(
-                  icon: const Icon(Icons.skip_next_rounded),
+                  icon: Icon(Icons.skip_next_rounded,
+                      color: isActive ? _kGold : null),
                   tooltip: 'Next ayah',
                   onPressed: isActive && supportsVerse
                       ? () => notifier.nextAyah()
@@ -405,7 +432,8 @@ class _PlayerBar extends ConsumerWidget {
                 ),
                 // Stop.
                 IconButton(
-                  icon: const Icon(Icons.stop_rounded),
+                  icon: Icon(Icons.stop_rounded,
+                      color: isActive ? _kGold : null),
                   tooltip: 'Stop',
                   onPressed: isActive ? () => notifier.stop() : null,
                 ),
