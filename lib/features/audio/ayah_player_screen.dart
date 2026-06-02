@@ -183,25 +183,11 @@ class _AyahRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
 
-    // Option C: warm gold gradient + left amber border (Mushaf-style).
     const _kGold = Color(0xFFF9A825);
     const _kGoldDark = Color(0xFF3E2723);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      decoration: isActive
-          ? const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFFF8E1), Color(0xFFFFF3C4), Color(0xFFFFF8E1)],
-                stops: [0.0, 0.6, 1.0],
-              ),
-              border: Border(
-                left: BorderSide(color: _kGold, width: 4),
-              ),
-            )
-          : const BoxDecoration(),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(isActive ? 12 : 16, 10, 16, 10),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -264,15 +250,12 @@ class _AyahRow extends ConsumerWidget {
                   fontFamily: kArabicFont,
                   fontSize: 22,
                   height: 1.8,
-                  color: isActive
-                      ? _kGoldDark
-                      : colors.onSurface.withValues(alpha: 0.85),
+                  color: colors.onSurface.withValues(alpha: 0.85),
                 ),
               ),
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -303,20 +286,13 @@ class _PlayerBar extends ConsumerWidget {
 
     const _kGold = Color(0xFFF9A825);
     const _kGoldDark = Color(0xFF3E2723);
-    const _kGoldBg = Color(0xFFFFFDE7);
-    const _kGoldBorder = Color(0xFFFFE082);
 
     return SafeArea(
       top: false,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+      child: Container(
         decoration: BoxDecoration(
-          color: isActive ? _kGoldBg : colors.surfaceContainerLow,
-          border: Border(
-            top: BorderSide(
-              color: isActive ? _kGoldBorder : colors.outlineVariant,
-            ),
-          ),
+          color: colors.surfaceContainerLow,
+          border: Border(top: BorderSide(color: colors.outlineVariant)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Column(
@@ -348,12 +324,10 @@ class _PlayerBar extends ConsumerWidget {
                   children: [
                     Text(_fmt(audio.position),
                         style: TextStyle(
-                            fontSize: 11,
-                            color: isActive ? _kGoldDark : colors.onSurfaceVariant)),
+                            fontSize: 11, color: colors.onSurfaceVariant)),
                     Text(_fmt(audio.duration),
                         style: TextStyle(
-                            fontSize: 11,
-                            color: isActive ? _kGoldDark : colors.onSurfaceVariant)),
+                            fontSize: 11, color: colors.onSurfaceVariant)),
                   ],
                 ),
               ),
@@ -366,7 +340,7 @@ class _PlayerBar extends ConsumerWidget {
                     ayahLabel,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isActive ? _kGoldDark : colors.onSurfaceVariant,
+                      color: colors.onSurfaceVariant,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                     ),
                     maxLines: 1,
