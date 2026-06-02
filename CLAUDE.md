@@ -75,6 +75,12 @@ main.dart
 
 ## Coding principles
 
+### Demo-first rule (MANDATORY)
+- **ALWAYS** show an interactive HTML demo/mockup in the chat before implementing any UI or visual change.
+- Generate the demo as a self-contained HTML file using inline CSS/JS, render it with `SendUserFile`, and wait for Yazan's approval or option selection.
+- **NEVER** write Flutter code for a UI change until Yazan has seen the demo and confirmed.
+- This applies to: new screens, layout changes, colour/typography changes, new widgets, interaction flows — anything visual.
+
 ### Hard rules
 - **NEVER** ship a build that paywalls Quran text, basic reading, or basic audio.
 - **NEVER** add tracking SDKs (Firebase Analytics, Mixpanel, etc.). Crash reporting (Sentry) is OK if user opts in.
