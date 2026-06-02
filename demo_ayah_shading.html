@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ayah Shading Demo — Quran App</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    padding: 24px;
+    color: #1a1a1a;
+  }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 28px; }
+
+  .options { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    width: 320px;
+  }
+  .card-header {
+    background: #6750A4;
+    color: white;
+    padding: 14px 16px 12px;
+  }
+  .card-header h2 { font-size: 16px; font-weight: 700; }
+  .card-header p  { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+  .card-body { padding: 0; }
+
+  .ayah-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 12px;
+    transition: background 0.25s;
+  }
+  .ayah-row:last-child { border-bottom: none; }
+
+  .badge {
+    min-width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    background: #ede9f7;
+    color: #6750A4;
+  }
+  .badge.active { background: #6750A4; color: white; }
+
+  .arabic {
+    font-size: 20px;
+    line-height: 1.9;
+    text-align: right;
+    direction: rtl;
+    flex: 1;
+    font-family: 'Amiri', 'Scheherazade New', 'Traditional Arabic', serif;
+  }
+
+  /* ── Option A — current (light tint) ── */
+  .opt-a .ayah-row.active {
+    background: #ede9f7;
+  }
+
+  /* ── Option B — left accent border + stronger bg ── */
+  .opt-b .ayah-row.active {
+    background: #ede9f7;
+    border-left: 4px solid #6750A4;
+    padding-left: 10px;
+  }
+  .opt-b .ayah-row.active .arabic { color: #1a1a1a; font-weight: 500; }
+
+  /* ── Option C — gradient sweep (gold Quran-style) ── */
+  .opt-c .ayah-row.active {
+    background: linear-gradient(90deg, #fff8e1 0%, #fff3c4 60%, #fff8e1 100%);
+    border-left: 4px solid #F9A825;
+    padding-left: 10px;
+  }
+  .opt-c .ayah-row.active .arabic { color: #3e2723; }
+  .opt-c .badge.active { background: #F9A825; color: #3e2723; }
+
+  /* ── Option D — full-row glow (elevated card look) ── */
+  .opt-d .ayah-row.active {
+    background: #fff;
+    box-shadow: 0 2px 16px rgba(103, 80, 164, 0.22);
+    border-radius: 12px;
+    margin: 4px 8px;
+    padding: 12px;
+    border-left: none;
+    transform: scale(1.01);
+  }
+  .opt-d .ayah-row.active .arabic { font-size: 22px; color: #1a1a1a; }
+
+  /* playing indicator (animated dots under badge) */
+  .playing-dots {
+    display: none;
+    justify-content: center;
+    gap: 3px;
+    margin-top: 4px;
+  }
+  .ayah-row.active .playing-dots { display: flex; }
+  .dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #6750A4;
+    animation: bounce 0.8s infinite ease-in-out;
+  }
+  .opt-c .dot { background: #F9A825; }
+  .dot:nth-child(2) { animation-delay: 0.15s; }
+  .dot:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scaleY(0.6); opacity: 0.5; }
+    40%           { transform: scaleY(1.4); opacity: 1;   }
+  }
+
+  /* player bar mock */
+  .player-bar {
+    background: #f8f6fc;
+    border-top: 1px solid #e8e0f5;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .player-bar span { font-size: 12px; color: #6750A4; flex: 1; font-weight: 600; }
+  .btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: #6750A4; padding: 4px;
+  }
+  .btn.primary {
+    background: #6750A4; color: white;
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .opt-c .player-bar { background: #fffde7; border-top-color: #ffe082; }
+  .opt-c .btn        { color: #F9A825; }
+  .opt-c .btn.primary { background: #F9A825; color: #3e2723; }
+  .opt-c .player-bar span { color: #795548; }
+
+  .label {
+    text-align: center; padding: 10px 0 0;
+    font-size: 12px; color: #666; font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<h1>Ayah Shading — Demo Options</h1>
+<p class="subtitle">Showing Ayah 3 of Al-Fatiha as the "active / currently recited" verse. Pick your preferred style.</p>
+
+<div class="options">
+
+  <!-- Option A: current light tint -->
+  <div>
+    <div class="card opt-a">
+      <div class="card-header">
+        <h2>Option A — Soft Tint (current)</h2>
+        <p>Light purple background on active ayah</p>
+      </div>
+      <div class="card-body">
+        <div class="ayah-row"><div class="badge">1</div><div class="arabic">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div></div>
+        <div class="ayah-row"><div class="badge">2</div><div class="arabic">ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ</div></div>
+        <div class="ayah-row active">
+          <div><div class="badge active">▶</div><div class="playing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+          <div class="arabic">ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>
+        </div>
+        <div class="ayah-row"><div class="badge">4</div><div class="arabic">مَٰلِكِ يَوۡمِ ٱلدِّينِ</div></div>
+        <div class="ayah-row"><div class="badge">5</div><div class="arabic">إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ</div></div>
+      </div>
+      <div class="player-bar">
+        <span>Ayah 3 of 7</span>
+        <button class="btn">⏮</button>
+        <button class="btn primary">⏸</button>
+        <button class="btn">⏭</button>
+        <button class="btn">⏹</button>
+      </div>
+    </div>
+    <p class="label">Already implemented</p>
+  </div>
+
+  <!-- Option B: left border + stronger bg -->
+  <div>
+    <div class="card opt-b">
+      <div class="card-header">
+        <h2>Option B — Accent Border</h2>
+        <p>Left border stripe + stronger background</p>
+      </div>
+      <div class="card-body">
+        <div class="ayah-row"><div class="badge">1</div><div class="arabic">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div></div>
+        <div class="ayah-row"><div class="badge">2</div><div class="arabic">ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ</div></div>
+        <div class="ayah-row active">
+          <div><div class="badge active">▶</div><div class="playing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+          <div class="arabic">ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>
+        </div>
+        <div class="ayah-row"><div class="badge">4</div><div class="arabic">مَٰلِكِ يَوۡمِ ٱلدِّينِ</div></div>
+        <div class="ayah-row"><div class="badge">5</div><div class="arabic">إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ</div></div>
+      </div>
+      <div class="player-bar">
+        <span>Ayah 3 of 7</span>
+        <button class="btn">⏮</button>
+        <button class="btn primary">⏸</button>
+        <button class="btn">⏭</button>
+        <button class="btn">⏹</button>
+      </div>
+    </div>
+    <p class="label">Border + bolder highlight</p>
+  </div>
+
+  <!-- Option C: gold/Quran-style -->
+  <div>
+    <div class="card opt-c">
+      <div class="card-header" style="background:#795548;">
+        <h2>Option C — Gold (Mushaf-style)</h2>
+        <p>Warm gold gradient — classic printed Quran feel</p>
+      </div>
+      <div class="card-body">
+        <div class="ayah-row"><div class="badge">1</div><div class="arabic">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div></div>
+        <div class="ayah-row"><div class="badge">2</div><div class="arabic">ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ</div></div>
+        <div class="ayah-row active">
+          <div><div class="badge active">▶</div><div class="playing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+          <div class="arabic">ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>
+        </div>
+        <div class="ayah-row"><div class="badge">4</div><div class="arabic">مَٰلِكِ يَوۡمِ ٱلدِّينِ</div></div>
+        <div class="ayah-row"><div class="badge">5</div><div class="arabic">إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ</div></div>
+      </div>
+      <div class="player-bar">
+        <span>Ayah 3 of 7</span>
+        <button class="btn">⏮</button>
+        <button class="btn primary">⏸</button>
+        <button class="btn">⏭</button>
+        <button class="btn">⏹</button>
+      </div>
+    </div>
+    <p class="label">Warm gold — Quran-book feel</p>
+  </div>
+
+  <!-- Option D: elevated card glow -->
+  <div>
+    <div class="card opt-d">
+      <div class="card-header">
+        <h2>Option D — Elevated Card</h2>
+        <p>Active ayah lifts out with shadow + larger text</p>
+      </div>
+      <div class="card-body">
+        <div class="ayah-row"><div class="badge">1</div><div class="arabic">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div></div>
+        <div class="ayah-row"><div class="badge">2</div><div class="arabic">ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ</div></div>
+        <div class="ayah-row active">
+          <div><div class="badge active">▶</div><div class="playing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+          <div class="arabic">ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>
+        </div>
+        <div class="ayah-row"><div class="badge">4</div><div class="arabic">مَٰلِكِ يَوۡمِ ٱلدِّينِ</div></div>
+        <div class="ayah-row"><div class="badge">5</div><div class="arabic">إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ</div></div>
+      </div>
+      <div class="player-bar">
+        <span>Ayah 3 of 7</span>
+        <button class="btn">⏮</button>
+        <button class="btn primary">⏸</button>
+        <button class="btn">⏭</button>
+        <button class="btn">⏹</button>
+      </div>
+    </div>
+    <p class="label">Elevated + larger text on active ayah</p>
+  </div>
+
+</div>
+
+<p style="margin-top:28px; font-size:13px; color:#888;">
+  All options include: animated bouncing dots under the badge while playing · auto-scroll to active ayah · smooth transition animation
+</p>
+
+</body>
+</html>
