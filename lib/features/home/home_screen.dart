@@ -4,6 +4,7 @@ import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../../domain/entities/juz.dart';
 import '../../domain/entities/surah.dart';
+import '../audio/ayah_player_screen.dart';
 import '../bookmarks/bookmarks_provider.dart';
 import '../bookmarks/bookmarks_screen.dart';
 import '../memorization/hifz_dashboard.dart';
@@ -168,6 +169,13 @@ class _SurahListView extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const MushafScreen()),
             );
           },
+          onAudioTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => AyahPlayerScreen(surah: surah)),
+            );
+          },
         );
       },
     );
@@ -211,11 +219,13 @@ class _SurahRow extends StatelessWidget {
     required this.surah,
     required this.page,
     required this.onTap,
+    required this.onAudioTap,
   });
 
   final Surah surah;
   final int page;
   final VoidCallback onTap;
+  final VoidCallback onAudioTap;
 
   @override
   Widget build(BuildContext context) {
@@ -265,10 +275,16 @@ class _SurahRow extends StatelessWidget {
                 ],
               ),
             ),
+            IconButton(
+              icon: Icon(Icons.headphones_rounded,
+                  size: 20, color: colors.primary),
+              tooltip: 'Listen ayah by ayah',
+              onPressed: onAudioTap,
+              visualDensity: VisualDensity.compact,
+            ),
             Text(
               '$page',
-              style:
-                  TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+              style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
             ),
           ],
         ),

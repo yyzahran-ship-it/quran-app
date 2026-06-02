@@ -14,6 +14,7 @@ class AudioPlaybackState {
     this.reciter,
     this.surahNumber,
     this.currentPlayingAyahId,
+    this.currentAyahNumber,
     this.verseTracking = false,
     this.position = Duration.zero,
     this.duration = Duration.zero,
@@ -25,6 +26,8 @@ class AudioPlaybackState {
   // Global ayah ID (1–6236) of the verse currently being played.
   // Non-null only when [verseTracking] is true.
   final int? currentPlayingAyahId;
+  // Within-surah ayah number (1-based). Non-null when verseTracking is true.
+  final int? currentAyahNumber;
   final bool verseTracking;
   final Duration position;
   final Duration duration;
@@ -37,6 +40,7 @@ class AudioPlaybackState {
     QuranicReciter? reciter,
     int? surahNumber,
     int? currentPlayingAyahId,
+    int? currentAyahNumber,
     bool? verseTracking,
     Duration? position,
     Duration? duration,
@@ -46,6 +50,7 @@ class AudioPlaybackState {
         reciter: reciter ?? this.reciter,
         surahNumber: surahNumber ?? this.surahNumber,
         currentPlayingAyahId: currentPlayingAyahId ?? this.currentPlayingAyahId,
+        currentAyahNumber: currentAyahNumber ?? this.currentAyahNumber,
         verseTracking: verseTracking ?? this.verseTracking,
         position: position ?? this.position,
         duration: duration ?? this.duration,
@@ -94,7 +99,11 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
 
   // Plays all verses of [surahNumber] one by one with live ayah tracking.
   // Falls back to full-surah playback if the reciter has no verse files.
-  Future<void> playSurah(int surahNumber, {QuranicReciter? reciter}) async {
+  Future<void> playSurah(
+    int surahNumber, {
+    QuranicReciter? reciter,
+    int startAyahNumber = 1,
+  }) async {
     final r = reciter ?? _ref.read(selectedReciterProvider);
     if (r == null) return;
 
@@ -108,14 +117,20 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
     );
 
     if (r.supportsVerseTracking) {
-      await _playVerseByVerse(surahNumber, r);
+      await _playVerseByVerse(surahNumber, r, startAyah: startAyahNumber);
     } else {
       await _playSurahLevel(surahNumber, r);
     }
   }
 
-  Future<void> _playVerseByVerse(int surahNumber, QuranicReciter r) async {
+  // Starts verse-by-verse playback from [startAyah] (1-based).
+  Future<void> _playVerseByVerse(
+    int surahNumber,
+    QuranicReciter r, {
+    int startAyah = 1,
+  }) async {
     final verseCount = kSurahVerseCounts[surahNumber - 1];
+    final clampedStart = startAyah.clamp(1, verseCount);
     final sources = List.generate(verseCount, (i) {
       final ayahNum = i + 1;
       final gId = globalAyahId(surahNumber, ayahNum);
@@ -125,15 +140,16 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
     try {
       await _player.setAudioSource(
         ConcatenatingAudioSource(children: sources),
-        initialIndex: 0,
+        initialIndex: clampedStart - 1,
       );
 
-      // Track which verse index is playing → map to global ayah ID.
+      // Track which verse index is playing → map to global ayah ID and local number.
       _indexSub = _player.currentIndexStream.listen((idx) {
         if (!mounted || idx == null) return;
         final ayahNum = idx + 1;
         if (ayahNum > verseCount) return;
         state = state.copyWith(
+          currentAyahNumber: ayahNum,
           currentPlayingAyahId: globalAyahId(surahNumber, ayahNum),
           verseTracking: true,
         );
@@ -141,7 +157,8 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
 
       state = state.copyWith(
         verseTracking: true,
-        currentPlayingAyahId: globalAyahId(surahNumber, 1),
+        currentAyahNumber: clampedStart,
+        currentPlayingAyahId: globalAyahId(surahNumber, clampedStart),
       );
       await _player.play();
     } catch (_) {
@@ -149,6 +166,43 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
       _indexSub?.cancel();
       _indexSub = null;
       await _playSurahLevel(surahNumber, r);
+    }
+  }
+
+  // Starts playback of a specific ayah within the currently-loaded playlist.
+  // Call [playSurah] first to load the surah; this jumps to [ayahNumber].
+  Future<void> playAyah(
+    int surahNumber,
+    int ayahNumber, {
+    required QuranicReciter reciter,
+  }) async {
+    if (state.surahNumber == surahNumber &&
+        state.reciter?.id == reciter.id &&
+        state.verseTracking) {
+      // Playlist already loaded for this surah — just seek.
+      await _player.seek(Duration.zero, index: ayahNumber - 1);
+      if (!state.isPlaying) await _player.play();
+    } else {
+      await playSurah(surahNumber, reciter: reciter, startAyahNumber: ayahNumber);
+    }
+  }
+
+  Future<void> nextAyah() async {
+    if (state.surahNumber == null || !state.verseTracking) return;
+    final verseCount = kSurahVerseCounts[state.surahNumber! - 1];
+    final currentIdx = _player.currentIndex ?? 0;
+    if (currentIdx + 1 < verseCount) {
+      await _player.seek(Duration.zero, index: currentIdx + 1);
+    }
+  }
+
+  Future<void> previousAyah() async {
+    if (!state.verseTracking) return;
+    final currentIdx = _player.currentIndex ?? 0;
+    if (currentIdx > 0) {
+      await _player.seek(Duration.zero, index: currentIdx - 1);
+    } else {
+      await _player.seek(Duration.zero);
     }
   }
 
