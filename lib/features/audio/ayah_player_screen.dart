@@ -139,12 +139,14 @@ class _AyahList extends StatelessWidget {
       itemBuilder: (context, i) {
         final ayah = ayahs[i];
         keys.putIfAbsent(ayah.ayahNumber, GlobalKey.new);
-        // Each row watches audioProvider directly so it rebuilds independently.
+        // ValueKey (not GlobalKey) so Riverpod subscriptions are not broken.
+        // GlobalKey is passed as scrollKey for ensureVisible anchoring.
         return _AyahRow(
-          key: keys[ayah.ayahNumber],
+          key: ValueKey(ayah.ayahNumber),
           ayah: ayah,
           reciter: reciter,
           surah: surah,
+          scrollKey: keys[ayah.ayahNumber]!,
         );
       },
     );
@@ -159,11 +161,13 @@ class _AyahRow extends ConsumerWidget {
     required this.ayah,
     required this.reciter,
     required this.surah,
+    required this.scrollKey,
   });
 
   final Ayah ayah;
   final QuranicReciter? reciter;
   final Surah surah;
+  final GlobalKey scrollKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -181,6 +185,7 @@ class _AyahRow extends ConsumerWidget {
     const _kGreenBg = Color(0xFFE6F4EA);
 
     return AnimatedContainer(
+      key: scrollKey,
       duration: const Duration(milliseconds: 250),
       decoration: isActive
           ? const BoxDecoration(

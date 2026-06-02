@@ -114,6 +114,10 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
       status: AudioStatus.loading,
       reciter: r,
       surahNumber: surahNumber,
+      currentAyahNumber: r.supportsVerseTracking ? startAyahNumber : null,
+      currentPlayingAyahId: r.supportsVerseTracking
+          ? globalAyahId(surahNumber, startAyahNumber)
+          : null,
     );
 
     if (r.supportsVerseTracking) {
