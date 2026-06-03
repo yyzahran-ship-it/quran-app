@@ -24,6 +24,7 @@ const _kBuiltInReciters = <QuranicReciter>[
     id: 1, name: 'Mishary Rashid Al-Afasy', arabicName: 'مشاري راشد العفاسي',
     relativePath: 'mishari_rashid_al_afasy/',
     islamicNetworkEdition: 'ar.alafasy',
+    qdcReciterId: 7, // verified: api.qurancdn.com/api/qdc/audio/reciters
   ),
   QuranicReciter(
     id: 2, name: 'AbdurRahman As-Sudais', arabicName: 'عبدالرحمن السديس',

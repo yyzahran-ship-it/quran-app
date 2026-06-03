@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../../domain/entities/ayah.dart';
+import '../../domain/entities/quran_word.dart';
 import '../../domain/entities/surah.dart';
 import 'audio_models.dart';
 import 'audio_provider.dart';
 import 'reciter_provider.dart';
+import 'word_timing_repository.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -294,10 +296,13 @@ class _AyahRow extends ConsumerWidget {
 // ── Word-by-word display ──────────────────────────────────────────────────────
 //
 // Mirrors the Kotlin ExoPlayer pattern: polls position every 30ms and calls
-// setState only when the word index changes. This gives fluid highlighting
-// (~33 updates/s) without rebuilding inactive rows.
-// Timing is proportional (word i spans [i/n, (i+1)/n) of verse duration);
-// swap in real per-word timestamps from Quran.com API later for precision.
+// setState only when the word index changes (~33 updates/s, only on the active row).
+//
+// Timing strategy (in priority order):
+//  1. QDC real timestamps — fetched once per surah from api.qurancdn.com,
+//     cached for the session. Uses word.startTime <= pos < word.endTime.
+//  2. Proportional fallback — divides verse duration evenly; used when
+//     the reciter has no qdcReciterId or the network fetch fails.
 
 class _WordDisplay extends ConsumerStatefulWidget {
   const _WordDisplay({required this.ayah, required this.surah});
@@ -317,6 +322,10 @@ class _WordDisplayState extends ConsumerState<_WordDisplay> {
   StreamSubscription<Duration>? _sub;
   ProviderSubscription<bool>? _activeSub;
   int _activeIdx = -1;
+
+  // Per-word timestamps from the QDC API. Null = use proportional fallback.
+  // Populated asynchronously; already sorted by position ascending.
+  List<QuranWord>? _wordTimings;
 
   @override
   void initState() {
@@ -338,6 +347,25 @@ class _WordDisplayState extends ConsumerState<_WordDisplay> {
     );
 
     _sub = ref.read(audioProvider.notifier).positionTickStream.listen(_onTick);
+
+    // Kick off async load of QDC word timestamps. Falls back to proportional
+    // timing if the reciter has no qdcReciterId or the request fails.
+    _loadWordTimings();
+  }
+
+  Future<void> _loadWordTimings() async {
+    final reciter = ref.read(selectedReciterProvider);
+    final qdcId = reciter?.qdcReciterId;
+    if (qdcId == null) return;
+
+    final repo = ref.read(wordTimingRepositoryProvider);
+    final surahTimings = await repo.fetchSurahTimings(qdcId, widget.surah.id);
+    if (!mounted) return;
+
+    final ayahTimings = surahTimings?[widget.ayah.ayahNumber];
+    if (ayahTimings != null && ayahTimings.isNotEmpty) {
+      setState(() => _wordTimings = ayahTimings);
+    }
   }
 
   void _onTick(Duration pos) {
@@ -346,11 +374,24 @@ class _WordDisplayState extends ConsumerState<_WordDisplay> {
     if (s.surahNumber != widget.surah.id ||
         s.currentAyahNumber != widget.ayah.ayahNumber ||
         !s.isActive) return;
-    if (s.duration == Duration.zero) return;
 
-    final n = _words.length;
-    final frac = (pos.inMilliseconds / s.duration.inMilliseconds).clamp(0.0, 1.0);
-    final newIdx = (frac * n).floor().clamp(0, n - 1);
+    int newIdx;
+    final timings = _wordTimings;
+    if (timings != null && timings.isNotEmpty) {
+      // Real timestamps: word.startTime <= positionMs < word.endTime
+      final posMs = pos.inMilliseconds;
+      newIdx = timings.indexWhere((w) => w.isActiveAt(posMs));
+      if (newIdx == -1) {
+        // Audio is past the last known boundary — keep the last word highlighted.
+        newIdx = timings.length - 1;
+      }
+    } else {
+      // Proportional fallback: divide verse duration evenly across words.
+      if (s.duration == Duration.zero) return;
+      final frac = (pos.inMilliseconds / s.duration.inMilliseconds).clamp(0.0, 1.0);
+      newIdx = (frac * _words.length).floor().clamp(0, _words.length - 1);
+    }
+
     if (newIdx != _activeIdx) setState(() => _activeIdx = newIdx);
   }
 

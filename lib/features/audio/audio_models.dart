@@ -15,6 +15,7 @@ class QuranicReciter {
     required this.relativePath,
     this.style,
     this.islamicNetworkEdition,
+    this.qdcReciterId,
   });
 
   final int id;
@@ -25,6 +26,10 @@ class QuranicReciter {
   // al-Quran Cloud edition identifier (e.g. "ar.alafasy").
   // When set, verse-by-verse playback and ayah highlighting are enabled.
   final String? islamicNetworkEdition;
+  // Quran.com QDC API reciter ID for fetching per-word timing segments.
+  // Null means word-level timestamps are unavailable; falls back to proportional timing.
+  // Source: https://api.qurancdn.com/api/qdc/audio/reciters
+  final int? qdcReciterId;
 
   bool get supportsVerseTracking => islamicNetworkEdition != null;
 
