@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
@@ -291,42 +293,77 @@ class _AyahRow extends ConsumerWidget {
 
 // ── Word-by-word display ──────────────────────────────────────────────────────
 //
-// Uses select() so only the currently-playing row rebuilds on position ticks.
-// Timing is proportional: word i starts at (i/n) of the verse duration.
-// Accuracy is good for Mishary Alafasy's steady recitation pace; swap in
-// real per-word timestamps from the Quran.com API later for precision.
+// Mirrors the Kotlin ExoPlayer pattern: polls position every 30ms and calls
+// setState only when the word index changes. This gives fluid highlighting
+// (~33 updates/s) without rebuilding inactive rows.
+// Timing is proportional (word i spans [i/n, (i+1)/n) of verse duration);
+// swap in real per-word timestamps from Quran.com API later for precision.
 
-class _WordDisplay extends ConsumerWidget {
+class _WordDisplay extends ConsumerStatefulWidget {
   const _WordDisplay({required this.ayah, required this.surah});
 
   final Ayah ayah;
   final Surah surah;
 
+  @override
+  ConsumerState<_WordDisplay> createState() => _WordDisplayState();
+}
+
+class _WordDisplayState extends ConsumerState<_WordDisplay> {
   static const _kGreen  = Color(0xFF34A853);
   static const _kSpoken = Color(0xFF8D6E1A);
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Fraction 0.0–1.0 while this ayah plays; -1.0 when not playing.
-    // select() keeps inactive rows from rebuilding on every position tick.
-    final frac = ref.watch(audioProvider.select((s) {
-      if (s.surahNumber != surah.id) return -1.0;
-      if (s.currentAyahNumber != ayah.ayahNumber) return -1.0;
-      if (!s.isActive) return -1.0;
-      if (s.duration == Duration.zero) return 0.0;
-      return (s.position.inMilliseconds / s.duration.inMilliseconds)
-          .clamp(0.0, 1.0);
-    }));
+  late final List<String> _words;
+  StreamSubscription<Duration>? _sub;
+  ProviderSubscription<bool>? _activeSub;
+  int _activeIdx = -1;
 
-    final words = ayah.textUthmani
+  @override
+  void initState() {
+    super.initState();
+    _words = widget.ayah.textUthmani
         .split(RegExp(r'\s+'))
         .where((w) => w.isNotEmpty)
         .toList();
-    final n = words.length;
 
-    // Proportional word index: each word occupies 1/n of the verse duration.
-    final active = frac < 0 ? -1 : (frac * n).floor().clamp(0, n - 1);
+    // Clear highlight immediately when this ayah stops being active.
+    _activeSub = ref.listenManual(
+      audioProvider.select((s) =>
+          s.surahNumber == widget.surah.id &&
+          s.currentAyahNumber == widget.ayah.ayahNumber &&
+          s.isActive),
+      (_, isThisAyahActive) {
+        if (!isThisAyahActive && mounted) setState(() => _activeIdx = -1);
+      },
+    );
 
+    _sub = ref.read(audioProvider.notifier).positionTickStream.listen(_onTick);
+  }
+
+  void _onTick(Duration pos) {
+    if (!mounted) return;
+    final s = ref.read(audioProvider);
+    if (s.surahNumber != widget.surah.id ||
+        s.currentAyahNumber != widget.ayah.ayahNumber ||
+        !s.isActive) return;
+    if (s.duration == Duration.zero) return;
+
+    final n = _words.length;
+    final frac = (pos.inMilliseconds / s.duration.inMilliseconds).clamp(0.0, 1.0);
+    final newIdx = (frac * n).floor().clamp(0, n - 1);
+    if (newIdx != _activeIdx) setState(() => _activeIdx = newIdx);
+  }
+
+  @override
+  void dispose() {
+    _activeSub?.close();
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = _words.length;
     final baseStyle = TextStyle(
       fontFamily: kArabicFont,
       fontSize: 22,
@@ -335,13 +372,13 @@ class _WordDisplay extends ConsumerWidget {
     );
 
     return Wrap(
-      alignment: WrapAlignment.end,   // right-aligned for RTL
+      alignment: WrapAlignment.end,
       textDirection: TextDirection.rtl,
       spacing: 6,
       runSpacing: 0,
       children: List.generate(n, (i) {
-        final isActive = i == active;
-        final isSpoken = frac >= 0 && i < active;
+        final isActive = i == _activeIdx;
+        final isSpoken = _activeIdx >= 0 && i < _activeIdx;
 
         return AnimatedContainer(
           duration: const Duration(milliseconds: 160),
@@ -356,14 +393,10 @@ class _WordDisplay extends ConsumerWidget {
                 )
               : null,
           child: Text(
-            words[i],
+            _words[i],
             textDirection: TextDirection.rtl,
             style: baseStyle.copyWith(
-              color: isActive
-                  ? _kGreen
-                  : isSpoken
-                      ? _kSpoken
-                      : null, // inherits baseStyle color
+              color: isActive ? _kGreen : isSpoken ? _kSpoken : null,
             ),
           ),
         );

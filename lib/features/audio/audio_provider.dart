@@ -85,6 +85,14 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
   late final StreamSubscription<Duration?> _durationSub;
   StreamSubscription<int?>? _indexSub;
 
+  // 30ms position ticker — only emits while the player is actually playing.
+  // Broadcast so multiple _WordDisplay widgets can share one timer.
+  late final Stream<Duration> positionTickStream =
+      Stream.periodic(const Duration(milliseconds: 30))
+          .where((_) => _player.playing)
+          .map((_) => _player.position)
+          .asBroadcastStream();
+
   void _onPlayerState(PlayerState ps) {
     if (!mounted) return;
     if (ps.processingState == ProcessingState.completed) {
