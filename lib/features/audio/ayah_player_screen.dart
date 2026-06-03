@@ -278,24 +278,97 @@ class _AyahRow extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 14),
-            // Arabic text.
+            // Word-by-word Arabic text with live highlighting.
             Expanded(
-              child: Text(
-                ayah.textUthmani,
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontFamily: kArabicFont,
-                  fontSize: 22,
-                  height: 1.8,
-                  color: colors.onSurface.withValues(alpha: 0.85),
-                ),
-              ),
+              child: _WordDisplay(ayah: ayah, surah: surah),
             ),
           ],
         ),
       ),
     )); // SizedBox + AnimatedContainer
+  }
+}
+
+// ── Word-by-word display ──────────────────────────────────────────────────────
+//
+// Uses select() so only the currently-playing row rebuilds on position ticks.
+// Timing is proportional: word i starts at (i/n) of the verse duration.
+// Accuracy is good for Mishary Alafasy's steady recitation pace; swap in
+// real per-word timestamps from the Quran.com API later for precision.
+
+class _WordDisplay extends ConsumerWidget {
+  const _WordDisplay({required this.ayah, required this.surah});
+
+  final Ayah ayah;
+  final Surah surah;
+
+  static const _kGreen  = Color(0xFF34A853);
+  static const _kSpoken = Color(0xFF8D6E1A);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Fraction 0.0–1.0 while this ayah plays; -1.0 when not playing.
+    // select() keeps inactive rows from rebuilding on every position tick.
+    final frac = ref.watch(audioProvider.select((s) {
+      if (s.surahNumber != surah.id) return -1.0;
+      if (s.currentAyahNumber != ayah.ayahNumber) return -1.0;
+      if (!s.isActive) return -1.0;
+      if (s.duration == Duration.zero) return 0.0;
+      return (s.position.inMilliseconds / s.duration.inMilliseconds)
+          .clamp(0.0, 1.0);
+    }));
+
+    final words = ayah.textUthmani
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    final n = words.length;
+
+    // Proportional word index: each word occupies 1/n of the verse duration.
+    final active = frac < 0 ? -1 : (frac * n).floor().clamp(0, n - 1);
+
+    final baseStyle = TextStyle(
+      fontFamily: kArabicFont,
+      fontSize: 22,
+      height: 1.8,
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+    );
+
+    return Wrap(
+      alignment: WrapAlignment.end,   // right-aligned for RTL
+      textDirection: TextDirection.rtl,
+      spacing: 6,
+      runSpacing: 0,
+      children: List.generate(n, (i) {
+        final isActive = i == active;
+        final isSpoken = frac >= 0 && i < active;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: EdgeInsets.symmetric(
+            horizontal: isActive ? 4 : 0,
+            vertical: isActive ? 1 : 0,
+          ),
+          decoration: isActive
+              ? BoxDecoration(
+                  color: _kGreen.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(5),
+                )
+              : null,
+          child: Text(
+            words[i],
+            textDirection: TextDirection.rtl,
+            style: baseStyle.copyWith(
+              color: isActive
+                  ? _kGreen
+                  : isSpoken
+                      ? _kSpoken
+                      : null, // inherits baseStyle color
+            ),
+          ),
+        );
+      }),
+    );
   }
 }
 
