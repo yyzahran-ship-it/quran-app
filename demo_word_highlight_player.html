@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quran Ayah Player — Word Highlight</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #09130d;
+  --surface:     #0d1a11;
+  --card:        #101f15;
+  --card2:       #132519;
+  --border:      #1c3323;
+  --border2:     #234030;
+  --green:       #2ecc71;
+  --green-dim:   #1a7a43;
+  --green-glow:  rgba(46,204,113,.30);
+  --gold:        #c9a84c;
+  --gold-dim:    #6b5520;
+  --spoken:      #9e7e30;
+  --text:        #e6dfc8;
+  --text-dim:    #7a9080;
+  --text-muted:  #45604e;
+  --r:           10px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0 }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 48px;
+  /* subtle radial glow at center */
+  background-image: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(20,60,30,.5) 0%, transparent 70%);
+}
+
+/* ── App header ─────────────────────────────────── */
+.app-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+.app-label {
+  font-size: 11px;
+  letter-spacing: 3.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.bismillah-header {
+  font-family: 'Amiri Quran', serif;
+  font-size: 28px;
+  direction: rtl;
+  color: var(--gold);
+  text-shadow: 0 0 24px rgba(201,168,76,.45), 0 0 8px rgba(201,168,76,.2);
+  line-height: 1.5;
+}
+.ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.ornament-line {
+  height: 1px;
+  width: 72px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim));
+}
+.ornament-line.right {
+  background: linear-gradient(270deg, transparent, var(--gold-dim));
+}
+.ornament-gem {
+  width: 6px; height: 6px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px rgba(201,168,76,.6);
+}
+
+/* ── Main card ──────────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 700px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 16px 64px rgba(0,0,0,.5), 0 0 0 1px rgba(46,204,113,.04);
+}
+
+/* ── Selector row ───────────────────────────────── */
+.sel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.sel-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 120px;
+}
+.sel-wrap::after {
+  content: '▾';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+select {
+  width: 100%;
+  background: var(--card2);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 8px 28px 8px 11px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+  transition: border-color .15s;
+}
+select:focus { border-color: var(--green); }
+select option { background: #192d20; }
+
+.nav-btn {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  border-radius: 7px;
+  padding: 8px 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.nav-btn:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+}
+.nav-btn:disabled { opacity: .3; cursor: default; }
+
+/* ── Surah title strip ──────────────────────────── */
+.surah-strip {
+  padding: 14px 20px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.surah-en {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.surah-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.surah-ar {
+  font-family: 'Amiri Quran', serif;
+  font-size: 22px;
+  color: var(--gold);
+  direction: rtl;
+}
+
+/* ── Arabic display ─────────────────────────────── */
+.ayah-box {
+  padding: 28px 24px 16px;
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(20,55,30,.35) 0%, transparent 100%);
+}
+.arabic {
+  font-family: 'Amiri Quran', serif;
+  font-size: 34px;
+  line-height: 2.1;
+  direction: rtl;
+  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0 8px;
+}
+.w {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 5px;
+  transition: color .12s, background .12s, text-shadow .12s;
+  cursor: default;
+}
+.w.spoken {
+  color: var(--spoken);
+}
+.w.active {
+  color: var(--green);
+  background: rgba(46,204,113,.11);
+  text-shadow: 0 0 18px var(--green-glow), 0 0 36px rgba(46,204,113,.15);
+}
+
+/* ── Translation ────────────────────────────────── */
+.translation {
+  padding: 6px 24px 18px;
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text-dim);
+  font-style: italic;
+  direction: ltr;
+}
+
+/* ── Loading band ───────────────────────────────── */
+.loading-band {
+  height: 2px;
+  background: transparent;
+  overflow: hidden;
+}
+.loading-band.active {
+  background: var(--border);
+}
+.loading-band.active::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: var(--green);
+  border-radius: 2px;
+  animation: loadslide 1.1s ease-in-out infinite;
+}
+@keyframes loadslide {
+  0%   { margin-left: -40%; }
+  100% { margin-left: 140%; }
+}
+
+/* ── Player ─────────────────────────────────────── */
+.player {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 14px 18px 16px;
+}
+
+/* Progress */
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.time {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+}
+.time.r { text-align: right; }
+
+input[type=range].seek {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+  --p: 0%;
+  background: linear-gradient(
+    90deg,
+    var(--green) 0%, var(--green) var(--p),
+    var(--border2) var(--p), var(--border2) 100%
+  );
+}
+input[type=range].seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+  cursor: pointer;
+  transition: transform .1s, box-shadow .1s;
+}
+input[type=range].seek:hover::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 0 14px var(--green-glow);
+}
+input[type=range].seek::-moz-range-thumb {
+  width:14px; height:14px;
+  border:none; border-radius:50%;
+  background: var(--green);
+  cursor: pointer;
+}
+input[type=range].seek::-moz-range-track {
+  height: 4px; border-radius: 4px;
+  background: var(--border2);
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.cb {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: var(--card2);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.cb:hover { border-color: var(--green); color: var(--green); }
+.cb.play {
+  width: 54px; height: 54px;
+  background: var(--green);
+  border: none;
+  color: #07110a;
+  font-size: 22px;
+  box-shadow: 0 0 18px rgba(46,204,113,.45);
+}
+.cb.play:hover {
+  transform: scale(1.07);
+  box-shadow: 0 0 28px rgba(46,204,113,.55);
+  color: #07110a;
+  border: none;
+}
+
+/* Volume */
+.vol-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 11px;
+}
+.vol-icon { font-size: 13px; color: var(--text-muted); }
+input[type=range].vol {
+  -webkit-appearance: none;
+  width: 90px; height: 3px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  background: linear-gradient(90deg, var(--gold) 0%, var(--gold) var(--vp, 80%), var(--border2) var(--vp, 80%), var(--border2) 100%);
+}
+input[type=range].vol::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+}
+input[type=range].vol::-moz-range-thumb {
+  width:12px; height:12px;
+  border:none; border-radius:50%;
+  background: var(--gold);
+}
+
+/* ── Reciter footer ─────────────────────────────── */
+.reciter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface);
+}
+.pulse {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+.pulse.playing {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(46,204,113,.7); }
+  50%      { box-shadow: 0 0 0 5px rgba(46,204,113,0); }
+}
+
+/* ── Responsive ─────────────────────────────────── */
+@media (max-width: 480px) {
+  .arabic { font-size: 26px; }
+  .bismillah-header { font-size: 22px; }
+  .controls { gap: 6px; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-label">القرآن الكريم · Quran Player</div>
+  <div class="bismillah-header">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</div>
+  <div class="ornament">
+    <div class="ornament-line"></div>
+    <div class="ornament-gem"></div>
+    <div class="ornament-line right"></div>
+  </div>
+</header>
+
+<div class="card">
+
+  <!-- Surah / Ayah selectors + nav -->
+  <div class="sel-row">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">← Prev</button>
+    <div class="sel-wrap">
+      <select id="surahSel" onchange="onSurahChange()"></select>
+    </div>
+    <div class="sel-wrap" style="max-width:110px">
+      <select id="ayahSel" onchange="onAyahChange()"></select>
+    </div>
+    <button class="nav-btn" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+
+  <!-- Surah name strip -->
+  <div class="surah-strip">
+    <div>
+      <div class="surah-en" id="surahEn"></div>
+      <div class="surah-sub" id="surahSub"></div>
+    </div>
+    <div class="surah-ar" id="surahAr"></div>
+  </div>
+
+  <!-- Arabic text -->
+  <div class="ayah-box">
+    <div class="arabic" id="arabicEl"></div>
+  </div>
+
+  <!-- Translation -->
+  <div class="translation" id="transEl"></div>
+
+  <!-- Loading indicator -->
+  <div class="loading-band" id="loadBand"></div>
+
+  <!-- Audio player -->
+  <div class="player">
+    <div class="progress-row">
+      <span class="time" id="curTime">0:00</span>
+      <input type="range" class="seek" id="seekBar" min="0" max="10000" value="0">
+      <span class="time r" id="totTime">0:00</span>
+    </div>
+
+    <div class="controls">
+      <button class="cb" onclick="navigate(-1)" title="Previous ayah">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+      <button class="cb" onclick="skip(-5)" title="−5 sec">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6 8.5 6V6l-8.5 6z"/></svg>
+      </button>
+      <button class="cb play" id="playBtn" onclick="togglePlay()">▶</button>
+      <button class="cb" onclick="skip(5)" title="+5 sec">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+      </button>
+      <button class="cb" onclick="navigate(1)" title="Next ayah">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+    </div>
+
+    <div class="vol-row">
+      <span class="vol-icon">🔈</span>
+      <input type="range" class="vol" id="volSlider" min="0" max="100" value="80">
+      <span class="vol-icon">🔊</span>
+    </div>
+  </div>
+
+  <div class="reciter-bar">
+    <div class="pulse" id="pulseDot"></div>
+    Mishary Rashid Alafasy · 128 kbps · Al-Quran Cloud CDN
+  </div>
+</div>
+
+<audio id="audioEl" preload="metadata" crossorigin="anonymous"></audio>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  QURAN DATA
+//  words[]  = Arabic word tokens
+//  t[]      = proportional timing fractions (0.0 – 1.0) for each word start
+//  g        = global ayah number (1–6236), used in CDN URL
+// ═══════════════════════════════════════════════════════════════
+const Q = {
+  1: {
+    name: 'Al-Fatiha', ar: 'الفاتحة',
+    ayahs: [
+      { n:1, g:1,
+        words:['بِسْمِ','ٱللَّهِ','ٱلرَّحْمَـٰنِ','ٱلرَّحِيمِ'],
+        t:[0.00,0.22,0.46,0.72],
+        tr:'In the name of Allah, the Entirely Merciful, the Especially Merciful.' },
+      { n:2, g:2,
+        words:['ٱلْحَمْدُ','لِلَّهِ','رَبِّ','ٱلْعَـٰلَمِينَ'],
+        t:[0.00,0.26,0.50,0.66],
+        tr:'[All] praise is [due] to Allah, Lord of the worlds —' },
+      { n:3, g:3,
+        words:['ٱلرَّحْمَـٰنِ','ٱلرَّحِيمِ'],
+        t:[0.00,0.52],
+        tr:'The Entirely Merciful, the Especially Merciful,' },
+      { n:4, g:4,
+        words:['مَـٰلِكِ','يَوْمِ','ٱلدِّينِ'],
+        t:[0.00,0.36,0.64],
+        tr:'Sovereign of the Day of Recompense.' },
+      { n:5, g:5,
+        words:['إِيَّاكَ','نَعْبُدُ','وَإِيَّاكَ','نَسْتَعِينُ'],
+        t:[0.00,0.28,0.52,0.74],
+        tr:'It is You we worship and You we ask for help.' },
+      { n:6, g:6,
+        words:['ٱهْدِنَا','ٱلصِّرَٰطَ','ٱلْمُسْتَقِيمَ'],
+        t:[0.00,0.36,0.60],
+        tr:'Guide us to the straight path —' },
+      { n:7, g:7,
+        words:['صِرَٰطَ','ٱلَّذِينَ','أَنْعَمْتَ','عَلَيْهِمْ','غَيْرِ','ٱلْمَغْضُوبِ','عَلَيْهِمْ','وَلَا','ٱلضَّآلِّينَ'],
+        t:[0.00,0.12,0.24,0.36,0.50,0.60,0.70,0.80,0.88],
+        tr:'The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray.' },
+    ]
+  },
+  112: {
+    name: 'Al-Ikhlas', ar: 'الإخلاص',
+    ayahs: [
+      { n:1, g:6222,
+        words:['قُلْ','هُوَ','ٱللَّهُ','أَحَدٌ'],
+        t:[0.00,0.26,0.50,0.76],
+        tr:'Say, "He is Allah, [who is] One,' },
+      { n:2, g:6223,
+        words:['ٱللَّهُ','ٱلصَّمَدُ'],
+        t:[0.00,0.52],
+        tr:'Allah, the Eternal Refuge.' },
+      { n:3, g:6224,
+        words:['لَمْ','يَلِدْ','وَلَمْ','يُولَدْ'],
+        t:[0.00,0.27,0.55,0.76],
+        tr:'He neither begets nor is born,' },
+      { n:4, g:6225,
+        words:['وَلَمْ','يَكُن','لَّهُۥ','كُفُوًا','أَحَدٌ'],
+        t:[0.00,0.22,0.42,0.62,0.80],
+        tr:'Nor is there to Him any equivalent."' },
+    ]
+  },
+  113: {
+    name: 'Al-Falaq', ar: 'الفلق',
+    ayahs: [
+      { n:1, g:6226,
+        words:['قُلْ','أَعُوذُ','بِرَبِّ','ٱلْفَلَقِ'],
+        t:[0.00,0.26,0.52,0.74],
+        tr:'Say, "I seek refuge in the Lord of daybreak' },
+      { n:2, g:6227,
+        words:['مِن','شَرِّ','مَا','خَلَقَ'],
+        t:[0.00,0.28,0.54,0.74],
+        tr:'From the evil of that which He created' },
+      { n:3, g:6228,
+        words:['وَمِن','شَرِّ','غَاسِقٍ','إِذَا','وَقَبَ'],
+        t:[0.00,0.22,0.44,0.65,0.82],
+        tr:'And from the evil of darkness when it settles' },
+      { n:4, g:6229,
+        words:['وَمِن','شَرِّ','ٱلنَّفَّـٰثَـٰتِ','فِى','ٱلْعُقَدِ'],
+        t:[0.00,0.20,0.40,0.68,0.82],
+        tr:'And from the evil of the blowers in knots' },
+      { n:5, g:6230,
+        words:['وَمِن','شَرِّ','حَاسِدٍ','إِذَا','حَسَدَ'],
+        t:[0.00,0.22,0.44,0.65,0.82],
+        tr:'And from the evil of an envier when he envies."' },
+    ]
+  },
+  114: {
+    name: 'An-Nas', ar: 'الناس',
+    ayahs: [
+      { n:1, g:6231,
+        words:['قُلْ','أَعُوذُ','بِرَبِّ','ٱلنَّاسِ'],
+        t:[0.00,0.26,0.52,0.74],
+        tr:'Say, "I seek refuge in the Lord of mankind,' },
+      { n:2, g:6232,
+        words:['مَلِكِ','ٱلنَّاسِ'],
+        t:[0.00,0.52],
+        tr:'The Sovereign of mankind.' },
+      { n:3, g:6233,
+        words:['إِلَـٰهِ','ٱلنَّاسِ'],
+        t:[0.00,0.52],
+        tr:'The God of mankind,' },
+      { n:4, g:6234,
+        words:['مِن','شَرِّ','ٱلْوَسْوَاسِ','ٱلْخَنَّاسِ'],
+        t:[0.00,0.26,0.50,0.74],
+        tr:'From the evil of the retreating whisperer —' },
+      { n:5, g:6235,
+        words:['ٱلَّذِى','يُوَسْوِسُ','فِى','صُدُورِ','ٱلنَّاسِ'],
+        t:[0.00,0.22,0.46,0.62,0.78],
+        tr:'Who whispers [evil] into the breasts of mankind —' },
+      { n:6, g:6236,
+        words:['مِنَ','ٱلْجِنَّةِ','وَٱلنَّاسِ'],
+        t:[0.00,0.38,0.66],
+        tr:'From among the jinn and mankind."' },
+    ]
+  }
+};
+
+const ORDER = [1, 112, 113, 114];
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let curSurah   = 1;
+let curAyah    = 1;
+let wordEls    = [];   // cached <span> refs for the current ayah
+let rafId      = null;
+let isSeeking  = false;
+let lastActive = -2;   // last highlighted word index (avoids redundant DOM writes)
+
+// ═══════════════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════════════
+const audio    = document.getElementById('audioEl');
+const playBtn  = document.getElementById('playBtn');
+const seekBar  = document.getElementById('seekBar');
+const curTimeEl= document.getElementById('curTime');
+const totTimeEl= document.getElementById('totTime');
+const volEl    = document.getElementById('volSlider');
+const arabicEl = document.getElementById('arabicEl');
+const transEl  = document.getElementById('transEl');
+const surahSel = document.getElementById('surahSel');
+const ayahSel  = document.getElementById('ayahSel');
+const loadBand = document.getElementById('loadBand');
+const pulseDot = document.getElementById('pulseDot');
+const prevBtn  = document.getElementById('prevBtn');
+const nextBtn  = document.getElementById('nextBtn');
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+function init() {
+  ORDER.forEach(sn => {
+    const s = Q[sn];
+    const o = document.createElement('option');
+    o.value = sn;
+    o.textContent = `${sn}. ${s.name} — ${s.ar}`;
+    surahSel.appendChild(o);
+  });
+  audio.volume = 0.8;
+  loadAyah(1, 1, false);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOAD AYAH
+// ═══════════════════════════════════════════════════════════════
+function loadAyah(sn, an, autoplay = false) {
+  const surah = Q[sn];
+  if (!surah) return;
+  const ayah = surah.ayahs.find(a => a.n === an);
+  if (!ayah) return;
+
+  curSurah = sn; curAyah = an;
+  lastActive = -2;
+
+  // Selectors
+  surahSel.value = sn;
+  rebuildAyahSel(sn);
+  ayahSel.value = an;
+
+  // Surah strip
+  document.getElementById('surahEn').textContent = `${sn}. ${surah.name}`;
+  document.getElementById('surahSub').textContent = `Ayah ${an} of ${surah.ayahs.length}`;
+  document.getElementById('surahAr').textContent  = surah.ar;
+
+  // Arabic words
+  arabicEl.innerHTML = '';
+  wordEls = ayah.words.map((w, i) => {
+    const span = document.createElement('span');
+    span.className = 'w';
+    span.textContent = w;
+    arabicEl.appendChild(span);
+    return span;
+  });
+
+  // Translation
+  transEl.textContent = `"${ayah.tr}"`;
+
+  // Nav buttons
+  prevBtn.disabled = !hasPrev(sn, an);
+  nextBtn.disabled = !hasNext(sn, an);
+
+  // Audio
+  stopRAF();
+  resetBar();
+  setLoading(true);
+
+  const url = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${ayah.g}.mp3`;
+  audio.src = url;
+  audio.load();
+  if (autoplay) audio.play().catch(() => {});
+}
+
+function rebuildAyahSel(sn) {
+  ayahSel.innerHTML = '';
+  Q[sn].ayahs.forEach(a => {
+    const o = document.createElement('option');
+    o.value = a.n;
+    o.textContent = `Ayah ${a.n}`;
+    ayahSel.appendChild(o);
+  });
+}
+
+function resetBar() {
+  seekBar.value = 0;
+  seekBar.style.setProperty('--p', '0%');
+  curTimeEl.textContent = '0:00';
+  totTimeEl.textContent = '0:00';
+  playBtn.textContent = '▶';
+  pulseDot.classList.remove('playing');
+}
+
+function setLoading(on) {
+  loadBand.classList.toggle('active', on);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function hasPrev(sn, an) {
+  if (an > 1) return true;
+  return ORDER.indexOf(sn) > 0;
+}
+function hasNext(sn, an) {
+  if (an < Q[sn].ayahs.length) return true;
+  return ORDER.indexOf(sn) < ORDER.length - 1;
+}
+
+function navigate(dir) {
+  const surah = Q[curSurah];
+  let ns = curSurah, na = curAyah + dir;
+  if (na < 1) {
+    const i = ORDER.indexOf(curSurah);
+    if (i <= 0) return;
+    ns = ORDER[i - 1];
+    na = Q[ns].ayahs.length;
+  } else if (na > surah.ayahs.length) {
+    const i = ORDER.indexOf(curSurah);
+    if (i >= ORDER.length - 1) return;
+    ns = ORDER[i + 1];
+    na = 1;
+  }
+  loadAyah(ns, na, !audio.paused);
+}
+
+function onSurahChange() {
+  loadAyah(+surahSel.value, 1, !audio.paused);
+}
+function onAyahChange() {
+  loadAyah(curSurah, +ayahSel.value, !audio.paused);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PLAYBACK
+// ═══════════════════════════════════════════════════════════════
+function togglePlay() {
+  if (audio.paused) audio.play().catch(() => {});
+  else              audio.pause();
+}
+function skip(s) {
+  audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + s));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUDIO EVENTS
+// ═══════════════════════════════════════════════════════════════
+audio.addEventListener('canplay', () => {
+  setLoading(false);
+  totTimeEl.textContent = fmt(audio.duration);
+});
+audio.addEventListener('waiting',  () => setLoading(true));
+audio.addEventListener('playing',  () => setLoading(false));
+audio.addEventListener('error',    () => setLoading(false));
+
+audio.addEventListener('play', () => {
+  playBtn.textContent = '⏸';
+  pulseDot.classList.add('playing');
+  startRAF();
+});
+audio.addEventListener('pause', () => {
+  playBtn.textContent = '▶';
+  pulseDot.classList.remove('playing');
+  stopRAF();
+});
+audio.addEventListener('ended', () => {
+  playBtn.textContent = '▶';
+  pulseDot.classList.remove('playing');
+  stopRAF();
+  // Mark all words as spoken
+  wordEls.forEach(w => { w.className = 'w spoken'; });
+  // Auto-advance to next ayah after a short pause
+  if (hasNext(curSurah, curAyah)) {
+    setTimeout(() => navigate(1), 900);
+  }
+});
+audio.addEventListener('timeupdate', () => {
+  if (!isSeeking) syncBar();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  SEEK BAR
+// ═══════════════════════════════════════════════════════════════
+function syncBar() {
+  if (!audio.duration) return;
+  const pct = audio.currentTime / audio.duration;
+  const pStr = (pct * 100).toFixed(2) + '%';
+  seekBar.value = Math.round(pct * 10000);
+  seekBar.style.setProperty('--p', pStr);
+  curTimeEl.textContent = fmt(audio.currentTime);
+}
+
+['mousedown','touchstart'].forEach(ev =>
+  seekBar.addEventListener(ev, () => { isSeeking = true; }, { passive: true })
+);
+
+seekBar.addEventListener('input', () => {
+  const pct = seekBar.value / 10000;
+  seekBar.style.setProperty('--p', (pct * 100).toFixed(2) + '%');
+  curTimeEl.textContent = fmt((pct * (audio.duration || 0)));
+});
+
+['mouseup','touchend'].forEach(ev =>
+  seekBar.addEventListener(ev, () => {
+    isSeeking = false;
+    if (audio.duration) audio.currentTime = (seekBar.value / 10000) * audio.duration;
+  })
+);
+seekBar.addEventListener('change', () => {
+  isSeeking = false;
+  if (audio.duration) audio.currentTime = (seekBar.value / 10000) * audio.duration;
+});
+
+volEl.addEventListener('input', () => {
+  const v = volEl.value / 100;
+  audio.volume = v;
+  volEl.style.setProperty('--vp', volEl.value + '%');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  WORD HIGHLIGHT  (rAF loop)
+// ═══════════════════════════════════════════════════════════════
+function startRAF() {
+  stopRAF();
+  function loop() {
+    tick();
+    rafId = requestAnimationFrame(loop);
+  }
+  rafId = requestAnimationFrame(loop);
+}
+function stopRAF() {
+  if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+function tick() {
+  if (!audio.duration || !wordEls.length) return;
+  const prog = audio.currentTime / audio.duration;
+  const ayah = Q[curSurah]?.ayahs.find(a => a.n === curAyah);
+  if (!ayah) return;
+
+  // Binary-search-style: find largest i where t[i] <= prog
+  const ts = ayah.t;
+  let active = -1;
+  for (let i = 0; i < ts.length; i++) {
+    if (prog >= ts[i]) active = i;
+    else break;
+  }
+
+  if (active === lastActive) return;  // nothing changed
+  lastActive = active;
+
+  wordEls.forEach((el, i) => {
+    const cls = i < active ? 'w spoken' : i === active ? 'w active' : 'w';
+    if (el.className !== cls) el.className = cls;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════
+function fmt(s) {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
