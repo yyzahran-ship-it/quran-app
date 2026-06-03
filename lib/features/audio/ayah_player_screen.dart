@@ -91,6 +91,27 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
       ),
       body: Column(
         children: [
+          // Debug strip — shows live audio state so we can confirm provider is working.
+          // Remove once shading is confirmed working.
+          Builder(builder: (context) {
+            final a = ref.watch(audioProvider);
+            final active = a.surahNumber == widget.surah.id && a.isActive;
+            return Container(
+              width: double.infinity,
+              color: active ? const Color(0xFF34A853) : Colors.grey.shade300,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Text(
+                active
+                    ? '▶  Playing ayah ${a.currentAyahNumber} of ${widget.surah.versesCount}'
+                    : 'Not playing  |  status: ${a.status.name}  |  surah: ${a.surahNumber}  |  ayah: ${a.currentAyahNumber}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : Colors.black54,
+                ),
+              ),
+            );
+          }),
           Expanded(
             child: ayahsAsync.when(
               loading: () =>
@@ -189,8 +210,11 @@ class _AyahRow extends ConsumerWidget {
     const _kGreen = Color(0xFF34A853);
     const _kGreenBg = Color(0xFFE6F4EA);
 
-    return AnimatedContainer(
+    // SizedBox carries the GlobalKey for auto-scroll; AnimatedContainer has no
+    // key so GlobalKey semantics don't interfere with its animation state.
+    return SizedBox(
       key: scrollKey,
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       decoration: isActive
           ? const BoxDecoration(
@@ -271,7 +295,7 @@ class _AyahRow extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    )); // SizedBox + AnimatedContainer
   }
 }
 
