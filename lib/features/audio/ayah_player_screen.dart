@@ -1,16 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../../domain/entities/ayah.dart';
-import '../../domain/entities/quran_word.dart';
 import '../../domain/entities/surah.dart';
 import 'audio_models.dart';
 import 'audio_provider.dart';
 import 'reciter_provider.dart';
-import 'word_timing_repository.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -295,116 +291,41 @@ class _AyahRow extends ConsumerWidget {
 
 // ── Word-by-word display ──────────────────────────────────────────────────────
 //
-// Mirrors the Kotlin ExoPlayer pattern: polls position every 30ms and calls
-// setState only when the word index changes (~33 updates/s, only on the active row).
-//
-// Timing strategy (in priority order):
-//  1. QDC real timestamps — fetched once per surah from api.qurancdn.com,
-//     cached for the session. Uses word.startTime <= pos < word.endTime.
-//  2. Proportional fallback — divides verse duration evenly; used when
-//     the reciter has no qdcReciterId or the network fetch fails.
+// Plain ConsumerWidget — watches audioProvider directly, same as the debug strip
+// and _AyahList already do. position + duration come from the provider; word
+// index is computed inline. No streams, no state, no async.
 
-class _WordDisplay extends ConsumerStatefulWidget {
+class _WordDisplay extends ConsumerWidget {
   const _WordDisplay({required this.ayah, required this.surah});
 
   final Ayah ayah;
   final Surah surah;
 
-  @override
-  ConsumerState<_WordDisplay> createState() => _WordDisplayState();
-}
-
-class _WordDisplayState extends ConsumerState<_WordDisplay> {
   static const _kGreen  = Color(0xFF34A853);
   static const _kSpoken = Color(0xFF8D6E1A);
 
-  late final List<String> _words;
-  StreamSubscription<Duration>? _sub;
-  ProviderSubscription<bool>? _activeSub;
-  int _activeIdx = -1;
-
-  // Per-word timestamps from the QDC API. Null = use proportional fallback.
-  // Populated asynchronously; already sorted by position ascending.
-  List<QuranWord>? _wordTimings;
-
   @override
-  void initState() {
-    super.initState();
-    _words = widget.ayah.textUthmani
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audio = ref.watch(audioProvider);
+
+    final words = ayah.textUthmani
         .split(RegExp(r'\s+'))
         .where((w) => w.isNotEmpty)
         .toList();
+    final n = words.length;
 
-    // Clear highlight immediately when this ayah stops being active.
-    _activeSub = ref.listenManual(
-      audioProvider.select((s) =>
-          s.surahNumber == widget.surah.id &&
-          s.currentAyahNumber == widget.ayah.ayahNumber &&
-          s.isActive),
-      (_, isThisAyahActive) {
-        if (!isThisAyahActive && mounted) setState(() => _activeIdx = -1);
-      },
-    );
+    final isThisAyah = audio.surahNumber == surah.id &&
+        audio.currentAyahNumber == ayah.ayahNumber &&
+        audio.isActive;
 
-    _sub = ref.read(audioProvider.notifier).positionTickStream.listen(_onTick);
+    final activeIdx = (!isThisAyah || audio.duration == Duration.zero)
+        ? -1
+        : (audio.position.inMilliseconds /
+                audio.duration.inMilliseconds *
+                n)
+            .floor()
+            .clamp(0, n - 1);
 
-    // Kick off async load of QDC word timestamps. Falls back to proportional
-    // timing if the reciter has no qdcReciterId or the request fails.
-    _loadWordTimings();
-  }
-
-  Future<void> _loadWordTimings() async {
-    final reciter = ref.read(selectedReciterProvider);
-    final qdcId = reciter?.qdcReciterId;
-    if (qdcId == null) return;
-
-    final repo = ref.read(wordTimingRepositoryProvider);
-    final surahTimings = await repo.fetchSurahTimings(qdcId, widget.surah.id);
-    if (!mounted) return;
-
-    final ayahTimings = surahTimings?[widget.ayah.ayahNumber];
-    if (ayahTimings != null && ayahTimings.isNotEmpty) {
-      setState(() => _wordTimings = ayahTimings);
-    }
-  }
-
-  void _onTick(Duration pos) {
-    if (!mounted) return;
-    final s = ref.read(audioProvider);
-    if (s.surahNumber != widget.surah.id ||
-        s.currentAyahNumber != widget.ayah.ayahNumber ||
-        !s.isActive) return;
-
-    int newIdx;
-    final timings = _wordTimings;
-    if (timings != null && timings.isNotEmpty) {
-      // Real timestamps: word.startTime <= positionMs < word.endTime
-      final posMs = pos.inMilliseconds;
-      newIdx = timings.indexWhere((w) => w.isActiveAt(posMs));
-      if (newIdx == -1) {
-        // Audio is past the last known boundary — keep the last word highlighted.
-        newIdx = timings.length - 1;
-      }
-    } else {
-      // Proportional fallback: divide verse duration evenly across words.
-      if (s.duration == Duration.zero) return;
-      final frac = (pos.inMilliseconds / s.duration.inMilliseconds).clamp(0.0, 1.0);
-      newIdx = (frac * _words.length).floor().clamp(0, _words.length - 1);
-    }
-
-    if (newIdx != _activeIdx) setState(() => _activeIdx = newIdx);
-  }
-
-  @override
-  void dispose() {
-    _activeSub?.close();
-    _sub?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final n = _words.length;
     final baseStyle = TextStyle(
       fontFamily: kArabicFont,
       fontSize: 22,
@@ -418,8 +339,8 @@ class _WordDisplayState extends ConsumerState<_WordDisplay> {
       spacing: 6,
       runSpacing: 0,
       children: List.generate(n, (i) {
-        final isActive = i == _activeIdx;
-        final isSpoken = _activeIdx >= 0 && i < _activeIdx;
+        final isActive = i == activeIdx;
+        final isSpoken = activeIdx >= 0 && i < activeIdx;
 
         return AnimatedContainer(
           duration: const Duration(milliseconds: 160),
@@ -434,7 +355,7 @@ class _WordDisplayState extends ConsumerState<_WordDisplay> {
                 )
               : null,
           child: Text(
-            _words[i],
+            words[i],
             textDirection: TextDirection.rtl,
             style: baseStyle.copyWith(
               color: isActive ? Colors.white : isSpoken ? _kSpoken : null,
