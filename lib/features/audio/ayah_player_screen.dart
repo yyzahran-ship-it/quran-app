@@ -343,15 +343,31 @@ class _AyahRow extends ConsumerWidget {
     final isActive  = isAudioActive || isTtsSpeaking;
     final isPlaying = isAudioPlaying;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      decoration: isActive
-          ? const BoxDecoration(
-              color: _kGreenBg,
-              border: Border(
-                  left: BorderSide(color: _kGreen, width: 3)),
-            )
-          : const BoxDecoration(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── TEMP DIAGNOSTIC ── remove once shading is confirmed ───────────
+        Container(
+          color: isAudioActive ? Colors.green : Colors.red.shade100,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          child: Text(
+            'row${ayah.ayahNumber}: audioSurah=${audio.surahNumber}/${surah.id} '
+            'audioAyah=${audio.currentAyahNumber}/${ayah.ayahNumber} '
+            'status=${audio.status.name} active=$isAudioActive',
+            style: const TextStyle(fontSize: 9, color: Colors.black87),
+          ),
+        ),
+        // ─────────────────────────────────────────────────────────────────
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          decoration: isActive
+              ? const BoxDecoration(
+                  color: _kGreenBg,
+                  border: Border(
+                      left: BorderSide(color: _kGreen, width: 3)),
+                )
+              : const BoxDecoration(),
       child: Padding(
         padding: EdgeInsets.fromLTRB(isActive ? 13 : 16, 10, 16, 10),
         child: Row(
@@ -421,6 +437,8 @@ class _AyahRow extends ConsumerWidget {
           ],
         ),
       ),
+    ),  // AnimatedContainer
+    ],  // Column children (diagnostic + AnimatedContainer)
     );
   }
 }
