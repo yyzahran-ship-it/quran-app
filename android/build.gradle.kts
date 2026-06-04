@@ -19,9 +19,10 @@ subprojects {
 }
 
 // flutter_tts 4.x is incompatible with the K2 compiler (Kotlin 2.0+).
-// Force K1 language semantics for all plugin subprojects so the build succeeds.
+// Force K1 language semantics for all Kotlin plugin subprojects so the build succeeds.
+// plugins.withId is safe on already-evaluated projects (unlike afterEvaluate).
 subprojects {
-    afterEvaluate {
+    plugins.withId("org.jetbrains.kotlin.android") {
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             compilerOptions {
                 languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
