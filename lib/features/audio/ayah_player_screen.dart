@@ -424,20 +424,20 @@ class _WordDisplayState extends ConsumerState<_WordDisplay> {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: EdgeInsets.symmetric(
-            horizontal: isActive ? 4 : 0,
-            vertical: isActive ? 1 : 0,
+            horizontal: isActive ? 6 : 0,
+            vertical: isActive ? 2 : 0,
           ),
           decoration: isActive
               ? BoxDecoration(
-                  color: _kGreen.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(5),
+                  color: _kGreen,
+                  borderRadius: BorderRadius.circular(6),
                 )
               : null,
           child: Text(
             _words[i],
             textDirection: TextDirection.rtl,
             style: baseStyle.copyWith(
-              color: isActive ? _kGreen : isSpoken ? _kSpoken : null,
+              color: isActive ? Colors.white : isSpoken ? _kSpoken : null,
             ),
           ),
         );
