@@ -121,6 +121,7 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
               data: (ayahs) => _AyahList(
                 surah: widget.surah,
                 ayahs: ayahs,
+                audioState: audioState,
                 reciter: reciter,
                 scrollController: _scrollController,
                 keys: _keys,
@@ -136,13 +137,14 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
 
 // ── Ayah list ─────────────────────────────────────────────────────────────────
 
-// Plain StatelessWidget — does not watch any provider.
-// Each _AyahRow subscribes to audioProvider independently so shading
-// updates are never lost through the itemBuilder closure chain.
+// Receives audioState as an explicit prop so the itemBuilder closure always
+// has the latest state. Each _AyahRow gets its isActive/isPlaying pre-computed
+// and a GlobalKey as its widget key (for auto-scroll via Scrollable.ensureVisible).
 class _AyahList extends StatelessWidget {
   const _AyahList({
     required this.surah,
     required this.ayahs,
+    required this.audioState,
     required this.reciter,
     required this.scrollController,
     required this.keys,
@@ -150,6 +152,7 @@ class _AyahList extends StatelessWidget {
 
   final Surah surah;
   final List<Ayah> ayahs;
+  final AudioPlaybackState audioState;
   final QuranicReciter? reciter;
   final ScrollController scrollController;
   final Map<int, GlobalKey> keys;
@@ -163,12 +166,17 @@ class _AyahList extends StatelessWidget {
       itemBuilder: (context, i) {
         final ayah = ayahs[i];
         keys.putIfAbsent(ayah.ayahNumber, GlobalKey.new);
+        final isActive = audioState.surahNumber == surah.id &&
+            audioState.currentAyahNumber == ayah.ayahNumber &&
+            audioState.isActive;
+        final isPlaying = isActive && audioState.isPlaying;
         return _AyahRow(
-          key: ValueKey(ayah.ayahNumber),
+          key: keys[ayah.ayahNumber],
           ayah: ayah,
           reciter: reciter,
           surah: surah,
-          scrollKey: keys[ayah.ayahNumber]!,
+          isActive: isActive,
+          isPlaying: isPlaying,
         );
       },
     );
@@ -177,41 +185,35 @@ class _AyahList extends StatelessWidget {
 
 // ── Ayah row ──────────────────────────────────────────────────────────────────
 
-// Watches audioProvider directly with select() so it only rebuilds when
-// THIS ayah's active/playing state changes — not on every position tick.
+// Receives pre-computed isActive/isPlaying as props from _AyahList.
+// Does NOT watch audioProvider — parent pushes state down.
+// GlobalKey lives on this widget (passed as key: from _AyahList) so
+// Scrollable.ensureVisible can locate the row for auto-scroll.
+// AnimatedContainer is the ROOT widget so its tween runs cleanly.
 class _AyahRow extends ConsumerWidget {
   const _AyahRow({
     super.key,
     required this.ayah,
     required this.reciter,
     required this.surah,
-    required this.scrollKey,
+    required this.isActive,
+    required this.isPlaying,
   });
 
   final Ayah ayah;
   final QuranicReciter? reciter;
   final Surah surah;
-  final GlobalKey scrollKey;
+  final bool isActive;
+  final bool isPlaying;
+
+  static const _kGreen   = Color(0xFF34A853);
+  static const _kGreenBg = Color(0xFFE6F4EA);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
 
-    const _kGreen = Color(0xFF34A853);
-    const _kGreenBg = Color(0xFFE6F4EA);
-
-    // Read state directly — same pattern as the debug strip.
-    final audio = ref.watch(audioProvider);
-    final isActive = audio.surahNumber == surah.id &&
-        audio.currentAyahNumber == ayah.ayahNumber &&
-        audio.isActive;
-    final isPlaying = isActive && audio.isPlaying;
-
-    // SizedBox carries the GlobalKey for auto-scroll; AnimatedContainer has no
-    // key so GlobalKey semantics don't interfere with its animation state.
-    return SizedBox(
-      key: scrollKey,
-      child: AnimatedContainer(
+    return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       decoration: isActive
           ? const BoxDecoration(
@@ -254,9 +256,7 @@ class _AyahRow extends ConsumerWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isActive
-                      ? _kGreen
-                      : colors.surfaceContainerHighest,
+                  color: isActive ? _kGreen : colors.surfaceContainerHighest,
                 ),
                 child: Center(
                   child: isPlaying
@@ -282,7 +282,7 @@ class _AyahRow extends ConsumerWidget {
           ],
         ),
       ),
-    )); // SizedBox + AnimatedContainer
+    );
   }
 }
 
