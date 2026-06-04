@@ -29,13 +29,27 @@ class AyahPlayerScreen extends ConsumerStatefulWidget {
 
 class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
   final _scrollController = ScrollController();
-  // Map from ayahNumber → GlobalKey for auto-scroll.
   final Map<int, GlobalKey> _keys = {};
   int? _lastScrolledAyah;
+
+  // ValueNotifier fed from audioProvider after each frame.
+  // _AyahRow uses ValueListenableBuilder on this notifier so that row shading
+  // fires even when ListView.builder's element reconciliation skips the row.
+  late final ValueNotifier<AudioPlaybackState> _audioNotifier;
+  late final ValueNotifier<TtsPlaybackState>   _ttsNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioNotifier = ValueNotifier(const AudioPlaybackState());
+    _ttsNotifier   = ValueNotifier(const TtsPlaybackState());
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _audioNotifier.dispose();
+    _ttsNotifier.dispose();
     super.dispose();
   }
 
@@ -52,7 +66,6 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
     );
   }
 
-  // Called when TTS finishes an ayah — speaks the next one automatically.
   void _ttsSpeakNextAfter(int? completedAyahNumber) {
     if (completedAyahNumber == null) return;
     final ayahs =
@@ -61,9 +74,9 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
     final idx = ayahs.indexWhere((a) => a.ayahNumber == completedAyahNumber);
     if (idx >= 0 && idx + 1 < ayahs.length) {
       final next = ayahs[idx + 1];
-      ref
-          .read(ttsProvider.notifier)
-          .speakAyah(widget.surah.id, next.ayahNumber, next.textUthmani);
+      ref.read(ttsProvider.notifier).speakAyah(
+        widget.surah.id, next.ayahNumber, next.textUthmani,
+      );
     }
   }
 
@@ -74,9 +87,16 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
     final ttsState   = ref.watch(ttsProvider);
     final ttsEnabled = ref.watch(ttsEnabledProvider);
     final reciter    = ref.watch(selectedReciterProvider);
-    final colors     = Theme.of(context).colorScheme;
 
-    // Auto-scroll: follows whichever engine is active.
+    // Sync ValueNotifiers after the frame so ValueListenableBuilders in every
+    // _AyahRow react to provider changes independently of ListView reconciliation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _audioNotifier.value = ref.read(audioProvider);
+      _ttsNotifier.value   = ref.read(ttsProvider);
+    });
+
+    // Auto-scroll to the currently-playing ayah.
     final currentAyah = audioState.surahNumber == widget.surah.id
         ? audioState.currentAyahNumber
         : ttsState.surahNumber == widget.surah.id
@@ -88,13 +108,15 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
       });
     }
 
-    // TTS auto-advance: speak next ayah when current one finishes.
+    // TTS auto-advance.
     ref.listen<TtsPlaybackState>(ttsProvider, (prev, curr) {
       if (!ref.read(ttsEnabledProvider)) return;
       if (prev?.isSpeaking == true && curr.status == TtsStatus.idle) {
         _ttsSpeakNextAfter(prev!.currentAyahNumber);
       }
     });
+
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -118,29 +140,6 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
       ),
       body: Column(
         children: [
-          // Debug strip — shows exact values _AyahRow uses so we can verify state.
-          Builder(builder: (context) {
-            final a = ref.watch(audioProvider);
-            final active = a.surahNumber == widget.surah.id && a.isActive;
-            return Container(
-              width: double.infinity,
-              color: active ? const Color(0xFF34A853) : Colors.grey.shade300,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: Text(
-                'status:${a.status.name} '
-                'surah:${a.surahNumber}==${widget.surah.id}? '
-                'ayah:${a.currentAyahNumber} '
-                'active:$active',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: active ? Colors.white : Colors.black54,
-                ),
-              ),
-            );
-          }),
-          // TTS mode banner + toggle.
           _TtsBanner(surah: widget.surah),
           Expanded(
             child: ayahsAsync.when(
@@ -154,6 +153,8 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
                 reciter: reciter,
                 scrollController: _scrollController,
                 keys: _keys,
+                audioNotifier: _audioNotifier,
+                ttsNotifier: _ttsNotifier,
               ),
             ),
           ),
@@ -208,14 +209,12 @@ class _TtsBanner extends ConsumerWidget {
               ),
             ),
           ),
-          // Animated toggle switch.
           GestureDetector(
             onTap: () {
               final enabled = ref.read(ttsEnabledProvider);
               if (enabled) {
                 ref.read(ttsProvider.notifier).stop();
               } else {
-                // Enabling TTS — stop any running audio to avoid overlap.
                 ref.read(audioProvider.notifier).stop();
               }
               ref.read(ttsEnabledProvider.notifier).state = !enabled;
@@ -238,14 +237,12 @@ class _TtsBanner extends ConsumerWidget {
                 child: Container(
                   width: 18,
                   height: 18,
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 2),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
                     boxShadow: [
-                      BoxShadow(
-                          color: Colors.black26, blurRadius: 2)
+                      BoxShadow(color: Colors.black26, blurRadius: 2)
                     ],
                   ),
                 ),
@@ -260,9 +257,6 @@ class _TtsBanner extends ConsumerWidget {
 
 // ── Ayah list ─────────────────────────────────────────────────────────────────
 
-// Minimal props — no audio/TTS state here. Each _AyahRow watches providers
-// directly (via select) so Riverpod pushes updates to the row. GlobalKey on
-// each row keeps the element stable and subscriptions alive across scrolling.
 class _AyahList extends StatelessWidget {
   const _AyahList({
     required this.surah,
@@ -270,6 +264,8 @@ class _AyahList extends StatelessWidget {
     required this.reciter,
     required this.scrollController,
     required this.keys,
+    required this.audioNotifier,
+    required this.ttsNotifier,
   });
 
   final Surah surah;
@@ -277,6 +273,8 @@ class _AyahList extends StatelessWidget {
   final QuranicReciter? reciter;
   final ScrollController scrollController;
   final Map<int, GlobalKey> keys;
+  final ValueNotifier<AudioPlaybackState> audioNotifier;
+  final ValueNotifier<TtsPlaybackState>   ttsNotifier;
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +290,8 @@ class _AyahList extends StatelessWidget {
           ayah: ayah,
           reciter: reciter,
           surah: surah,
+          audioNotifier: audioNotifier,
+          ttsNotifier: ttsNotifier,
         );
       },
     );
@@ -300,150 +300,144 @@ class _AyahList extends StatelessWidget {
 
 // ── Ayah row ──────────────────────────────────────────────────────────────────
 
-// Watches audioProvider + ttsProvider via select so Riverpod pushes updates
-// directly to this widget. GlobalKey (set by _AyahList) keeps the element
-// stable across scrolling, so subscriptions are never lost.
-// AnimatedContainer is the ROOT widget so its tween runs cleanly.
+// Row shading is driven by ValueListenableBuilder on audioNotifier/ttsNotifier.
+// These notifiers are updated from _AyahPlayerScreenState after each frame,
+// so they fire independently of ListView's element-reconciliation pass —
+// fixing the bug where GlobalKey rows were not being rebuilt by Riverpod.
 class _AyahRow extends ConsumerWidget {
   const _AyahRow({
     super.key,
     required this.ayah,
     required this.reciter,
     required this.surah,
+    required this.audioNotifier,
+    required this.ttsNotifier,
   });
 
   final Ayah ayah;
   final QuranicReciter? reciter;
   final Surah surah;
+  final ValueNotifier<AudioPlaybackState> audioNotifier;
+  final ValueNotifier<TtsPlaybackState>   ttsNotifier;
 
   static const _kGreen   = Color(0xFF34A853);
   static const _kGreenBg = Color(0xFFE6F4EA);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).colorScheme;
-
-    // Watch full state — no select — so any state change triggers rebuild.
-    // Each row only re-renders if isActive/isPlaying actually changed, since
-    // AnimatedContainer only repaints when its props differ.
-    final audio      = ref.watch(audioProvider);
-    final tts        = ref.watch(ttsProvider);
+    final colors     = Theme.of(context).colorScheme;
     final ttsEnabled = ref.watch(ttsEnabledProvider);
 
-    final isAudioActive = audio.surahNumber == surah.id &&
-        audio.currentAyahNumber == ayah.ayahNumber &&
-        audio.isActive;
-    final isAudioPlaying = audio.surahNumber == surah.id &&
-        audio.currentAyahNumber == ayah.ayahNumber &&
-        audio.isPlaying;
-    final isTtsSpeaking = tts.surahNumber == surah.id &&
-        tts.currentAyahNumber == ayah.ayahNumber &&
-        tts.isSpeaking;
+    return ValueListenableBuilder<AudioPlaybackState>(
+      valueListenable: audioNotifier,
+      builder: (context, audio, _) {
+        return ValueListenableBuilder<TtsPlaybackState>(
+          valueListenable: ttsNotifier,
+          builder: (context, tts, _) {
+            final isAudioActive = audio.surahNumber == surah.id &&
+                audio.currentAyahNumber == ayah.ayahNumber &&
+                audio.isActive;
+            final isAudioPlaying = audio.surahNumber == surah.id &&
+                audio.currentAyahNumber == ayah.ayahNumber &&
+                audio.isPlaying;
+            final isTtsSpeaking = tts.surahNumber == surah.id &&
+                tts.currentAyahNumber == ayah.ayahNumber &&
+                tts.isSpeaking;
 
-    final isActive  = isAudioActive || isTtsSpeaking;
-    final isPlaying = isAudioPlaying;
+            final isActive  = isAudioActive || isTtsSpeaking;
+            final isPlaying = isAudioPlaying;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // ── TEMP DIAGNOSTIC ── remove once shading is confirmed ───────────
-        Container(
-          color: isAudioActive ? Colors.green : Colors.red.shade100,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          child: Text(
-            'row${ayah.ayahNumber}: audioSurah=${audio.surahNumber}/${surah.id} '
-            'audioAyah=${audio.currentAyahNumber}/${ayah.ayahNumber} '
-            'status=${audio.status.name} active=$isAudioActive',
-            style: const TextStyle(fontSize: 9, color: Colors.black87),
-          ),
-        ),
-        // ─────────────────────────────────────────────────────────────────
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          decoration: isActive
-              ? const BoxDecoration(
-                  color: _kGreenBg,
-                  border: Border(
-                      left: BorderSide(color: _kGreen, width: 3)),
-                )
-              : const BoxDecoration(),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(isActive ? 13 : 16, 10, 16, 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Badge: number → play/pause/waveform depending on state.
-            GestureDetector(
-              onTap: () {
-                if (ttsEnabled) {
-                  ref.read(ttsProvider.notifier).speakAyah(
-                    surah.id,
-                    ayah.ayahNumber,
-                    ayah.textUthmani,
-                  );
-                } else {
-                  if (reciter == null) return;
-                  if (!reciter!.supportsVerseTracking) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'This reciter only supports full-surah playback. '
-                          'Choose a reciter with verse tracking.',
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              decoration: isActive
+                  ? const BoxDecoration(
+                      color: _kGreenBg,
+                      border: Border(
+                          left: BorderSide(color: _kGreen, width: 3)),
+                    )
+                  : const BoxDecoration(),
+              child: Padding(
+                padding:
+                    EdgeInsets.fromLTRB(isActive ? 13 : 16, 10, 16, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        if (ttsEnabled) {
+                          ref.read(ttsProvider.notifier).speakAyah(
+                            surah.id,
+                            ayah.ayahNumber,
+                            ayah.textUthmani,
+                          );
+                        } else {
+                          if (reciter == null) return;
+                          if (!reciter!.supportsVerseTracking) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'This reciter only supports full-surah '
+                                  'playback. Choose a reciter with verse '
+                                  'tracking.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          ref.read(audioProvider.notifier).playAyah(
+                            surah.id,
+                            ayah.ayahNumber,
+                            reciter: reciter!,
+                          );
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isActive
+                              ? _kGreen
+                              : colors.surfaceContainerHighest,
+                        ),
+                        child: Center(
+                          child: isTtsSpeaking
+                              ? const _WaveformIcon()
+                              : isPlaying
+                                  ? const Icon(Icons.pause,
+                                      size: 18, color: Colors.white)
+                                  : isActive
+                                      ? const Icon(Icons.play_arrow,
+                                          size: 18, color: Colors.white)
+                                      : Text(
+                                          '${ayah.ayahNumber}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color:
+                                                colors.onSurfaceVariant,
+                                          ),
+                                        ),
                         ),
                       ),
-                    );
-                    return;
-                  }
-                  ref.read(audioProvider.notifier).playAyah(
-                    surah.id,
-                    ayah.ayahNumber,
-                    reciter: reciter!,
-                  );
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isActive
-                      ? _kGreen
-                      : colors.surfaceContainerHighest,
-                ),
-                child: Center(
-                  child: isTtsSpeaking
-                      ? const _WaveformIcon()
-                      : isPlaying
-                          ? const Icon(Icons.pause,
-                              size: 18, color: Colors.white)
-                          : isActive
-                              ? const Icon(Icons.play_arrow,
-                                  size: 18, color: Colors.white)
-                              : Text(
-                                  '${ayah.ayahNumber}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: colors.onSurfaceVariant,
-                                  ),
-                                ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _WordDisplay(ayah: ayah, surah: surah),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: _WordDisplay(ayah: ayah, surah: surah)),
-          ],
-        ),
-      ),
-    ),  // AnimatedContainer
-    ],  // Column children (diagnostic + AnimatedContainer)
+            );
+          },
+        );
+      },
     );
   }
 }
 
-// ── Waveform animation (TTS speaking indicator) ───────────────────────────────
+// ── Waveform animation ────────────────────────────────────────────────────────
 
 class _WaveformIcon extends StatefulWidget {
   const _WaveformIcon();
@@ -508,8 +502,6 @@ class _WaveformIconState extends State<_WaveformIcon>
 
 // ── Word-by-word display ──────────────────────────────────────────────────────
 
-// Watches both audioProvider (proportional timing) and ttsProvider (exact word
-// boundary from setProgressHandler). TTS takes priority when active.
 class _WordDisplay extends ConsumerWidget {
   const _WordDisplay({required this.ayah, required this.surah});
 
@@ -539,10 +531,8 @@ class _WordDisplay extends ConsumerWidget {
 
     int activeIdx;
     if (isTtsAyah) {
-      // Exact word index from TTS progress callback.
       activeIdx = tts.currentWordIndex.clamp(-1, n - 1);
     } else if (isAudioAyah && audio.duration != Duration.zero) {
-      // Proportional estimate from playback position.
       activeIdx = (audio.position.inMilliseconds /
               audio.duration.inMilliseconds *
               n)
@@ -623,7 +613,6 @@ class _PlayerBar extends ConsumerWidget {
     final ttsSpeaking  = ttsThisSurah && tts.isSpeaking;
     final ttsActive    = ttsThisSurah && tts.isActive;
 
-    // TTS bar takes over when TTS mode is on.
     final showTts = ttsEnabled;
 
     final isAnyActive  = audioActive || ttsActive;
@@ -647,7 +636,6 @@ class _PlayerBar extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Progress slider — audio only (TTS has no seekable position).
             if (!showTts &&
                 audioActive &&
                 audio.duration > Duration.zero) ...[
@@ -701,7 +689,6 @@ class _PlayerBar extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // Previous ayah.
                 IconButton(
                   icon: Icon(Icons.skip_previous_rounded,
                       color: isAnyActive ? _kGreen : null),
@@ -712,7 +699,6 @@ class _PlayerBar extends ConsumerWidget {
                           ? () => notifier.previousAyah()
                           : null),
                 ),
-                // Play / Pause.
                 FilledButton(
                   onPressed: showTts
                       ? () => _ttsToggle(ref)
@@ -725,8 +711,9 @@ class _PlayerBar extends ConsumerWidget {
                                     ScaffoldMessenger.of(context)
                                         .showSnackBar(const SnackBar(
                                       content: Text(
-                                        'This reciter only supports full-surah playback. '
-                                        'Choose a reciter with verse tracking.',
+                                        'This reciter only supports '
+                                        'full-surah playback. Choose a '
+                                        'reciter with verse tracking.',
                                       ),
                                     ));
                                     return;
@@ -763,7 +750,6 @@ class _PlayerBar extends ConsumerWidget {
                           size: 24,
                         ),
                 ),
-                // Next ayah.
                 IconButton(
                   icon: Icon(Icons.skip_next_rounded,
                       color: isAnyActive ? _kGreen : null),
@@ -774,7 +760,6 @@ class _PlayerBar extends ConsumerWidget {
                           ? () => notifier.nextAyah()
                           : null),
                 ),
-                // Stop.
                 IconButton(
                   icon: Icon(Icons.stop_rounded,
                       color: isAnyActive ? _kGreen : null),
@@ -815,8 +800,7 @@ class _PlayerBar extends ConsumerWidget {
 
   void _ttsPrev(WidgetRef ref) {
     final curr = ref.read(ttsProvider).currentAyahNumber ?? 1;
-    final ayahs =
-        ref.read(_surahAyahsProvider(surah.id)).valueOrNull;
+    final ayahs = ref.read(_surahAyahsProvider(surah.id)).valueOrNull;
     if (ayahs == null) return;
     final idx = ayahs.indexWhere((a) => a.ayahNumber == curr);
     if (idx > 0) {
@@ -829,8 +813,7 @@ class _PlayerBar extends ConsumerWidget {
 
   void _ttsNext(WidgetRef ref) {
     final curr = ref.read(ttsProvider).currentAyahNumber ?? 0;
-    final ayahs =
-        ref.read(_surahAyahsProvider(surah.id)).valueOrNull;
+    final ayahs = ref.read(_surahAyahsProvider(surah.id)).valueOrNull;
     if (ayahs == null) return;
     final idx = ayahs.indexWhere((a) => a.ayahNumber == curr);
     if (idx >= 0 && idx + 1 < ayahs.length) {
