@@ -41,8 +41,10 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _audioNotifier = ValueNotifier(const AudioPlaybackState());
-    _ttsNotifier   = ValueNotifier(const TtsPlaybackState());
+    // Initialise with current provider values so any in-flight playback is
+    // immediately reflected (e.g. user navigated here while audio was playing).
+    _audioNotifier = ValueNotifier(ref.read(audioProvider));
+    _ttsNotifier   = ValueNotifier(ref.read(ttsProvider));
   }
 
   @override
@@ -88,12 +90,15 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
     final ttsEnabled = ref.watch(ttsEnabledProvider);
     final reciter    = ref.watch(selectedReciterProvider);
 
-    // Sync ValueNotifiers after the frame so ValueListenableBuilders in every
-    // _AyahRow react to provider changes independently of ListView reconciliation.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _audioNotifier.value = ref.read(audioProvider);
-      _ttsNotifier.value   = ref.read(ttsProvider);
+    // Push every provider-state change into the ValueNotifiers immediately
+    // (before any frame renders). ref.listen fires synchronously during
+    // Riverpod's notification phase — faster than addPostFrameCallback and
+    // catches rapid idle→loading→idle transitions that span a single frame.
+    ref.listen<AudioPlaybackState>(audioProvider, (_, next) {
+      _audioNotifier.value = next;
+    });
+    ref.listen<TtsPlaybackState>(ttsProvider, (_, next) {
+      _ttsNotifier.value = next;
     });
 
     // Auto-scroll to the currently-playing ayah.
