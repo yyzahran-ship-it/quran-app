@@ -150,9 +150,6 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
               data: (ayahs) => _AyahList(
                 surah: widget.surah,
                 ayahs: ayahs,
-                audioState: audioState,
-                ttsState: ttsState,
-                ttsEnabled: ttsEnabled,
                 reciter: reciter,
                 scrollController: _scrollController,
                 keys: _keys,
@@ -262,16 +259,13 @@ class _TtsBanner extends ConsumerWidget {
 
 // ── Ayah list ─────────────────────────────────────────────────────────────────
 
-// Receives audioState + ttsState as explicit props so the itemBuilder closure
-// always has the latest state. Each _AyahRow gets its active flags pre-computed
-// and a GlobalKey as its widget key (for auto-scroll).
+// Minimal props — no audio/TTS state here. Each _AyahRow watches providers
+// directly (via select) so Riverpod pushes updates to the row. GlobalKey on
+// each row keeps the element stable and subscriptions alive across scrolling.
 class _AyahList extends StatelessWidget {
   const _AyahList({
     required this.surah,
     required this.ayahs,
-    required this.audioState,
-    required this.ttsState,
-    required this.ttsEnabled,
     required this.reciter,
     required this.scrollController,
     required this.keys,
@@ -279,9 +273,6 @@ class _AyahList extends StatelessWidget {
 
   final Surah surah;
   final List<Ayah> ayahs;
-  final AudioPlaybackState audioState;
-  final TtsPlaybackState ttsState;
-  final bool ttsEnabled;
   final QuranicReciter? reciter;
   final ScrollController scrollController;
   final Map<int, GlobalKey> keys;
@@ -295,23 +286,11 @@ class _AyahList extends StatelessWidget {
       itemBuilder: (context, i) {
         final ayah = ayahs[i];
         keys.putIfAbsent(ayah.ayahNumber, GlobalKey.new);
-
-        final audioActive = audioState.surahNumber == surah.id &&
-            audioState.currentAyahNumber == ayah.ayahNumber &&
-            audioState.isActive;
-        final ttsActive = ttsState.surahNumber == surah.id &&
-            ttsState.currentAyahNumber == ayah.ayahNumber &&
-            ttsState.isActive;
-
         return _AyahRow(
           key: keys[ayah.ayahNumber],
           ayah: ayah,
           reciter: reciter,
           surah: surah,
-          isActive: audioActive || ttsActive,
-          isPlaying: audioActive && audioState.isPlaying,
-          isTtsSpeaking: ttsActive && ttsState.isSpeaking,
-          ttsEnabled: ttsEnabled,
         );
       },
     );
@@ -320,9 +299,9 @@ class _AyahList extends StatelessWidget {
 
 // ── Ayah row ──────────────────────────────────────────────────────────────────
 
-// Receives pre-computed active flags as props from _AyahList.
-// Does NOT watch audioProvider or ttsProvider — parent pushes state down.
-// GlobalKey lives on this widget for Scrollable.ensureVisible.
+// Watches audioProvider + ttsProvider via select so Riverpod pushes updates
+// directly to this widget. GlobalKey (set by _AyahList) keeps the element
+// stable across scrolling, so subscriptions are never lost.
 // AnimatedContainer is the ROOT widget so its tween runs cleanly.
 class _AyahRow extends ConsumerWidget {
   const _AyahRow({
@@ -330,19 +309,11 @@ class _AyahRow extends ConsumerWidget {
     required this.ayah,
     required this.reciter,
     required this.surah,
-    required this.isActive,
-    required this.isPlaying,
-    required this.isTtsSpeaking,
-    required this.ttsEnabled,
   });
 
   final Ayah ayah;
   final QuranicReciter? reciter;
   final Surah surah;
-  final bool isActive;
-  final bool isPlaying;
-  final bool isTtsSpeaking;
-  final bool ttsEnabled;
 
   static const _kGreen   = Color(0xFF34A853);
   static const _kGreenBg = Color(0xFFE6F4EA);
@@ -350,6 +321,24 @@ class _AyahRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+
+    // select keeps rebuilds scoped: position/duration changes never reach here.
+    final isAudioActive = ref.watch(audioProvider.select((s) =>
+        s.surahNumber == surah.id &&
+        s.currentAyahNumber == ayah.ayahNumber &&
+        s.isActive));
+    final isAudioPlaying = ref.watch(audioProvider.select((s) =>
+        s.surahNumber == surah.id &&
+        s.currentAyahNumber == ayah.ayahNumber &&
+        s.isPlaying));
+    final isTtsSpeaking = ref.watch(ttsProvider.select((s) =>
+        s.surahNumber == surah.id &&
+        s.currentAyahNumber == ayah.ayahNumber &&
+        s.isSpeaking));
+    final ttsEnabled = ref.watch(ttsEnabledProvider);
+
+    final isActive  = isAudioActive || isTtsSpeaking;
+    final isPlaying = isAudioPlaying;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
