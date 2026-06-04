@@ -136,9 +136,10 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
 
 // ── Ayah list ─────────────────────────────────────────────────────────────────
 
-// Watches audioProvider directly so it rebuilds immediately on audio changes,
-// then passes isActive/isPlaying as props so rows never need their own watch.
-class _AyahList extends ConsumerWidget {
+// Plain StatelessWidget — does not watch any provider.
+// Each _AyahRow subscribes to audioProvider independently so shading
+// updates are never lost through the itemBuilder closure chain.
+class _AyahList extends StatelessWidget {
   const _AyahList({
     required this.surah,
     required this.ayahs,
@@ -154,8 +155,7 @@ class _AyahList extends ConsumerWidget {
   final Map<int, GlobalKey> keys;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final audio = ref.watch(audioProvider);
+  Widget build(BuildContext context) {
     return ListView.builder(
       controller: scrollController,
       itemCount: ayahs.length,
@@ -163,17 +163,9 @@ class _AyahList extends ConsumerWidget {
       itemBuilder: (context, i) {
         final ayah = ayahs[i];
         keys.putIfAbsent(ayah.ayahNumber, GlobalKey.new);
-        final isPlaying = audio.surahNumber == surah.id &&
-            audio.currentAyahNumber == ayah.ayahNumber &&
-            audio.isPlaying;
-        final isActive = audio.surahNumber == surah.id &&
-            audio.currentAyahNumber == ayah.ayahNumber &&
-            audio.isActive;
         return _AyahRow(
           key: ValueKey(ayah.ayahNumber),
           ayah: ayah,
-          isPlaying: isPlaying,
-          isActive: isActive,
           reciter: reciter,
           surah: surah,
           scrollKey: keys[ayah.ayahNumber]!,
@@ -185,20 +177,18 @@ class _AyahList extends ConsumerWidget {
 
 // ── Ayah row ──────────────────────────────────────────────────────────────────
 
+// Watches audioProvider directly with select() so it only rebuilds when
+// THIS ayah's active/playing state changes — not on every position tick.
 class _AyahRow extends ConsumerWidget {
   const _AyahRow({
     super.key,
     required this.ayah,
-    required this.isPlaying,
-    required this.isActive,
     required this.reciter,
     required this.surah,
     required this.scrollKey,
   });
 
   final Ayah ayah;
-  final bool isPlaying;
-  final bool isActive;
   final QuranicReciter? reciter;
   final Surah surah;
   final GlobalKey scrollKey;
@@ -209,6 +199,13 @@ class _AyahRow extends ConsumerWidget {
 
     const _kGreen = Color(0xFF34A853);
     const _kGreenBg = Color(0xFFE6F4EA);
+
+    // Read state directly — same pattern as the debug strip.
+    final audio = ref.watch(audioProvider);
+    final isActive = audio.surahNumber == surah.id &&
+        audio.currentAyahNumber == ayah.ayahNumber &&
+        audio.isActive;
+    final isPlaying = isActive && audio.isPlaying;
 
     // SizedBox carries the GlobalKey for auto-scroll; AnimatedContainer has no
     // key so GlobalKey semantics don't interfere with its animation state.
