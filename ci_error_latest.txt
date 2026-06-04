@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Thu Jun  4 15:57:56 UTC 2026
-Run: 26963075985
+Date: Thu Jun  4 16:07:03 UTC 2026
+Run: 26963548815
 
 ## flutter analyze output:
 ```
@@ -23,26 +23,124 @@ warning • The declaration '_showAyahActions' isn't referenced. Try removing th
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:79:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-16 issues found. (ran in 12.8s)
+16 issues found. (ran in 11.7s)
 ```
 
 ## Gradle error lines:
 ```
 Starting process 'Gradle build daemon'. Working directory: /home/runner/.gradle/daemon/8.12 Command: /usr/lib/jvm/temurin-17-jdk-amd64/bin/java --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=256m -Xmx4g -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -cp /home/runner/.gradle/wrapper/dists/gradle-8.12-all/ejduaidbjup3bmmkhw3rie4zb/gradle-8.12/lib/gradle-daemon-main-8.12.jar -javaagent:/home/runner/.gradle/wrapper/dists/gradle-8.12-all/ejduaidbjup3bmmkhw3rie4zb/gradle-8.12/lib/agents/gradle-instrumentation-agent-8.12.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.12
-FAILURE: Build failed with an exception.
-	at java.base/java.lang.Thread.run(Thread.java:840)
+e: Incompatible classes were found in dependencies. Remove them from the classpath or use '-Xskip-metadata-version-check' to suppress errors
+e: file:///home/runner/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.2.20/5380b19fa1924399b62ce3a1faffebb2b4f82272/kotlin-stdlib-2.2.20.jar!/META-INF/kotlin-stdlib-jdk7.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.2.0, expected version is 2.0.0.
+e: file:///home/runner/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.2.20/5380b19fa1924399b62ce3a1faffebb2b4f82272/kotlin-stdlib-2.2.20.jar!/META-INF/kotlin-stdlib-jdk8.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.2.0, expected version is 2.0.0.
+e: file:///home/runner/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.2.20/5380b19fa1924399b62ce3a1faffebb2b4f82272/kotlin-stdlib-2.2.20.jar!/META-INF/kotlin-stdlib.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.2.0, expected version is 2.0.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:47:38 Unresolved reference: ArrayList
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:48:30 Unresolved reference: HashMap
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:69:14 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:70:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:71:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:72:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:73:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:74:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:79:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:83:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:84:15 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:85:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:86:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:87:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:93:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:93:33 Unresolved reference: startsWith
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:94:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:96:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:97:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:98:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:100:29 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:101:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:105:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:110:33 Unresolved reference: startsWith
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:111:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:111:33 Unresolved reference: startsWith
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:112:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:113:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:115:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:117:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:119:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:121:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:123:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:125:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:126:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:128:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:132:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:137:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:139:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:140:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:142:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:144:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:148:57 Unresolved reference: startsWith
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:150:32 Unresolved reference: HashMap
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:155:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:161:34 Unresolved reference: startsWith
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:162:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:163:27 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:164:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:168:14 Class 'kotlin.Deprecated' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:168:14 Class 'kotlin.ReplaceWith' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:168:14 Class 'kotlin.DeprecationLevel' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:170:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:170:33 Unresolved reference: startsWith
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:171:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:173:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:175:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:178:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:180:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:182:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:186:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:186:33 Unresolved reference: startsWith
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:187:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:189:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:191:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:194:25 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:196:21 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:202:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:204:26 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:205:13 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:210:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:212:26 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:213:13 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:220:13 Unresolved reference: synchronized
+e: file:///home/runner/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/android/src/main/kotlin/com/eyedeadevelopment/fluttertts/FlutterTtsPlugin.kt:221:17 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
 ```
 
 ## Last 100 lines of build_log.txt:
 ```
-[   +1 ms] 	at org.gradle.internal.buildtree.InitDeprecationLoggingActionExecutor.execute(InitDeprecationLoggingActionExecutor.java:62)
-[        ] 	at org.gradle.internal.buildtree.InitProblems.execute(InitProblems.java:36)
-[        ] 	at org.gradle.internal.buildtree.DefaultBuildTreeContext.execute(DefaultBuildTreeContext.java:40)
-[        ] 	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.lambda$execute$0(BuildTreeLifecycleBuildActionExecutor.java:71)
-[        ] 	at org.gradle.internal.buildtree.BuildTreeState.run(BuildTreeState.java:60)
-[        ] 	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.execute(BuildTreeLifecycleBuildActionExecutor.java:71)
-[        ] 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$2.call(RunAsBuildOperationBuildActionExecutor.java:67)
-[        ] 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$2.call(RunAsBuildOperationBuildActionExecutor.java:63)
+[        ] 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
+[        ] 	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+[        ] 	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
+[        ] 	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
+[        ] 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+[        ] 	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
+[        ] 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+[        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
+[        ] Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+[        ] 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
+[        ] 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:119)
+[        ] 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:76)
+[        ] 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+[        ] 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+[        ] 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+[        ] 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
@@ -50,58 +148,37 @@ FAILURE: Build failed with an exception.
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-[        ] 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor.execute(RunAsBuildOperationBuildActionExecutor.java:63)
-[        ] 	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.lambda$execute$0(RunAsWorkerThreadBuildActionExecutor.java:36)
+[        ] 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+[        ] 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+[        ] 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+[        ] 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
+[        ] 	at org.gradle.internal.Factories$1.create(Factories.java:31)
 [        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
 [        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-[        ] 	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.execute(RunAsWorkerThreadBuildActionExecutor.java:36)
-[        ] 	at org.gradle.tooling.internal.provider.continuous.ContinuousBuildActionExecutor.execute(ContinuousBuildActionExecutor.java:110)
-[        ] 	at org.gradle.tooling.internal.provider.SubscribableBuildActionExecutor.execute(SubscribableBuildActionExecutor.java:64)
-[        ] 	at org.gradle.internal.session.DefaultBuildSessionContext.execute(DefaultBuildSessionContext.java:46)
-[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor$ActionImpl.apply(BuildSessionLifecycleBuildActionExecutor.java:92)
-[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor$ActionImpl.apply(BuildSessionLifecycleBuildActionExecutor.java:80)
-[        ] 	at org.gradle.internal.session.BuildSessionState.run(BuildSessionState.java:71)
-[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor.execute(BuildSessionLifecycleBuildActionExecutor.java:62)
-[        ] 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor.execute(BuildSessionLifecycleBuildActionExecutor.java:41)
-[        ] 	at org.gradle.internal.buildprocess.execution.StartParamsValidatingActionExecutor.execute(StartParamsValidatingActionExecutor.java:64)
-[        ] 	at org.gradle.internal.buildprocess.execution.StartParamsValidatingActionExecutor.execute(StartParamsValidatingActionExecutor.java:32)
-[        ] 	at org.gradle.internal.buildprocess.execution.SessionFailureReportingActionExecutor.execute(SessionFailureReportingActionExecutor.java:51)
-[        ] 	at org.gradle.internal.buildprocess.execution.SessionFailureReportingActionExecutor.execute(SessionFailureReportingActionExecutor.java:39)
-[        ] 	at org.gradle.internal.buildprocess.execution.SetupLoggingActionExecutor.execute(SetupLoggingActionExecutor.java:47)
-[        ] 	at org.gradle.internal.buildprocess.execution.SetupLoggingActionExecutor.execute(SetupLoggingActionExecutor.java:31)
-[        ] 	at org.gradle.launcher.daemon.server.exec.ExecuteBuild.doBuild(ExecuteBuild.java:70)
-[        ] 	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.WatchForDisconnection.execute(WatchForDisconnection.java:39)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.ResetDeprecationLogger.execute(ResetDeprecationLogger.java:29)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.RequestStopIfSingleUsedDaemon.execute(RequestStopIfSingleUsedDaemon.java:35)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.ForwardClientInput.lambda$execute$0(ForwardClientInput.java:40)
-[        ] 	at org.gradle.internal.daemon.clientinput.ClientInputForwarder.forwardInput(ClientInputForwarder.java:80)
-[        ] 	at org.gradle.launcher.daemon.server.exec.ForwardClientInput.execute(ForwardClientInput.java:37)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.LogAndCheckHealth.execute(LogAndCheckHealth.java:64)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.LogToClient.doBuild(LogToClient.java:63)
-[        ] 	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.EstablishBuildEnvironment.doBuild(EstablishBuildEnvironment.java:84)
-[        ] 	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
-[        ] 	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
-[        ] 	at org.gradle.launcher.daemon.server.exec.StartBuildOrRespondWithBusy$1.run(StartBuildOrRespondWithBusy.java:52)
-[        ] 	at org.gradle.launcher.daemon.server.DaemonStateCoordinator.lambda$runCommand$0(DaemonStateCoordinator.java:321)
-[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
-[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
-[        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
-[        ] BUILD FAILED in 1m 33s
-[        ] 4 actionable tasks: 4 up-to-date
-[ +485 ms] Running Gradle task 'assembleDebug'... (completed in 94.2s)
-[   +1 ms] "flutter apk" took 94,670ms.
-[   +7 ms] Gradle task assembleDebug failed with exit code 1
+[        ] 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
+[        ] 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
+[        ] 	... 7 more
+[        ] BUILD FAILED in 3m 7s
+[ +486 ms] Running Gradle task 'assembleDebug'... (completed in 188.4s)
+[   +2 ms] 
+           ┌─ Flutter Fix ────────────────────────────────────────────────────────────────────────────────┐
+           │ [!] Your project requires a newer version of the Kotlin Gradle plugin.                       │
+           │ Find the latest version on https://kotlinlang.org/docs/releases.html#release-details, then   │
+           │ update the                                                                                   │
+           │ version number of the plugin with id "org.jetbrains.kotlin.android" in the plugins block of  │
+           │ /home/runner/work/quran-app/quran-app/android/settings.gradle.                               │
+           │                                                                                              │
+           │ Alternatively (if your project was created before Flutter 3.19), update                      │
+           │ /home/runner/work/quran-app/quran-app/android/build.gradle.kts                               │
+           │ ext.kotlin_version = '<latest-version>'                                                      │
+           └──────────────────────────────────────────────────────────────────────────────────────────────┘
+
+[   +1 ms] "flutter apk" took 188,923ms.
+[   +6 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
            #1      AndroidGradleBuilder.buildGradleApp (package:flutter_tools/src/android/gradle.dart:595:7)
