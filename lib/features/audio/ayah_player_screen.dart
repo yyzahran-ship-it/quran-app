@@ -118,7 +118,7 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
       ),
       body: Column(
         children: [
-          // Debug strip — remove once ayah shading is confirmed working.
+          // Debug strip — shows exact values _AyahRow uses so we can verify state.
           Builder(builder: (context) {
             final a = ref.watch(audioProvider);
             final active = a.surahNumber == widget.surah.id && a.isActive;
@@ -128,9 +128,10 @@ class _AyahPlayerScreenState extends ConsumerState<AyahPlayerScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Text(
-                active
-                    ? '▶  Playing ayah ${a.currentAyahNumber} of ${widget.surah.versesCount}'
-                    : 'Not playing  |  status: ${a.status.name}  |  surah: ${a.surahNumber}  |  ayah: ${a.currentAyahNumber}',
+                'status:${a.status.name} '
+                'surah:${a.surahNumber}==${widget.surah.id}? '
+                'ayah:${a.currentAyahNumber} '
+                'active:$active',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -322,20 +323,22 @@ class _AyahRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
 
-    // select keeps rebuilds scoped: position/duration changes never reach here.
-    final isAudioActive = ref.watch(audioProvider.select((s) =>
-        s.surahNumber == surah.id &&
-        s.currentAyahNumber == ayah.ayahNumber &&
-        s.isActive));
-    final isAudioPlaying = ref.watch(audioProvider.select((s) =>
-        s.surahNumber == surah.id &&
-        s.currentAyahNumber == ayah.ayahNumber &&
-        s.isPlaying));
-    final isTtsSpeaking = ref.watch(ttsProvider.select((s) =>
-        s.surahNumber == surah.id &&
-        s.currentAyahNumber == ayah.ayahNumber &&
-        s.isSpeaking));
+    // Watch full state — no select — so any state change triggers rebuild.
+    // Each row only re-renders if isActive/isPlaying actually changed, since
+    // AnimatedContainer only repaints when its props differ.
+    final audio      = ref.watch(audioProvider);
+    final tts        = ref.watch(ttsProvider);
     final ttsEnabled = ref.watch(ttsEnabledProvider);
+
+    final isAudioActive = audio.surahNumber == surah.id &&
+        audio.currentAyahNumber == ayah.ayahNumber &&
+        audio.isActive;
+    final isAudioPlaying = audio.surahNumber == surah.id &&
+        audio.currentAyahNumber == ayah.ayahNumber &&
+        audio.isPlaying;
+    final isTtsSpeaking = tts.surahNumber == surah.id &&
+        tts.currentAyahNumber == ayah.ayahNumber &&
+        tts.isSpeaking;
 
     final isActive  = isAudioActive || isTtsSpeaking;
     final isPlaying = isAudioPlaying;
