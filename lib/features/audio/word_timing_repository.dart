@@ -86,3 +86,19 @@ class WordTimingRepository {
 final wordTimingRepositoryProvider = Provider<WordTimingRepository>((ref) {
   return WordTimingRepository(Dio());
 });
+
+// Keyed by (qdcReciterId, surahNumber). Result is null on network failure,
+// empty map if the surah has no segment data, or a populated ayah→words map.
+// autoDispose keeps memory clean; keepAlive() is called once data arrives so
+// navigating away and back doesn't re-fetch.
+final surahWordTimingsProvider = FutureProvider.autoDispose
+    .family<Map<int, List<QuranWord>>?, ({int qdcReciterId, int surahNumber})>(
+  (ref, key) async {
+    final result = await ref
+        .read(wordTimingRepositoryProvider)
+        .fetchSurahTimings(key.qdcReciterId, key.surahNumber);
+    // Keep the fetched data alive so it survives widget tree rebuilds.
+    ref.keepAlive();
+    return result;
+  },
+);

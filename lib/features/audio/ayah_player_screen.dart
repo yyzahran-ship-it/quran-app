@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../../domain/entities/ayah.dart';
+import '../../domain/entities/quran_word.dart';
 import '../../domain/entities/surah.dart';
 import 'audio_models.dart';
 import 'audio_provider.dart';
 import 'reciter_provider.dart';
 import 'tts_provider.dart';
+import 'word_timing_repository.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -471,47 +473,39 @@ class _WordDisplay extends ConsumerWidget {
   static const _kGreen  = Color(0xFF34A853);
   static const _kSpoken = Color(0xFF8D6E1A);
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final audio = ref.watch(audioProvider);
-    final tts   = ref.watch(ttsProvider);
-
-    final words = ayah.textUthmani
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .toList();
-    final n = words.length;
-
-    final isAudioAyah = audio.surahNumber == surah.id &&
-        audio.currentAyahNumber == ayah.ayahNumber &&
-        audio.isActive;
-    final isTtsAyah = tts.surahNumber == surah.id &&
-        tts.currentAyahNumber == ayah.ayahNumber &&
-        tts.isActive;
-
-    int activeIdx;
-    if (isTtsAyah) {
-      activeIdx = tts.currentWordIndex.clamp(-1, n - 1);
-    } else if (isAudioAyah && audio.duration != Duration.zero) {
-      activeIdx = (audio.position.inMilliseconds /
-              audio.duration.inMilliseconds *
-              n)
-          .floor()
-          .clamp(0, n - 1);
-    } else {
-      activeIdx = -1;
+  // Find the active word index (0-based) given a playback position.
+  // Uses actual QDC word timestamps when available; falls back to proportional.
+  static int _activeWord(
+    int posMs,
+    int durMs,
+    List<QuranWord>? timings,
+    int wordCount,
+  ) {
+    if (timings != null && timings.isNotEmpty) {
+      // Walk forward; keep the last word whose startTime ≤ posMs.
+      int idx = timings.first.position - 1; // convert 1-based → 0-based
+      for (final w in timings) {
+        if (w.startTime <= posMs) {
+          idx = w.position - 1;
+        } else {
+          break;
+        }
+      }
+      return idx.clamp(0, wordCount - 1);
     }
+    // Proportional fallback (no timing data).
+    if (durMs <= 0) return -1;
+    return (posMs / durMs * wordCount).floor().clamp(0, wordCount - 1);
+  }
 
+  Widget _buildWordWrap(BuildContext context, List<String> words, int activeIdx) {
     final baseStyle = TextStyle(
       fontFamily: kArabicFont,
       fontSize: 22,
       height: 1.8,
-      color: Theme.of(context)
-          .colorScheme
-          .onSurface
-          .withValues(alpha: 0.85),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
     );
-
+    final n = words.length;
     return Wrap(
       alignment: WrapAlignment.end,
       textDirection: TextDirection.rtl,
@@ -521,7 +515,7 @@ class _WordDisplay extends ConsumerWidget {
         final isActive = i == activeIdx;
         final isSpoken = activeIdx >= 0 && i < activeIdx;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+          duration: const Duration(milliseconds: 120),
           padding: EdgeInsets.symmetric(
             horizontal: isActive ? 6 : 0,
             vertical: isActive ? 2 : 0,
@@ -536,12 +530,62 @@ class _WordDisplay extends ConsumerWidget {
             words[i],
             textDirection: TextDirection.rtl,
             style: baseStyle.copyWith(
-              color:
-                  isActive ? Colors.white : isSpoken ? _kSpoken : null,
+              color: isActive ? Colors.white : isSpoken ? _kSpoken : null,
             ),
           ),
         );
       }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tts = ref.watch(ttsProvider);
+
+    // Use .select so non-active rows don't rebuild on every position tick.
+    final isAudioActive = ref.watch(audioProvider.select((s) =>
+        s.surahNumber == surah.id &&
+        s.currentAyahNumber == ayah.ayahNumber &&
+        s.isActive));
+
+    final isTtsActive = tts.surahNumber == surah.id &&
+        tts.currentAyahNumber == ayah.ayahNumber &&
+        tts.isActive;
+
+    final words = ayah.textUthmani
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    final n = words.length;
+
+    // TTS: word index is provided directly by TtsNotifier.
+    if (isTtsActive) {
+      return _buildWordWrap(context, words, tts.currentWordIndex.clamp(-1, n - 1));
+    }
+
+    // Fetch real word timings from QDC API when the reciter supports it.
+    final qdcId = ref.watch(selectedReciterProvider.select((r) => r?.qdcReciterId));
+    final timings = qdcId != null
+        ? ref.watch(surahWordTimingsProvider((
+              qdcReciterId: qdcId,
+              surahNumber: surah.id,
+            ))).valueOrNull?[ayah.ayahNumber]
+        : null;
+
+    if (!isAudioActive) {
+      return _buildWordWrap(context, words, -1);
+    }
+
+    // Active audio ayah: use positionTickStream (30 ms) for smooth karaoke.
+    return StreamBuilder<Duration>(
+      stream: ref.read(audioProvider.notifier).positionTickStream,
+      builder: (ctx, snap) {
+        final audio = ref.read(audioProvider);
+        final posMs = snap.data?.inMilliseconds ?? audio.position.inMilliseconds;
+        final durMs = audio.duration.inMilliseconds;
+        final activeIdx = _activeWord(posMs, durMs, timings, n);
+        return _buildWordWrap(ctx, words, activeIdx);
+      },
     );
   }
 }
