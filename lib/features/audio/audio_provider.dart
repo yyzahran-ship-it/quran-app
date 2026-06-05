@@ -84,17 +84,41 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
   late final StreamSubscription<Duration> _positionSub;
   late final StreamSubscription<Duration?> _durationSub;
   StreamSubscription<int?>? _indexSub;
+  // Polls position every 100 ms while playing. Belt-and-suspenders alongside
+  // positionStream — guarantees state.position updates even if the platform
+  // plugin's stream fires infrequently on certain Android devices.
+  Timer? _positionPollTimer;
 
   void _onPlayerState(PlayerState ps) {
     if (!mounted) return;
     if (ps.processingState == ProcessingState.completed) {
+      _positionPollTimer?.cancel();
+      _positionPollTimer = null;
       _indexSub?.cancel();
       state = const AudioPlaybackState();
     } else if (ps.playing) {
       state = state.copyWith(status: AudioStatus.playing);
+      _startPositionPoll();
     } else if (state.status == AudioStatus.playing) {
+      _positionPollTimer?.cancel();
+      _positionPollTimer = null;
       state = state.copyWith(status: AudioStatus.paused);
     }
+  }
+
+  void _startPositionPoll() {
+    _positionPollTimer?.cancel();
+    _positionPollTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (!mounted) return;
+      final pos = _player.position;
+      final dur = _player.duration;
+      if (pos != state.position) {
+        state = state.copyWith(position: pos);
+      }
+      if (dur != null && dur != state.duration) {
+        state = state.copyWith(duration: dur);
+      }
+    });
   }
 
   // Plays all verses of [surahNumber] one by one with live ayah tracking.
@@ -230,6 +254,8 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
   }
 
   Future<void> stop() async {
+    _positionPollTimer?.cancel();
+    _positionPollTimer = null;
     _indexSub?.cancel();
     _indexSub = null;
     await _player.stop();
@@ -240,6 +266,7 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
 
   @override
   void dispose() {
+    _positionPollTimer?.cancel();
     _playerStateSub.cancel();
     _positionSub.cancel();
     _durationSub.cancel();

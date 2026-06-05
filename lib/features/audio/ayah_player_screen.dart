@@ -610,10 +610,18 @@ class _WordDisplay extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildWordWrap(context, words, activeIdx),
-          Text(
-            'WD pos=${posMs}ms dur=${durMs}ms idx=$activeIdx '
-            't=${timings?.length ?? "null"} n=$n',
-            style: const TextStyle(fontSize: 9, color: Color(0xFF1565C0)),
+          Container(
+            color: const Color(0xFF0D47A1),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Text(
+              'pos=${posMs}ms dur=${durMs}ms idx=$activeIdx '
+              't=${timings?.length ?? "null"} n=$n',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       );
@@ -674,13 +682,23 @@ class _PlayerBar extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (kDebugMode && audioActive) ...[
-              Text(
-                'DBG: sura=${audio.surahNumber} ayah=${audio.currentAyahNumber} '
-                'pos=${audio.position.inMilliseconds}ms '
-                'dur=${audio.duration.inMilliseconds}ms '
-                'trk=${audio.verseTracking} st=${audio.status.name}',
-                style: const TextStyle(fontSize: 9, color: Color(0xFFE53935)),
-                textAlign: TextAlign.center,
+              Container(
+                color: const Color(0xFFB71C1C),
+                padding: const EdgeInsets.all(4),
+                child: Text(
+                  'sura=${audio.surahNumber} '
+                  'ayah=${audio.currentAyahNumber} '
+                  'pos=${audio.position.inMilliseconds}ms '
+                  'dur=${audio.duration.inMilliseconds}ms '
+                  'trk=${audio.verseTracking} '
+                  'st=${audio.status.name}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: 2),
             ],
