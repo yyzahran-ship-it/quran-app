@@ -681,17 +681,17 @@ class _PlayerBar extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (kDebugMode && audioActive) ...[
+            if (kDebugMode) ...[
               Container(
                 color: const Color(0xFFB71C1C),
                 padding: const EdgeInsets.all(4),
                 child: Text(
+                  'st=${audio.status.name} '
                   'sura=${audio.surahNumber} '
                   'ayah=${audio.currentAyahNumber} '
                   'pos=${audio.position.inMilliseconds}ms '
-                  'dur=${audio.duration.inMilliseconds}ms '
                   'trk=${audio.verseTracking} '
-                  'st=${audio.status.name}',
+                  'rec=${reciter?.name?.split(" ").first ?? "NULL"}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: Colors.white,
