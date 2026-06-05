@@ -146,7 +146,8 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
     final sources = List.generate(verseCount, (i) {
       final ayahNum = i + 1;
       final gId = globalAyahId(surahNumber, ayahNum);
-      return AudioSource.uri(Uri.parse(r.verseAudioUrl(gId)));
+      return AudioSource.uri(Uri.parse(
+          r.verseAudioUrl(gId, surahNumber: surahNumber, ayahNumber: ayahNum)));
     });
 
     try {
