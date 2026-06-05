@@ -28,7 +28,11 @@ import 'widgets/juz_jump_dialog.dart';
 import '../settings/settings_screen.dart';
 import '../audio/audio_provider.dart';
 import '../audio/audio_player_bar.dart';
+import '../audio/local_word_timing_repository.dart';
+import '../audio/reciter_provider.dart';
 import '../audio/reciter_picker_sheet.dart';
+import '../audio/word_timing_repository.dart';
+import '../../domain/entities/quran_word.dart';
 
 // CDN base URLs for King Fahad Mushaf page images, tried in order.
 // The GitHub raw URL is a fallback served from GitHub's CDN (Fastly/Azure)
@@ -1710,6 +1714,119 @@ class _AppBarTitle extends StatelessWidget {
   }
 }
 
+// ─── Word-by-word karaoke for a single ayah row ──────────────────────────────
+//
+// Shows the Uthmani Arabic text as individual tappable words. When this ayah is
+// the currently-playing one, the word under the audio position is highlighted
+// green. Other rows rebuild only when their ayah becomes active/inactive
+// (select() returns null for non-playing ayahs → no position-tick rebuilds).
+
+class _MushafWordKaraoke extends ConsumerWidget {
+  const _MushafWordKaraoke({required this.ayah, required this.isDark});
+
+  final Ayah ayah;
+  final bool isDark;
+
+  static const _kGreen = Color(0xFF34A853);
+
+  static int _activeWord(
+    int posMs,
+    int durMs,
+    List<QuranWord>? timings,
+    int wordCount,
+  ) {
+    if (timings != null && timings.isNotEmpty) {
+      int idx = timings.first.position - 1;
+      for (final w in timings) {
+        if (w.startTime <= posMs) {
+          idx = w.position - 1;
+        } else {
+          break;
+        }
+      }
+      return idx.clamp(0, wordCount - 1);
+    }
+    if (durMs <= 0) return 0;
+    return (posMs / durMs * wordCount).floor().clamp(0, wordCount - 1);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final words = ayah.textUthmani
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    final n = words.length;
+    if (n == 0) return const SizedBox.shrink();
+
+    // Only receive position ticks for the currently-playing ayah.
+    final posMs = ref.watch(audioProvider.select((s) {
+      if (s.currentPlayingAyahId != ayah.id || !s.isActive) return null;
+      return s.position.inMilliseconds;
+    }));
+
+    // Pre-load timing data so it's ready when this ayah starts.
+    final reciter = ref.watch(selectedReciterProvider);
+    final qdcId   = reciter?.qdcReciterId;
+    final appId   = reciter?.id;
+
+    final qdcMap   = qdcId != null
+        ? ref.watch(surahWordTimingsProvider('$qdcId:${ayah.surahNumber}')).valueOrNull
+        : null;
+    final localMap = (qdcId == null && appId != null)
+        ? ref.watch(localSurahWordTimingsProvider('$appId:${ayah.surahNumber}')).valueOrNull
+        : null;
+
+    final timings = qdcMap?[ayah.ayahNumber] ?? localMap?[ayah.ayahNumber];
+
+    int activeIdx = -1;
+    if (posMs != null) {
+      final durMs = ref.read(audioProvider).duration.inMilliseconds;
+      activeIdx = _activeWord(posMs, durMs, timings, n);
+    }
+
+    final baseColor = isDark
+        ? const Color(0xFFD4C5A0)
+        : const Color(0xFF3B2F2F);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Wrap(
+        alignment: WrapAlignment.end,
+        textDirection: TextDirection.rtl,
+        spacing: 4,
+        runSpacing: 2,
+        children: List.generate(n, (i) {
+          final isActive = i == activeIdx;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            padding: EdgeInsets.symmetric(
+              horizontal: isActive ? 5 : 0,
+              vertical: isActive ? 1 : 0,
+            ),
+            decoration: isActive
+                ? BoxDecoration(
+                    color: _kGreen,
+                    borderRadius: BorderRadius.circular(5),
+                  )
+                : null,
+            child: Text(
+              words[i],
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                fontFamily: kArabicFont,
+                fontSize: 18,
+                height: 1.8,
+                color: isActive ? Colors.white : baseColor,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
 // ─── Translation list below King Fahad page image ────────────────────────────
 
 class _PageTranslations extends ConsumerWidget {
@@ -1820,8 +1937,9 @@ class _PageTranslations extends ConsumerWidget {
             ),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _MushafWordKaraoke(ayah: ayah, isDark: isDark),
                   if (translations[ayah.id] != null)
                     Text(
                       translations[ayah.id]!,
