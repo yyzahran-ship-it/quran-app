@@ -566,10 +566,7 @@ class _WordDisplay extends ConsumerWidget {
     // Fetch real word timings from QDC API when the reciter supports it.
     final qdcId = ref.watch(selectedReciterProvider.select((r) => r?.qdcReciterId));
     final timings = qdcId != null
-        ? ref.watch(surahWordTimingsProvider((
-              qdcReciterId: qdcId,
-              surahNumber: surah.id,
-            ))).valueOrNull?[ayah.ayahNumber]
+        ? ref.watch(surahWordTimingsProvider('$qdcId:${surah.id}')).valueOrNull?[ayah.ayahNumber]
         : null;
 
     if (!isAudioActive) {

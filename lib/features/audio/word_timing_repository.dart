@@ -87,17 +87,20 @@ final wordTimingRepositoryProvider = Provider<WordTimingRepository>((ref) {
   return WordTimingRepository(Dio());
 });
 
-// Keyed by (qdcReciterId, surahNumber). Result is null on network failure,
-// empty map if the surah has no segment data, or a populated ayah→words map.
-// autoDispose keeps memory clean; keepAlive() is called once data arrives so
-// navigating away and back doesn't re-fetch.
+// Keyed by "$qdcReciterId:$surahNumber" — a plain String avoids the Dart
+// record-type syntax that build_runner's older analyzer can't parse.
+// Result is null on network failure, empty map if there is no segment data,
+// or a populated ayah→words map. keepAlive() is called once data arrives so
+// navigating away and back doesn't re-fetch within the same session.
 final surahWordTimingsProvider = FutureProvider.autoDispose
-    .family<Map<int, List<QuranWord>>?, ({int qdcReciterId, int surahNumber})>(
+    .family<Map<int, List<QuranWord>>?, String>(
   (ref, key) async {
+    final parts = key.split(':');
+    final qdcReciterId = int.parse(parts[0]);
+    final surahNumber  = int.parse(parts[1]);
     final result = await ref
         .read(wordTimingRepositoryProvider)
-        .fetchSurahTimings(key.qdcReciterId, key.surahNumber);
-    // Keep the fetched data alive so it survives widget tree rebuilds.
+        .fetchSurahTimings(qdcReciterId, surahNumber);
     ref.keepAlive();
     return result;
   },
