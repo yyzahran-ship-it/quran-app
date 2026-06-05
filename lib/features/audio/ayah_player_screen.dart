@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
@@ -603,6 +604,21 @@ class _WordDisplay extends ConsumerWidget {
     final audio = ref.read(audioProvider);
     final durMs = audio.duration.inMilliseconds;
     final activeIdx = _activeWord(posMs!, durMs, timings, n);
+
+    if (kDebugMode) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildWordWrap(context, words, activeIdx),
+          Text(
+            'WD pos=${posMs}ms dur=${durMs}ms idx=$activeIdx '
+            't=${timings?.length ?? "null"} n=$n',
+            style: const TextStyle(fontSize: 9, color: Color(0xFF1565C0)),
+          ),
+        ],
+      );
+    }
+
     return _buildWordWrap(context, words, activeIdx);
   }
 }
@@ -657,7 +673,18 @@ class _PlayerBar extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (!showTts &&
+            if (kDebugMode && audioActive) ...[
+              Text(
+                'DBG: sura=${audio.surahNumber} ayah=${audio.currentAyahNumber} '
+                'pos=${audio.position.inMilliseconds}ms '
+                'dur=${audio.duration.inMilliseconds}ms '
+                'trk=${audio.verseTracking} st=${audio.status.name}',
+                style: const TextStyle(fontSize: 9, color: Color(0xFFE53935)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 2),
+            ],
+          if (!showTts &&
                 audioActive &&
                 audio.duration > Duration.zero) ...[
               SliderTheme(
