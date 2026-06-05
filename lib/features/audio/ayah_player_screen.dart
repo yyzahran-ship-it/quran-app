@@ -564,10 +564,14 @@ class _WordDisplay extends ConsumerWidget {
     }
 
     // Fetch real word timings from QDC API when the reciter supports it.
+    // Split into two statements: the old analyzer (7.6.0 / Dart 3.9.0) misparses
+    // ?[...] null-aware subscript when it appears inside a ternary expression,
+    // treating the ? as a second nested ternary operator.
     final qdcId = ref.watch(selectedReciterProvider.select((r) => r?.qdcReciterId));
-    final timings = qdcId != null
-        ? ref.watch(surahWordTimingsProvider('$qdcId:${surah.id}')).valueOrNull?[ayah.ayahNumber]
+    final surahTimingsMap = qdcId != null
+        ? ref.watch(surahWordTimingsProvider('$qdcId:${surah.id}')).valueOrNull
         : null;
+    final timings = surahTimingsMap?[ayah.ayahNumber];
 
     if (!isAudioActive) {
       return _buildWordWrap(context, words, -1);
