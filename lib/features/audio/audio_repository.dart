@@ -20,41 +20,50 @@ const _kBuiltInReciters = <QuranicReciter>[
 
   // ── 18 reciters — verse-by-verse tracking via Islamic Network CDN ─────────
 
+  // qdcReciterId values verified against spa5k/quran-timings-api + quran.com API
+  // QDC IDs 1-12 are the full set with confirmed word-by-word timing data.
+
   QuranicReciter(
     id: 1, name: 'Mishary Rashid Al-Afasy', arabicName: 'مشاري راشد العفاسي',
     relativePath: 'mishari_rashid_al_afasy/',
     islamicNetworkEdition: 'ar.alafasy',
-    qdcReciterId: 7, // verified: api.qurancdn.com/api/qdc/audio/reciters
+    qdcReciterId: 7,
   ),
   QuranicReciter(
     id: 2, name: 'AbdurRahman As-Sudais', arabicName: 'عبدالرحمن السديس',
     relativePath: 'abdurrahmaan_as-sudays/',
     islamicNetworkEdition: 'ar.abdurrahmaansudais',
+    qdcReciterId: 3,
   ),
   QuranicReciter(
     id: 3, name: 'Abdul Basit (Murattal)', arabicName: 'عبدالباسط عبدالصمد',
     relativePath: 'abdul_basit_murattal/', style: 'Murattal',
     islamicNetworkEdition: 'ar.abdulbasitmurattal',
+    qdcReciterId: 2,
   ),
   QuranicReciter(
     id: 4, name: 'Abdul Basit (Abdul Samad)', arabicName: 'عبدالباسط عبدالصمد',
     relativePath: 'abdulbasit_abdussamed/', style: 'Murattal',
     islamicNetworkEdition: 'ar.abdulsamad',
+    qdcReciterId: 1,
   ),
   QuranicReciter(
     id: 5, name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري',
     relativePath: 'mahmoud_khalil_al_husaree/', style: 'Murattal',
     islamicNetworkEdition: 'ar.husary',
+    qdcReciterId: 6,
   ),
   QuranicReciter(
     id: 6, name: 'Al-Husary (Mujawwad)', arabicName: 'محمود خليل الحصري',
     relativePath: 'mahmoud_khalil_al_husaree_mujawwad/', style: 'Mujawwad',
     islamicNetworkEdition: 'ar.husarymujawwad',
+    qdcReciterId: 12,
   ),
   QuranicReciter(
     id: 7, name: 'Abu Bakr Al-Shatri', arabicName: 'أبو بكر الشاطري',
     relativePath: 'abu_bakr_ash-shaatree/',
     islamicNetworkEdition: 'ar.shaatree',
+    qdcReciterId: 4,
   ),
   QuranicReciter(
     id: 8, name: 'Ahmad ibn Ali Al-Ajamy', arabicName: 'أحمد بن علي العجمي',
@@ -65,16 +74,19 @@ const _kBuiltInReciters = <QuranicReciter>[
     id: 9, name: 'Hani Ar-Rifai', arabicName: 'هاني الرفاعي',
     relativePath: 'hani_ar-rifai/',
     islamicNetworkEdition: 'ar.hanirifai',
+    qdcReciterId: 5,
   ),
   QuranicReciter(
     id: 10, name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي',
     relativePath: 'siddiq_al-minshawi/', style: 'Murattal',
     islamicNetworkEdition: 'ar.minshawi',
+    qdcReciterId: 8,
   ),
   QuranicReciter(
     id: 11, name: 'Al-Minshawi (Mujawwad)', arabicName: 'محمد صديق المنشاوي',
     relativePath: 'siddiq_al-minshawi/', style: 'Mujawwad',
     islamicNetworkEdition: 'ar.minshawimujawwad',
+    qdcReciterId: 9,
   ),
   QuranicReciter(
     id: 12, name: 'Muhammad Ayyoob', arabicName: 'محمد أيوب',
@@ -110,6 +122,7 @@ const _kBuiltInReciters = <QuranicReciter>[
     id: 18, name: 'Saud Al-Shuraim', arabicName: 'سعود الشريم',
     relativePath: 'saoud_ash-shuraim/',
     islamicNetworkEdition: 'ar.saoodshuraym',
+    qdcReciterId: 10,
   ),
 
   // ── 17 reciters — surah-level only via QuranicAudio CDN ──────────────────
@@ -154,6 +167,7 @@ const _kBuiltInReciters = <QuranicReciter>[
   QuranicReciter(
     id: 28, name: 'Muhammad Al-Tablawi', arabicName: 'محمد الطبلاوي',
     relativePath: 'muhammad_al_tablawi/',
+    qdcReciterId: 11,
   ),
   QuranicReciter(
     id: 29, name: 'Salah Al-Budair', arabicName: 'صلاح البدير',
