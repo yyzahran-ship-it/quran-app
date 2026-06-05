@@ -122,6 +122,18 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Pre-fetch QDC word-timing data (Mishary — default reciter)
+        continue-on-error: true
+        run: |
+          pip install requests --quiet
+          # Fetch timing for Mishary Rashid Al-Afasy (qdc_id=7) — all 114 surahs.
+          # Output: assets/timings/qdc7s{1-114}.json — bundled into the APK so
+          # word highlighting works offline on first launch without network calls.
+          # ~23 seconds at 0.15s delay between calls.
+          python scripts/fetch_qdc_timings.py --reciter 7 --delay 0.15
+          COUNT=$(ls assets/timings/qdc7s*.json 2>/dev/null | wc -l)
+          echo "=== Bundled QDC timing for $COUNT/114 surahs (Mishary) ==="
+
       - name: Generate app icons
         run: dart run flutter_launcher_icons
 
