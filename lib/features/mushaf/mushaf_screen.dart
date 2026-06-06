@@ -19,7 +19,6 @@ import 'mushaf_provider.dart';
 import 'mushaf_download_provider.dart';
 import 'search_screen.dart';
 import 'ayah_coords_provider.dart';
-import 'word_coords_provider.dart';
 import 'second_translation_provider.dart';
 import 'tafsir_repository.dart';
 import 'tafsir_sheet.dart';
@@ -899,22 +898,21 @@ class _MushafAyahText extends ConsumerWidget {
   }
 }
 
-// ─── Word highlight overlay on page image ────────────────────────────────────
+// ─── Full-ayah highlight overlay on the page image ───────────────────────────
 //
-// Paints a green semi-transparent box over the currently-playing word directly
-// on the Mushaf page image. Coordinates come from wordcoords.db which stores
-// per-word pixel rects in the same 1024×1634 space as ayahcoords.db.
+// When audio is playing, fills + borders every line-rect of the active ayah
+// directly on the Mushaf page scan. Uses the ayah-level bounding boxes from
+// ayahcoords.db (already loaded by _AyahImageOverlay). Only rebuilds when the
+// playing ayah changes — not on every 100 ms position tick.
 
-class _WordHighlightPainter extends CustomPainter {
-  const _WordHighlightPainter({
-    required this.wordRect,
-    required this.isDark,
+class _AyahHighlightPainter extends CustomPainter {
+  const _AyahHighlightPainter({
+    required this.rects,
     required this.xScale,
     required this.yScale,
   });
 
-  final Rect? wordRect;
-  final bool isDark;
+  final List<Rect>? rects;
   final double xScale;
   final double yScale;
 
@@ -922,114 +920,69 @@ class _WordHighlightPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final r = wordRect;
-    if (r == null) return;
-
-    final scaled = Rect.fromLTWH(
-      r.left * xScale,
-      r.top * yScale,
-      r.width * xScale,
-      r.height * yScale,
-    );
-
-    final highlightColor = _kGreen.withAlpha(90);
-    final borderColor   = _kGreen.withAlpha(200);
+    final rs = rects;
+    if (rs == null || rs.isEmpty) return;
 
     final fillPaint = Paint()
-      ..color = highlightColor
+      ..color = _kGreen.withAlpha(56)   // ~22 % — matches demo default
       ..style = PaintingStyle.fill;
     final borderPaint = Paint()
-      ..color = borderColor
+      ..color = _kGreen.withAlpha(210)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
-    final rr = RRect.fromRectAndRadius(scaled.inflate(2), const Radius.circular(4));
-    canvas.drawRRect(rr, fillPaint);
-    canvas.drawRRect(rr, borderPaint);
+    for (final r in rs) {
+      final scaled = Rect.fromLTWH(
+        r.left   * xScale,
+        r.top    * yScale,
+        r.width  * xScale,
+        r.height * yScale,
+      );
+      final rr = RRect.fromRectAndRadius(scaled.inflate(2), const Radius.circular(4));
+      canvas.drawRRect(rr, fillPaint);
+      canvas.drawRRect(rr, borderPaint);
+    }
   }
 
   @override
-  bool shouldRepaint(_WordHighlightPainter old) =>
-      old.wordRect != wordRect || old.isDark != isDark ||
-      old.xScale != xScale || old.yScale != yScale;
+  bool shouldRepaint(_AyahHighlightPainter old) =>
+      old.rects != rects || old.xScale != xScale || old.yScale != yScale;
 }
 
-class _WordHighlightLayer extends ConsumerWidget {
-  const _WordHighlightLayer({
+class _AyahHighlightLayer extends ConsumerWidget {
+  const _AyahHighlightLayer({
     required this.ayahs,
-    required this.page,
-    required this.isDark,
+    required this.coordsMap,
     required this.xScale,
     required this.yScale,
   });
 
   final List<Ayah> ayahs;
-  final int page;
-  final bool isDark;
+  // Already-loaded page coords map passed from _AyahImageOverlay — no extra provider watch.
+  final PageCoordsMap coordsMap;
   final double xScale;
   final double yScale;
 
-  static int _activeWord(
-      int posMs, int durMs, List<QuranWord>? timings, int wordCount) {
-    if (timings != null && timings.isNotEmpty) {
-      int idx = timings.first.position - 1;
-      for (final w in timings) {
-        if (w.startTime <= posMs) idx = w.position - 1; else break;
-      }
-      return idx.clamp(0, wordCount - 1);
-    }
-    if (durMs <= 0) return 0;
-    return (posMs / durMs * wordCount).floor().clamp(0, wordCount - 1);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Single select captures all needed audio fields atomically.
-    final snap = ref.watch(audioProvider.select((s) {
-      if (!s.isActive || s.currentPlayingAyahId == null) return null;
-      return (
-        playingId: s.currentPlayingAyahId!,
-        posMs: s.position.inMilliseconds,
-        durMs: s.duration.inMilliseconds,
-      );
-    }));
-    if (snap == null) return const SizedBox.shrink();
+    // Rebuilds only when the playing ayah ID changes — not every 100 ms tick.
+    final playingId = ref.watch(
+        audioProvider.select((s) => s.isActive ? s.currentPlayingAyahId : null));
+    if (playingId == null) return const SizedBox.shrink();
 
     Ayah? playingAyah;
     for (final a in ayahs) {
-      if (a.id == snap.playingId) { playingAyah = a; break; }
+      if (a.id == playingId) { playingAyah = a; break; }
     }
     if (playingAyah == null) return const SizedBox.shrink();
 
-    // Word timings for accurate position; proportional fallback if null.
-    final reciter = ref.watch(selectedReciterProvider);
-    final qdcId  = reciter?.qdcReciterId;
-    final appId  = reciter?.id;
-    final qdcMap = qdcId != null
-        ? ref.watch(surahWordTimingsProvider('$qdcId:${playingAyah.surahNumber}')).valueOrNull
-        : null;
-    final localMap = (qdcId == null && appId != null)
-        ? ref.watch(localSurahWordTimingsProvider('$appId:${playingAyah.surahNumber}')).valueOrNull
-        : null;
-    final timings = qdcMap?[playingAyah.ayahNumber] ?? localMap?[playingAyah.ayahNumber];
-
-    final wordCount = playingAyah.textUthmani
-        .split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
-    final activeIdx = _activeWord(snap.posMs, snap.durMs, timings, wordCount);
-    final activePos = activeIdx + 1; // 1-based to match wordcoords.db
-
-    // Pixel-precise word rects from bundled database.
-    final wordMap = ref.watch(wordCoordsProvider(page)).valueOrNull;
-    if (wordMap == null || wordMap.isEmpty) return const SizedBox.shrink();
-
     final mapKey = playingAyah.surahNumber * 10000 + playingAyah.ayahNumber;
-    final wordRect = wordMap[mapKey]?[activePos];
+    final rects  = coordsMap[mapKey];
 
     return RepaintBoundary(
       child: CustomPaint(
-        painter: _WordHighlightPainter(
-          wordRect: wordRect,
-          isDark: isDark,
+        painter: _AyahHighlightPainter(
+          rects:  rects,
           xScale: xScale,
           yScale: yScale,
         ),
@@ -1129,14 +1082,13 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
 
         final zones = <Widget>[
           Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.translucent)),
-          // Word-level karaoke highlight (below tap zones so taps still work).
+          // Full-ayah highlight (below tap zones so taps still register).
           Positioned.fill(
-            child: _WordHighlightLayer(
-              ayahs: widget.ayahs,
-              page: widget.page,
-              isDark: widget.isDark,
-              xScale: xScale,
-              yScale: yScale,
+            child: _AyahHighlightLayer(
+              ayahs:     widget.ayahs,
+              coordsMap: coordsMap,
+              xScale:    xScale,
+              yScale:    yScale,
             ),
           ),
         ];
