@@ -18,7 +18,7 @@ const _kApiBase = 'https://api.quranicaudio.com';
 
 const _kBuiltInReciters = <QuranicReciter>[
 
-  // ── 18 reciters — verse-by-verse tracking via Islamic Network CDN ─────────
+  // ── 14 reciters — verse-by-verse tracking via Islamic Network CDN ─────────
 
   // qdcReciterId values verified against spa5k/quran-timings-api + quran.com API
   // QDC IDs 1-12 are the full set with confirmed word-by-word timing data.
@@ -72,8 +72,8 @@ const _kBuiltInReciters = <QuranicReciter>[
   ),
   QuranicReciter(
     id: 9, name: 'Hani Ar-Rifai', arabicName: 'هاني الرفاعي',
-    relativePath: 'hani_ar-rifai/',
-    islamicNetworkEdition: 'ar.hanirifai',
+    relativePath: 'rifai/',
+    everyayahSubfolder: 'Hani_Rifai_64kbps',
     qdcReciterId: 5,
   ),
   QuranicReciter(
@@ -84,8 +84,8 @@ const _kBuiltInReciters = <QuranicReciter>[
   ),
   QuranicReciter(
     id: 11, name: 'Al-Minshawi (Mujawwad)', arabicName: 'محمد صديق المنشاوي',
-    relativePath: 'siddiq_al-minshawi/', style: 'Mujawwad',
-    islamicNetworkEdition: 'ar.minshawimujawwad',
+    relativePath: 'minshawi_mujawwad/', style: 'Mujawwad',
+    everyayahSubfolder: 'Minshawy_Mujawwad_64kbps',
     qdcReciterId: 9,
   ),
   QuranicReciter(
@@ -116,12 +116,12 @@ const _kBuiltInReciters = <QuranicReciter>[
   QuranicReciter(
     id: 17, name: 'Ibrahim Akhdar', arabicName: 'إبراهيم الأخضر',
     relativePath: 'ibrahim_al-akhdar/',
-    islamicNetworkEdition: 'ar.ibrahimakhbar',
+    everyayahSubfolder: 'Ibrahim_Akhdar_64kbps',
   ),
   QuranicReciter(
     id: 18, name: 'Saud Al-Shuraim', arabicName: 'سعود الشريم',
-    relativePath: 'saoud_ash-shuraim/',
-    islamicNetworkEdition: 'ar.saoodshuraym',
+    relativePath: 'sa3ood_al-shuraym/',
+    everyayahSubfolder: 'Saood_ash-Shuraym_128kbps',
     qdcReciterId: 10,
   ),
 
@@ -189,7 +189,7 @@ const _kBuiltInReciters = <QuranicReciter>[
   ),
   QuranicReciter(
     id: 30, name: 'Sudais and Shuraim', arabicName: 'السديس والشريم',
-    relativePath: 'sudais_and_shuraim/',
+    relativePath: 'sodais_and_shuraim/',
     // Combined reciter — no single everyayah path. Remains surah-level.
   ),
   QuranicReciter(
@@ -249,17 +249,19 @@ const _kBuiltInReciters = <QuranicReciter>[
   QuranicReciter(
     id: 41, name: 'Alzain Mohammad Ahmad',
     relativePath: 'alzain_mohammad_ahmad/',
-    // No confirmed everyayah path — remains surah-level.
+    surahBaseUrl: 'https://server8.mp3quran.net/alzain',
+    // Not on everyAyah or QuranicAudio — surah-level only via mp3quran.net.
   ),
   QuranicReciter(
     id: 42, name: 'Muhammad Al-Luhaidan', arabicName: 'محمد اللحيدان',
-    relativePath: 'muhammad_al-luhaidan/',
+    relativePath: 'muhammad_alhaidan/',
     // No confirmed everyayah path — remains surah-level.
   ),
   QuranicReciter(
     id: 43, name: 'AbdulHadi Kanakeri',
     relativePath: 'abdulhadi_kanakeri/',
-    // No confirmed everyayah path — remains surah-level.
+    surahBaseUrl: 'https://server6.mp3quran.net/kanakeri',
+    // Not on everyAyah or QuranicAudio — surah-level only via mp3quran.net.
   ),
   QuranicReciter(
     id: 44, name: 'Bandar Baleela', arabicName: 'بندر بليلة',
@@ -267,12 +269,11 @@ const _kBuiltInReciters = <QuranicReciter>[
     // No confirmed everyayah path — remains surah-level.
   ),
 
-  // ── 1 English reciter — verse-by-verse tracking via Islamic Network CDN ──────
-  // en.walk is a confirmed Islamic Network audio edition.
+  // ── 1 English reciter — verse-by-verse tracking via everyAyah.com ──────────
   QuranicReciter(
     id: 45, name: 'Ibrahim Walk (English)',
     relativePath: 'ibrahim_walk_saheeh_intl/',
-    islamicNetworkEdition: 'en.walk',
+    everyayahSubfolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps',
   ),
 ];
 
