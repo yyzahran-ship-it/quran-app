@@ -1365,6 +1365,7 @@ class _AyahPopupBar extends ConsumerWidget {
 
     final isBookmarked = ref.watch(
         bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)));
+    final reciter = ref.watch(selectedReciterProvider);
 
     return Material(
       color: Colors.transparent,
@@ -1412,6 +1413,20 @@ class _AyahPopupBar extends ConsumerWidget {
                             surahNumber: ayah.surahNumber,
                             ayahNumber: ayah.ayahNumber,
                           );
+                    },
+                  ),
+                  _PopupBtn(
+                    icon: Icons.headphones_rounded,
+                    tooltip: 'Play ayah',
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (reciter != null) {
+                        ref.read(audioProvider.notifier).playAyah(
+                              ayah.surahNumber,
+                              ayah.ayahNumber,
+                              reciter: reciter,
+                            );
+                      }
                     },
                   ),
                   _PopupBtn(
