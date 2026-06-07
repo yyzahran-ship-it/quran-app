@@ -4,7 +4,7 @@ import 'audio_repository.dart';
 
 // Fetches the full reciter list from QuranicAudio once per session, sorted A–Z.
 final recitersProvider = FutureProvider<List<QuranicReciter>>((ref) async {
-  final list = await ref.read(quranicAudioRepositoryProvider).fetchReciters();
+  final list = List.of(await ref.read(quranicAudioRepositoryProvider).fetchReciters());
   list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   return list;
 });
