@@ -84,6 +84,9 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
   late final StreamSubscription<Duration> _positionSub;
   late final StreamSubscription<Duration?> _durationSub;
   StreamSubscription<int?>? _indexSub;
+  // Catches async URL-load failures in ConcatenatingAudioSource that happen
+  // after play() returns and outside the normal try-catch.
+  StreamSubscription<PlaybackEvent>? _verseErrorSub;
   // Polls position every 100 ms while playing. Belt-and-suspenders alongside
   // positionStream — guarantees state.position updates even if the platform
   // plugin's stream fires infrequently on certain Android devices.
@@ -157,6 +160,9 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
     QuranicReciter r, {
     int startAyah = 1,
   }) async {
+    _verseErrorSub?.cancel();
+    _verseErrorSub = null;
+
     final verseCount = kSurahVerseCounts[surahNumber - 1];
     final clampedStart = startAyah.clamp(1, verseCount);
     final sources = List.generate(verseCount, (i) {
@@ -184,6 +190,20 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
         );
       });
 
+      // ConcatenatingAudioSource loads lazily — URL failures arrive as stream
+      // errors after play() returns and outside the try-catch below. Catch them
+      // here so the surah-level fallback actually fires.
+      _verseErrorSub = _player.playbackEventStream.listen(
+        null,
+        onError: (Object e, StackTrace st) async {
+          _verseErrorSub?.cancel();
+          _verseErrorSub = null;
+          _indexSub?.cancel();
+          _indexSub = null;
+          await _playSurahLevel(surahNumber, r);
+        },
+      );
+
       state = state.copyWith(
         verseTracking: true,
         currentAyahNumber: clampedStart,
@@ -191,7 +211,9 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
       );
       await _player.play();
     } catch (_) {
-      // Verse files unavailable — fall back to surah-level.
+      // Verse files unavailable at setup — fall back to surah-level.
+      _verseErrorSub?.cancel();
+      _verseErrorSub = null;
       _indexSub?.cancel();
       _indexSub = null;
       await _playSurahLevel(surahNumber, r);
@@ -256,6 +278,8 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
   Future<void> stop() async {
     _positionPollTimer?.cancel();
     _positionPollTimer = null;
+    _verseErrorSub?.cancel();
+    _verseErrorSub = null;
     _indexSub?.cancel();
     _indexSub = null;
     await _player.stop();
@@ -270,6 +294,7 @@ class AudioNotifier extends StateNotifier<AudioPlaybackState> {
     _playerStateSub.cancel();
     _positionSub.cancel();
     _durationSub.cancel();
+    _verseErrorSub?.cancel();
     _indexSub?.cancel();
     _player.dispose();
     super.dispose();

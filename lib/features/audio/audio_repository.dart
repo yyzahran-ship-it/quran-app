@@ -116,7 +116,7 @@ const _kBuiltInReciters = <QuranicReciter>[
   QuranicReciter(
     id: 17, name: 'Ibrahim Akhdar', arabicName: 'إبراهيم الأخضر',
     relativePath: 'ibrahim_al-akhdar/',
-    everyayahSubfolder: 'Ibrahim_Akhdar_64kbps',
+    // everyAyah subfolder unconfirmed — surah-level via QuranicAudio only.
   ),
   QuranicReciter(
     id: 18, name: 'Saud Al-Shuraim', arabicName: 'سعود الشريم',
@@ -243,9 +243,8 @@ const _kBuiltInReciters = <QuranicReciter>[
   ),
   QuranicReciter(
     id: 41, name: 'Alzain Mohammad Ahmad',
-    relativePath: 'alzain_mohammad_ahmad/',
-    surahBaseUrl: 'https://server8.mp3quran.net/alzain',
-    // Not on everyAyah or QuranicAudio — surah-level only via mp3quran.net.
+    relativePath: 'alzain/',
+    // QuranicAudio surah-level only.
   ),
   QuranicReciter(
     id: 42, name: 'Muhammad Al-Luhaidan', arabicName: 'محمد اللحيدان',
