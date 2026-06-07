@@ -145,6 +145,8 @@ class _ReciterTile extends StatelessWidget {
             Flexible(
               child: Text(
                 reciter.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected ? colors.primary : null,
@@ -178,12 +180,18 @@ class _ReciterTile extends StatelessWidget {
             )
           : null,
       trailing: reciter.arabicName != null
-          ? Text(
-              reciter.arabicName!,
-              style: TextStyle(
-                fontFamily: 'AmiriQuran',
-                fontSize: 15,
-                color: colors.onSurfaceVariant,
+          ? ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 110),
+              child: Text(
+                reciter.arabicName!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontFamily: 'AmiriQuran',
+                  fontSize: 15,
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             )
           : null,
