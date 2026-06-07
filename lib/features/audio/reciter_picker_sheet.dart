@@ -4,6 +4,15 @@ import 'audio_models.dart';
 import 'audio_provider.dart';
 import 'reciter_provider.dart';
 
+const _kBlack = Color(0xFF0A0A0A);
+const _kGold = Color(0xFFC9A84C);
+const _kGoldDim = Color(0xFF8A6D2A);
+const _kDivider = Color(0xFF1A1A1A);
+const _kSelectedBg = Color(0xFF161008);
+const _kUnselectedName = Color(0xFFAAAAAA);
+const _kUnselectedRadio = Color(0xFF444444);
+const _kArabicUnsel = Color(0xFF555555);
+
 // Bottom sheet for selecting a reciter and starting playback.
 // [surahNumber] is the surah that will start playing on selection.
 class ReciterPickerSheet extends ConsumerWidget {
@@ -15,7 +24,6 @@ class ReciterPickerSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final recitersAsync = ref.watch(recitersProvider);
     final selectedId = ref.watch(selectedReciterIdProvider);
-    final colors = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.65,
@@ -23,52 +31,57 @@ class ReciterPickerSheet extends ConsumerWidget {
       maxChildSize: 0.92,
       expand: false,
       builder: (ctx, scrollController) => Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        decoration: const BoxDecoration(
+          color: _kBlack,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
-            _handle(context),
+            _handle(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
               child: Row(
                 children: [
-                  Icon(Icons.headphones, size: 20, color: colors.primary),
+                  const Icon(Icons.headphones, size: 20, color: _kGold),
                   const SizedBox(width: 10),
                   Text(
                     'Choose Reciter',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: _kGold,
+                          letterSpacing: 0.3,
+                        ),
                   ),
                 ],
               ),
             ),
-            Divider(height: 1, color: colors.outlineVariant),
+            const Divider(height: 1, color: _kDivider),
             Expanded(
               child: recitersAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: _kGold),
+                ),
                 error: (e, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.wifi_off_rounded,
-                            size: 48, color: colors.outline),
+                        const Icon(Icons.wifi_off_rounded,
+                            size: 48, color: _kArabicUnsel),
                         const SizedBox(height: 12),
-                        Text(
+                        const Text(
                           'Could not load reciters.\nCheck your internet connection.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: colors.onSurfaceVariant),
+                          style: TextStyle(color: _kUnselectedName),
                         ),
                         const SizedBox(height: 16),
-                        FilledButton.tonal(
-                          onPressed: () =>
-                              ref.invalidate(recitersProvider),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kGold,
+                            foregroundColor: _kBlack,
+                          ),
+                          onPressed: () => ref.invalidate(recitersProvider),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -104,13 +117,13 @@ class ReciterPickerSheet extends ConsumerWidget {
     );
   }
 
-  Widget _handle(BuildContext context) => Center(
+  Widget _handle() => Center(
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 10),
           width: 36,
           height: 4,
           decoration: BoxDecoration(
-            color: Theme.of(context).dividerColor,
+            color: const Color(0xFF333333),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -130,74 +143,97 @@ class _ReciterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return ListTile(
-      leading: Icon(
-        isSelected
-            ? Icons.radio_button_checked_rounded
-            : Icons.radio_button_unchecked_rounded,
-        color: isSelected ? colors.primary : colors.outline,
-        size: 22,
-      ),
-      title: Row(
+    return InkWell(
+      onTap: onTap,
+      splashColor: _kGold.withAlpha(20),
+      highlightColor: _kGold.withAlpha(10),
+      child: Container(
+        color: isSelected ? _kSelectedBg : Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        constraints: const BoxConstraints(minHeight: 58),
+        child: Row(
           children: [
-            Flexible(
-              child: Text(
-                reciter.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected ? colors.primary : null,
-                ),
+            Icon(
+              isSelected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: isSelected ? _kGold : _kUnselectedRadio,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          reciter.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: isSelected ? _kGold : _kUnselectedName,
+                          ),
+                        ),
+                      ),
+                      if (reciter.supportsVerseTracking) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _kGold.withAlpha(38),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '⟨ tracking ⟩',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: _kGold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (reciter.style != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      reciter.style!,
+                      style: const TextStyle(
+                          fontSize: 12, color: _kArabicUnsel),
+                    ),
+                  ],
+                ],
               ),
             ),
-            if (reciter.supportsVerseTracking) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.green.withAlpha(30),
-                  borderRadius: BorderRadius.circular(4),
-                ),
+            if (reciter.arabicName != null) ...[
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 110),
                 child: Text(
-                  '⟨ tracking ⟩',
+                  reciter.arabicName!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
                   style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green.shade700,
+                    fontFamily: 'AmiriQuran',
+                    fontSize: 14,
+                    color: isSelected ? _kGoldDim : _kArabicUnsel,
                   ),
                 ),
               ),
             ],
           ],
         ),
-      subtitle: reciter.style != null
-          ? Text(
-              reciter.style!,
-              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-            )
-          : null,
-      trailing: reciter.arabicName != null
-          ? ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 110),
-              child: Text(
-                reciter.arabicName!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontFamily: 'AmiriQuran',
-                  fontSize: 15,
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            )
-          : null,
-      selected: isSelected,
-      selectedTileColor: colors.primaryContainer.withAlpha(80),
-      onTap: onTap,
+      ),
     );
   }
 }
