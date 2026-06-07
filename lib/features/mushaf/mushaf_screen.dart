@@ -905,16 +905,26 @@ class _MushafAyahText extends ConsumerWidget {
 // ayahcoords.db (already loaded by _AyahImageOverlay). Only rebuilds when the
 // playing ayah changes — not on every 100 ms position tick.
 
+// The ayahcoords.db was built from images that lack the decorative surah-title
+// banner present in the qurancdn.com PNG files.  Pages 1 & 2 have this banner
+// (~90 px + whitespace) which pushes every text line 103 px down in the
+// 1024×1634 DB coordinate space.  Pages 3 onward have no such banner.
+const double _kPage12YOffset = 103.0;
+
+double _pageYOffset(int page) => page <= 2 ? _kPage12YOffset : 0.0;
+
 class _AyahHighlightPainter extends CustomPainter {
   const _AyahHighlightPainter({
     required this.rects,
     required this.xScale,
     required this.yScale,
+    required this.yOffset,
   });
 
   final List<Rect>? rects;
   final double xScale;
   final double yScale;
+  final double yOffset;
 
   static const _kGreen = Color(0xFF34A853);
 
@@ -933,10 +943,10 @@ class _AyahHighlightPainter extends CustomPainter {
 
     for (final r in rs) {
       final scaled = Rect.fromLTWH(
-        r.left   * xScale,
-        r.top    * yScale,
-        r.width  * xScale,
-        r.height * yScale,
+        r.left              * xScale,
+        (r.top + yOffset)   * yScale,
+        r.width             * xScale,
+        r.height            * yScale,
       );
       final rr = RRect.fromRectAndRadius(scaled.inflate(2), const Radius.circular(4));
       canvas.drawRRect(rr, fillPaint);
@@ -946,7 +956,10 @@ class _AyahHighlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AyahHighlightPainter old) =>
-      old.rects != rects || old.xScale != xScale || old.yScale != yScale;
+      old.rects   != rects   ||
+      old.xScale  != xScale  ||
+      old.yScale  != yScale  ||
+      old.yOffset != yOffset;
 }
 
 class _AyahHighlightLayer extends ConsumerWidget {
@@ -955,6 +968,7 @@ class _AyahHighlightLayer extends ConsumerWidget {
     required this.coordsMap,
     required this.xScale,
     required this.yScale,
+    required this.page,
   });
 
   final List<Ayah> ayahs;
@@ -962,6 +976,7 @@ class _AyahHighlightLayer extends ConsumerWidget {
   final PageCoordsMap coordsMap;
   final double xScale;
   final double yScale;
+  final int page;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -982,9 +997,10 @@ class _AyahHighlightLayer extends ConsumerWidget {
     return RepaintBoundary(
       child: CustomPaint(
         painter: _AyahHighlightPainter(
-          rects:  rects,
-          xScale: xScale,
-          yScale: yScale,
+          rects:   rects,
+          xScale:  xScale,
+          yScale:  yScale,
+          yOffset: _pageYOffset(page),
         ),
         child: const SizedBox.expand(),
       ),
@@ -1042,7 +1058,7 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
           // Topmost rect = first line of the ayah.
           final firstRect = rects
               .reduce((a, b) => a.top <= b.top ? a : b);
-          final topLocalY    = firstRect.top  * _yScale;
+          final topLocalY    = (firstRect.top + _pageYOffset(widget.page)) * _yScale;
           // Right edge of the first rect = beginning of the ayah in RTL.
           final beginLocalX  = (firstRect.left + firstRect.width) * _xScale;
           anchor = Offset(
@@ -1080,6 +1096,8 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
         final xScale = _xScale;
         final yScale = _yScale;
 
+        final yOff = _pageYOffset(widget.page);
+
         final zones = <Widget>[
           Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.translucent)),
           // Full-ayah highlight (below tap zones so taps still register).
@@ -1089,6 +1107,7 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
               coordsMap: coordsMap,
               xScale:    xScale,
               yScale:    yScale,
+              page:      widget.page,
             ),
           ),
         ];
@@ -1098,10 +1117,10 @@ class _AyahImageOverlayState extends ConsumerState<_AyahImageOverlay> {
           if (rects == null) continue;
           for (final r in rects) {
             zones.add(Positioned(
-              left:   r.left   * xScale,
-              top:    r.top    * yScale,
-              width:  r.width  * xScale,
-              height: r.height * yScale,
+              left:   r.left              * xScale,
+              top:    (r.top + yOff)      * yScale,
+              width:  r.width             * xScale,
+              height: r.height            * yScale,
               child: _zone(ayah, tapShade),
             ));
           }
