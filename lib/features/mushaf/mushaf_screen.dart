@@ -1364,8 +1364,24 @@ class _AyahPopupBar extends ConsumerWidget {
   final bool isDark;
   final Offset tapPos;
 
-  static const _barH    = 56.0;
-  static const _barColor = Color(0xFF1B6B3A); // deep Quran-green
+  static const _barH = 58.0;
+  static const _borderW = 2.5; // gold bezel thickness
+
+  // Metallic gold gradient — mimics a bevelled luxury-watch bezel.
+  static const _goldBezel = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF0D060),
+      Color(0xFFC9A030),
+      Color(0xFF7A5C10),
+      Color(0xFFC9A030),
+      Color(0xFFF0D060),
+      Color(0xFFC9A030),
+      Color(0xFF8A6518),
+    ],
+    stops: [0.0, 0.18, 0.38, 0.52, 0.65, 0.80, 1.0],
+  );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1402,71 +1418,91 @@ class _AyahPopupBar extends ConsumerWidget {
           Positioned(
             top: barTop,
             left: barLeft,
+            // Outer shell — metallic gold gradient acts as the bezel border.
             child: Container(
               width: barW,
               height: _barH,
+              padding: const EdgeInsets.all(_borderW),
               decoration: BoxDecoration(
-                color: _barColor,
-                borderRadius: BorderRadius.circular(28),
+                gradient: _goldBezel,
+                borderRadius: BorderRadius.circular(29),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x55000000),
-                    blurRadius: 14,
-                    offset: Offset(0, 5),
+                    color: Color(0xCC000000),
+                    blurRadius: 32,
+                    offset: Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: Color(0x40C9A030),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _PopupBtn(
-                    icon: isBookmarked
-                        ? Icons.bookmark
-                        : Icons.bookmark_border,
-                    active: isBookmarked,
-                    tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark',
-                    onTap: () {
-                      Navigator.pop(context);
-                      ref.read(bookmarksProvider.notifier).toggle(
-                            ayahId: ayah.id,
-                            surahNumber: ayah.surahNumber,
-                            ayahNumber: ayah.ayahNumber,
-                          );
-                    },
+              // Inner shell — deep black with warm tint.
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF111008), Color(0xFF0A0A06)],
                   ),
-                  _PopupBtn(
-                    icon: Icons.headphones_rounded,
-                    tooltip: 'Play ayah',
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (reciter != null) {
-                        ref.read(audioProvider.notifier).playAyah(
-                              ayah.surahNumber,
-                              ayah.ayahNumber,
-                              reciter: reciter,
+                  borderRadius: BorderRadius.circular(29 - _borderW),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _PopupBtn(
+                      icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      active: isBookmarked,
+                      tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark',
+                      onTap: () {
+                        Navigator.pop(context);
+                        ref.read(bookmarksProvider.notifier).toggle(
+                              ayahId: ayah.id,
+                              surahNumber: ayah.surahNumber,
+                              ayahNumber: ayah.ayahNumber,
                             );
-                      }
-                    },
-                  ),
-                  _PopupBtn(
-                    icon: Icons.label_outline,
-                    tooltip: 'Tag',
-                    onTap: () => Navigator.pop(context, 'tag'),
-                  ),
-                  _PopupBtn(
-                    icon: Icons.share_outlined,
-                    tooltip: 'Share',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _shareAyah(ayah, ref);
-                    },
-                  ),
-                  _PopupBtn(
-                    icon: Icons.language,
-                    tooltip: 'Tafsir',
-                    onTap: () => Navigator.pop(context, 'tafsir'),
-                  ),
-                ],
+                      },
+                    ),
+                    const _PopupSep(),
+                    _PopupBtn(
+                      icon: Icons.headphones_rounded,
+                      tooltip: 'Play ayah',
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (reciter != null) {
+                          ref.read(audioProvider.notifier).playAyah(
+                                ayah.surahNumber,
+                                ayah.ayahNumber,
+                                reciter: reciter,
+                              );
+                        }
+                      },
+                    ),
+                    const _PopupSep(),
+                    _PopupBtn(
+                      icon: Icons.label_outline,
+                      tooltip: 'Tag',
+                      onTap: () => Navigator.pop(context, 'tag'),
+                    ),
+                    const _PopupSep(),
+                    _PopupBtn(
+                      icon: Icons.share_outlined,
+                      tooltip: 'Share',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _shareAyah(ayah, ref);
+                      },
+                    ),
+                    const _PopupSep(),
+                    _PopupBtn(
+                      icon: Icons.language,
+                      tooltip: 'Tafsir',
+                      onTap: () => Navigator.pop(context, 'tafsir'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1500,11 +1536,25 @@ class _PopupBtn extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Icon(
             icon,
-            color: active ? Colors.amber.shade300 : Colors.white,
-            size: 26,
+            color: active ? const Color(0xFFF0C840) : const Color(0xFFC9A84C),
+            size: 24,
           ),
         ),
       ),
+    );
+  }
+}
+
+// Thin vertical divider between popup buttons — gold-tinted.
+class _PopupSep extends StatelessWidget {
+  const _PopupSep();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 22,
+      color: const Color(0x30C9A84C),
     );
   }
 }
