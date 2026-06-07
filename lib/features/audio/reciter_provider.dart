@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'audio_models.dart';
 import 'audio_repository.dart';
 
-// Fetches the full reciter list from QuranicAudio once per session.
-final recitersProvider = FutureProvider<List<QuranicReciter>>((ref) {
-  return ref.read(quranicAudioRepositoryProvider).fetchReciters();
+// Fetches the full reciter list from QuranicAudio once per session, sorted A–Z.
+final recitersProvider = FutureProvider<List<QuranicReciter>>((ref) async {
+  final list = await ref.read(quranicAudioRepositoryProvider).fetchReciters();
+  list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return list;
 });
 
 // ID of the reciter the user has chosen (null = use first in list).
