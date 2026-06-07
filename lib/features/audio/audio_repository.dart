@@ -208,11 +208,6 @@ const _kBuiltInReciters = <QuranicReciter>[
     // No confirmed everyayah path — remains surah-level.
   ),
   QuranicReciter(
-    id: 34, name: 'Salaah Abu Ismail', arabicName: 'صلاح أبو إسماعيل',
-    relativePath: 'salaah_abu_ismail/',
-    // No confirmed everyayah path — remains surah-level.
-  ),
-  QuranicReciter(
     id: 35, name: 'Hamad Sinan', arabicName: 'حمد سنان',
     relativePath: 'hamad_sinan/',
     // No confirmed everyayah path — remains surah-level.
