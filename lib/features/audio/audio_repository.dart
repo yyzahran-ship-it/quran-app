@@ -32,7 +32,7 @@ const _kBuiltInReciters = <QuranicReciter>[
   QuranicReciter(
     id: 2, name: 'AbdurRahman As-Sudais', arabicName: 'عبدالرحمن السديس',
     relativePath: 'abdurrahmaan_as-sudays/',
-    islamicNetworkEdition: 'ar.abdurrahmaansudais',
+    everyayahSubfolder: 'Abdurrahmaan_As-Sudais_192kbps',
     qdcReciterId: 3,
   ),
   QuranicReciter(
