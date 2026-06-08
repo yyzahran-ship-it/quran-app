@@ -20,6 +20,7 @@ import 'mushaf_download_provider.dart';
 import 'search_screen.dart';
 import 'ayah_coords_provider.dart';
 import 'second_translation_provider.dart';
+import 'tafsir_library_screen.dart';
 import 'tafsir_repository.dart';
 import 'tafsir_sheet.dart';
 import 'translations_library.dart';
@@ -161,13 +162,11 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
           IconButton(
             icon: Icon(Icons.language, size: 22,
                 color: isLight ? const Color(0xFF1A1A1A) : null),
-            tooltip: 'Translations & Tafsir',
-            onPressed: () {
-              final verseKey = state.ayahs.isNotEmpty
-                  ? state.ayahs.first.verseKey
-                  : '1:1';
-              _showTranslationPanel(context, verseKey);
-            },
+            tooltip: 'Tafsir Library',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const TafsirLibraryScreen()),
+            ),
           ),
           PopupMenuButton<_AppAction>(
             icon: Icon(Icons.more_vert,
@@ -2349,40 +2348,38 @@ class _TranslationPanelSheetState
       controller: sc,
       padding: EdgeInsets.zero,
       children: [
-        // ── "الترجمات" gold header ─────────────────────────────────────
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 14, 16, 2),
-          child: Text(
-            'الترجمات',
-            textDirection: TextDirection.rtl,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: _kPanelGold,
-              letterSpacing: .02,
-            ),
-          ),
-        ),
-        // ── Tafsir pick list — gold checkboxes ────────────────────────
-        for (final t in kTafsirs)
-          _GoldCheckTile(
-            label: t.name,
-            sub: t.language,
-            checked: selectedIds.contains(t.id),
-            onTap: () =>
-                ref.read(selectedTafsirsProvider.notifier).toggle(t.id),
-          ),
-        // ── "المزيد من الترجمات" link ──────────────────────────────────
+        // ── Library entry button ───────────────────────────────────────
         InkWell(
           onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const TranslationsScreen())),
-          child: const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Text(
-              'المزيد من الترجمات...',
+              MaterialPageRoute(
+                  builder: (_) => const TafsirLibraryScreen())),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
               textDirection: TextDirection.rtl,
-              style: TextStyle(
-                  fontSize: 13, color: _kPanelGoldDim, height: 1.4),
+              children: [
+                const Icon(Icons.library_books_outlined,
+                    color: _kPanelGold, size: 18),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'مكتبة التفاسير',
+                    textDirection: TextDirection.rtl,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _kPanelGold),
+                  ),
+                ),
+                Text(
+                  '${selectedIds.length} مختار',
+                  style: const TextStyle(
+                      fontSize: 12, color: _kPanelGoldDim),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_left_rounded,
+                    color: _kPanelGoldDim, size: 18),
+              ],
             ),
           ),
         ),
@@ -2441,7 +2438,9 @@ class _TranslationPanelSheetState
                   color: _kPanelGoldDim.withAlpha(80), width: .8),
             ),
             child: Text(
-              '${info.name}  •  ${info.language}',
+              info.author.isNotEmpty
+                  ? '${info.name}  —  ${info.author}  •  ${info.language}'
+                  : '${info.name}  •  ${info.language}',
               textDirection: TextDirection.rtl,
               style: const TextStyle(
                 fontSize: 12,

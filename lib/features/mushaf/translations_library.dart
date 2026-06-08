@@ -82,7 +82,6 @@ class SelectedTafsirsNotifier extends Notifier<Set<int>> {
   Future<void> toggle(int id) async {
     final next = Set<int>.from(state);
     if (next.contains(id)) {
-      if (next.length <= 1) return; // always keep at least one
       next.remove(id);
     } else {
       next.add(id);
