@@ -2260,9 +2260,9 @@ class _PageNav extends StatelessWidget {
 //   Tab 2: translations / tafsir (default active)
 //   Tab 3: audio / reciter
 
-const _kPanelBg     = Color(0xFF1A1A1A);
-const _kPanelHeader = Color(0xFF1E3232);
-const _kPanelCyan   = Color(0xFF4DD0E1);
+const _kPanelBg      = Color(0xFF0A0A0A);
+const _kPanelGold    = Color(0xFFC9A84C);
+const _kPanelGoldDim = Color(0xFF8A6518);
 
 class _TranslationPanelSheet extends ConsumerStatefulWidget {
   const _TranslationPanelSheet({required this.verseKey});
@@ -2295,13 +2295,13 @@ class _TranslationPanelSheetState
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(60),
+                color: _kPanelGoldDim.withAlpha(90),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             // Tab row
             _buildTabRow(context),
-            Divider(height: 1, color: Colors.white.withAlpha(25)),
+            Divider(height: 1, color: _kPanelGoldDim.withAlpha(40)),
             // Content
             Expanded(child: _buildContent(context, scrollController)),
           ],
@@ -2328,12 +2328,18 @@ class _TranslationPanelSheetState
           active: _tab == 2,
           onTap: () => setState(() => _tab = 2),
         ),
+        _TabIcon(
+          icon: Icons.play_arrow_rounded,
+          active: _tab == 3,
+          onTap: () => setState(() => _tab = 3),
+        ),
       ],
     );
   }
 
   Widget _buildContent(BuildContext context, ScrollController sc) {
     if (_tab == 2) return _buildTranslationsTab(context, sc);
+    if (_tab == 3) return _buildPlayTab();
     return _buildBookmarkTab();
   }
 
@@ -2343,62 +2349,55 @@ class _TranslationPanelSheetState
       controller: sc,
       padding: EdgeInsets.zero,
       children: [
-        // ── Tafsir selection checkboxes ────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        // ── "الترجمات" gold header ─────────────────────────────────────
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 2),
           child: Text(
-            'SELECT TAFSIRS',
+            'الترجمات',
+            textDirection: TextDirection.rtl,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-              color: Colors.white.withAlpha(120),
+              color: _kPanelGold,
+              letterSpacing: .02,
             ),
           ),
         ),
+        // ── Tafsir pick list — gold checkboxes ────────────────────────
         for (final t in kTafsirs)
-          CheckboxListTile(
-            tileColor: _kPanelBg,
-            activeColor: _kPanelCyan,
-            checkColor: _kPanelBg,
-            value: selectedIds.contains(t.id),
-            onChanged: (_) =>
+          _GoldCheckTile(
+            label: t.name,
+            sub: t.language,
+            checked: selectedIds.contains(t.id),
+            onTap: () =>
                 ref.read(selectedTafsirsProvider.notifier).toggle(t.id),
-            title: Text(
-              t.name,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-            subtitle: Text(
-              t.language,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.45),
-              ),
-            ),
-            controlAffinity: ListTileControlAffinity.leading,
-            dense: false,
           ),
-        // ── More Translations link ─────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-          child: TextButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const TranslationsScreen()));
-            },
-            icon: const Icon(Icons.library_books_outlined,
-                color: _kPanelCyan, size: 18),
-            label: const Text(
-              'More Translations',
-              style: TextStyle(color: _kPanelCyan, fontSize: 14),
+        // ── "المزيد من الترجمات" link ──────────────────────────────────
+        InkWell(
+          onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TranslationsScreen())),
+          child: const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Text(
+              'المزيد من الترجمات...',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                  fontSize: 13, color: _kPanelGoldDim, height: 1.4),
             ),
           ),
         ),
-        Divider(height: 1, color: Colors.white.withAlpha(25)),
-        // ── Tafsir content for each selected tafsir ────────────────────
+        // Gold shimmer divider
+        Container(
+          height: 1,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [
+              Colors.transparent,
+              _kPanelGold,
+              Colors.transparent,
+            ]),
+          ),
+        ),
+        // ── Verse key ─────────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
           child: Text(
@@ -2406,7 +2405,7 @@ class _TranslationPanelSheetState
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: _kPanelCyan,
+              color: _kPanelGold,
             ),
           ),
         ),
@@ -2433,15 +2432,17 @@ class _TranslationPanelSheetState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: _kPanelHeader,
+              color: const Color(0xFF161008),
               borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                  color: _kPanelGoldDim.withAlpha(80), width: .8),
             ),
             child: Text(
               '${info.name}  •  ${info.language}',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: _kPanelGold,
               ),
             ),
           ),
@@ -2451,7 +2452,7 @@ class _TranslationPanelSheetState
               height: 40,
               child: Center(
                   child: CircularProgressIndicator(
-                      color: _kPanelCyan, strokeWidth: 2)),
+                      color: _kPanelGold, strokeWidth: 2)),
             ),
             error: (_, __) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -2471,7 +2472,7 @@ class _TranslationPanelSheetState
               ),
             ),
           ),
-          Divider(height: 24, color: Colors.white.withAlpha(20)),
+          Divider(height: 24, color: _kPanelGoldDim.withAlpha(30)),
         ],
       ),
     );
@@ -2500,18 +2501,18 @@ class _TranslationPanelSheetState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Ayah card with amber shade when bookmarked ─────────────────
+          // ── Ayah card with gold shade when bookmarked ─────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOut,
             decoration: BoxDecoration(
               color: isBookmarked
-                  ? Colors.amber.withAlpha(38)
+                  ? _kPanelGold.withAlpha(22)
                   : Colors.white.withAlpha(10),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isBookmarked
-                    ? Colors.amber.shade600
+                    ? _kPanelGold
                     : Colors.white.withValues(alpha: 0.12),
                 width: isBookmarked ? 1.5 : 0.8,
               ),
@@ -2526,7 +2527,7 @@ class _TranslationPanelSheetState
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
-                    color: isBookmarked ? Colors.amber.shade400 : _kPanelCyan,
+                    color: _kPanelGold,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -2547,13 +2548,13 @@ class _TranslationPanelSheetState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.bookmark, size: 14, color: Colors.amber.shade400),
+                      const Icon(Icons.bookmark, size: 14, color: _kPanelGold),
                       const SizedBox(width: 4),
-                      Text(
+                      const Text(
                         'Saved to bookmarks',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.amber.shade400,
+                          color: _kPanelGold,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -2585,8 +2586,7 @@ class _TranslationPanelSheetState
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               style: FilledButton.styleFrom(
-                backgroundColor:
-                    isBookmarked ? Colors.amber.shade700 : _kPanelCyan,
+                backgroundColor: _kPanelGold,
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -2600,7 +2600,18 @@ class _TranslationPanelSheetState
   }
 }
 
-// Single icon tab button with teal active indicator.
+// Stub play tab — shows current playback state, wired up in a future task.
+Widget _buildPlayTab() => const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Text(
+          'قريباً — التشغيل',
+          style: TextStyle(color: _kPanelGoldDim, fontSize: 14),
+        ),
+      ),
+    );
+
+// Single icon tab button with gold active indicator.
 class _TabIcon extends StatelessWidget {
   const _TabIcon({
     required this.icon,
@@ -2622,7 +2633,7 @@ class _TabIcon extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: active ? _kPanelCyan : Colors.transparent,
+                color: active ? _kPanelGold : Colors.transparent,
                 width: 2,
               ),
             ),
@@ -2630,10 +2641,83 @@ class _TabIcon extends StatelessWidget {
           child: Icon(
             icon,
             color: active
-                ? _kPanelCyan
-                : Colors.white.withValues(alpha: 0.55),
+                ? _kPanelGold
+                : const Color(0xFF444444),
             size: 24,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Gold checkbox row used in the translation picker inside the panel.
+class _GoldCheckTile extends StatelessWidget {
+  const _GoldCheckTile({
+    required this.label,
+    required this.sub,
+    required this.checked,
+    required this.onTap,
+  });
+
+  final String label;
+  final String sub;
+  final bool checked;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Gold checkbox
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: checked ? _kPanelGold : Colors.transparent,
+                border: Border.all(
+                  color: checked ? _kPanelGold : const Color(0xFF333333),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: checked
+                  ? const Icon(Icons.check, size: 14, color: Colors.black)
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            // Name + language
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: checked ? _kPanelGold : const Color(0xFF888888),
+                      fontWeight: checked ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  if (sub.isNotEmpty)
+                    Text(
+                      sub,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: checked
+                            ? _kPanelGoldDim
+                            : const Color(0xFF444444),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
