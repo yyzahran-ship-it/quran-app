@@ -86,9 +86,9 @@ class TranslationsScreen extends ConsumerWidget {
 
   Widget _sectionHeader(String label) => Container(
         width: double.infinity,
-        color: _kBg,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: const BoxDecoration(
+          color: _kBg,
           border: Border(
             bottom: BorderSide(color: _kGoldDim, width: .8),
           ),
