@@ -2400,12 +2400,15 @@ class _TranslationPanelSheetState
         // ── Verse key ─────────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-          child: Text(
-            widget.verseKey,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: _kPanelGold,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              widget.verseKey,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _kPanelGold,
+              ),
             ),
           ),
         ),
@@ -2677,6 +2680,7 @@ class _GoldCheckTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
+          textDirection: TextDirection.rtl,
           children: [
             // Gold checkbox
             AnimatedContainer(
@@ -2699,10 +2703,11 @@ class _GoldCheckTile extends StatelessWidget {
             // Name + language
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     label,
+                    textDirection: TextDirection.rtl,
                     style: TextStyle(
                       fontSize: 15,
                       color: checked ? _kPanelGold : const Color(0xFF888888),
@@ -2712,6 +2717,7 @@ class _GoldCheckTile extends StatelessWidget {
                   if (sub.isNotEmpty)
                     Text(
                       sub,
+                      textDirection: TextDirection.rtl,
                       style: TextStyle(
                         fontSize: 11,
                         color: checked
