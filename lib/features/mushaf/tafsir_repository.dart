@@ -12,9 +12,9 @@ class TafsirInfo {
 }
 
 const kTafsirs = [
-  TafsirInfo(id: 16,  name: 'الميسّر',          language: 'عربي'),
-  TafsirInfo(id: 171, name: 'المختصر',          language: 'عربي'),
-  TafsirInfo(id: 74,  name: 'تفسير الجلالين',   language: 'عربي'),
+  TafsirInfo(id: 16,  name: 'الميسّر',       language: 'عربي'),
+  TafsirInfo(id: 91,  name: 'تفسير السعدي',  language: 'عربي'),
+  TafsirInfo(id: 169, name: 'تفسير ابن كثير', language: 'عربي'),
 ];
 
 // ─── Persisted tafsir selection ───────────────────────────────────────────────
@@ -103,7 +103,10 @@ class TafsirRepository {
       .trim();
 }
 
-final _dioProvider = Provider<Dio>((ref) => Dio());
+final _dioProvider = Provider<Dio>((ref) => Dio(BaseOptions(
+  connectTimeout: const Duration(seconds: 15),
+  receiveTimeout: const Duration(seconds: 20),
+)));
 
 final tafsirRepositoryProvider = Provider<TafsirRepository>(
     (ref) => TafsirRepository(ref.read(_dioProvider)));
