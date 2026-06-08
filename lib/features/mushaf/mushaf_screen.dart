@@ -2426,7 +2426,7 @@ class _TranslationPanelSheetState
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Label chip
           Container(
@@ -2439,6 +2439,7 @@ class _TranslationPanelSheetState
             ),
             child: Text(
               '${info.name}  •  ${info.language}',
+              textDirection: TextDirection.rtl,
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -2454,10 +2455,13 @@ class _TranslationPanelSheetState
                   child: CircularProgressIndicator(
                       color: _kPanelGold, strokeWidth: 2)),
             ),
-            error: (_, __) => Padding(
+            error: (e, __) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                'Could not load — check your connection',
+                e.toString().contains('لا يوجد')
+                    ? 'لا يوجد تفسير لهذه الآية'
+                    : 'تعذّر التحميل — تحقّق من الاتصال',
+                textDirection: TextDirection.rtl,
                 style: TextStyle(
                     fontSize: 13,
                     color: Colors.white.withValues(alpha: 0.45)),
@@ -2465,6 +2469,7 @@ class _TranslationPanelSheetState
             ),
             data: (text) => Text(
               text,
+              textDirection: TextDirection.rtl,
               style: const TextStyle(
                 fontSize: 14,
                 height: 1.75,

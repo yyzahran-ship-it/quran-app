@@ -77,9 +77,12 @@ class TafsirRepository {
     final url =
         'https://api.quran.com/api/v4/tafsirs/$tafsirId/by_ayah/$verseKey';
     final response = await _dio.get<Map<String, dynamic>>(url);
-    final raw =
-        (response.data!['tafsir'] as Map<String, dynamic>)['text'] as String;
-    final text = _stripHtml(raw);
+    final tafsirMap = response.data?['tafsir'] as Map<String, dynamic>?;
+    final rawOrNull = tafsirMap?['text'] as String?;
+    if (rawOrNull == null || rawOrNull.isEmpty) {
+      throw Exception('لا يوجد نص متاح لهذه الآية');
+    }
+    final text = _stripHtml(rawOrNull);
 
     _memCache[key] = text;
     // Fire-and-forget: don't block the caller on prefs write.
