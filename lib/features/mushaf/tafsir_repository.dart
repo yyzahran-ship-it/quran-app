@@ -14,7 +14,7 @@ class TafsirInfo {
 const kTafsirs = [
   TafsirInfo(id: 16,  name: 'الميسّر',       language: 'عربي'),
   TafsirInfo(id: 91,  name: 'تفسير السعدي',  language: 'عربي'),
-  TafsirInfo(id: 169, name: 'تفسير ابن كثير', language: 'عربي'),
+  TafsirInfo(id: 14,  name: 'تفسير ابن كثير', language: 'عربي'),
 ];
 
 // ─── Persisted tafsir selection ───────────────────────────────────────────────
