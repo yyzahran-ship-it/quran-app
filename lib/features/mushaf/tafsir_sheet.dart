@@ -37,37 +37,41 @@ class TafsirSheet extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            // Header row
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Tafsir — $verseKey',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+            // Header row — RTL so Arabic name sits on the right
+            Directionality(
+              textDirection: TextDirection.rtl,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 16, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'تفسير — $verseKey',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                  DropdownButton<int>(
-                    value: tafsirId,
-                    underline: const SizedBox.shrink(),
-                    items: kTafsirs
-                        .map((t) => DropdownMenuItem(
-                              value: t.id,
-                              child: Text(
-                                '${t.name} (${t.language})',
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ))
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) ref.read(tafsirIdProvider.notifier).set(v);
-                    },
-                  ),
-                ],
+                    DropdownButton<int>(
+                      value: tafsirId,
+                      underline: const SizedBox.shrink(),
+                      items: kTafsirs
+                          .map((t) => DropdownMenuItem(
+                                value: t.id,
+                                child: Text(
+                                  t.name,
+                                  textDirection: TextDirection.rtl,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) ref.read(tafsirIdProvider.notifier).set(v);
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
             const Divider(height: 1),
@@ -84,42 +88,49 @@ class TafsirSheet extends ConsumerWidget {
                         Icon(Icons.wifi_off_outlined,
                             size: 48, color: colors.outlineVariant),
                         const SizedBox(height: 12),
-                        const Text('Could not load tafsir'),
+                        const Text(
+                          'تعذّر تحميل التفسير',
+                          textDirection: TextDirection.rtl,
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          'Check your internet connection',
-                          style:
-                              TextStyle(fontSize: 12, color: colors.outline),
+                          'تحقّق من اتصالك بالإنترنت',
+                          textDirection: TextDirection.rtl,
+                          style: TextStyle(fontSize: 12, color: colors.outline),
                         ),
                         const SizedBox(height: 16),
                         FilledButton.icon(
                           onPressed: () =>
                               ref.invalidate(tafsirTextProvider(tafsirKey)),
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
+                          label: const Text('إعادة المحاولة'),
                         ),
                       ],
                     ),
                   ),
                 ),
-                data: (text) => ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                  children: [
-                    Text(
-                      text,
-                      style: const TextStyle(fontSize: 14, height: 1.7),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '— ${selectedTafsir.name}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colors.outline,
-                        fontStyle: FontStyle.italic,
+                data: (text) => Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                    children: [
+                      Text(
+                        text,
+                        style: const TextStyle(fontSize: 14, height: 1.7),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Text(
+                        '— ${selectedTafsir.name}',
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colors.outline,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
