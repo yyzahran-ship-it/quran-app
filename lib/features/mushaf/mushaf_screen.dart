@@ -2457,18 +2457,42 @@ class _TranslationPanelSheetState
                   child: CircularProgressIndicator(
                       color: _kPanelGold, strokeWidth: 2)),
             ),
-            error: (e, __) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                e.toString().contains('لا يوجد')
-                    ? 'لا يوجد تفسير لهذه الآية'
-                    : 'تعذّر التحميل — تحقّق من الاتصال',
-                textDirection: TextDirection.rtl,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.45)),
-              ),
-            ),
+            error: (e, __) {
+              final isNoText = e.toString().contains('لا يوجد');
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  textDirection: TextDirection.rtl,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isNoText
+                            ? 'لا يوجد تفسير لهذه الآية'
+                            : 'تعذّر التحميل — تحقّق من الاتصال',
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.45)),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => ref
+                          .read(selectedTafsirsProvider.notifier)
+                          .toggle(tafsirId),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Text(
+                          'حذف',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: _kPanelGoldDim.withAlpha(180)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
             data: (text) => Text(
               text,
               textDirection: TextDirection.rtl,

@@ -74,7 +74,13 @@ class SelectedTafsirsNotifier extends Notifier<Set<int>> {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_key);
     if (raw != null && raw.isNotEmpty) {
-      final ids = raw.map(int.tryParse).whereType<int>().toSet();
+      final validIds = {for (final t in kTafsirs) t.id};
+      final ids = raw
+          .map(int.tryParse)
+          .whereType<int>()
+          // Drop any previously saved ID that was removed from the catalog.
+          .where(validIds.contains)
+          .toSet();
       if (ids.isNotEmpty) state = ids;
     }
   }
