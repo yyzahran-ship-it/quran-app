@@ -88,15 +88,6 @@ const kTafsirs = [
   // ── Assamese ────────────────────────────────────────────────────────────────
   TafsirInfo(id: 790, name: 'কোৰআনৰ চমু ব্যাখ্যা', language: 'অসমীয়া', author: 'Tafsir Center', langCode: 'assamese'),
 ];
-  // ── Filipino ────────────────────────────────────────────────────────────────
-  TafsirInfo(id: 179,  name: 'Maikling Paliwanag',       language: 'Filipino',  author: 'Tafsir Center',           langCode: 'tagalog'),
-  // ── Malayalam ───────────────────────────────────────────────────────────────
-  TafsirInfo(id: 791,  name: 'ഖുർആൻ വ്യാഖ്യാനം',     language: 'മലയാളം',  author: 'Tafsir Center',             langCode: 'malayalam'),
-  // ── Assamese ────────────────────────────────────────────────────────────────
-  TafsirInfo(id: 790,  name: 'কোৰআনৰ চমু ব্যাখ্যা',   language: 'অসমীয়া',  author: 'Tafsir Center',            langCode: 'assamese'),
-  // ── Thai ────────────────────────────────────────────────────────────────────
-  TafsirInfo(id: 1281, name: 'คำอธิบายย่อ',             language: 'ภาษาไทย',  author: 'ศูนย์ตัฟสีร',             langCode: 'thai'),
-];
 
 // ─── Persisted single-tafsir selection (used by TafsirSheet bottom-sheet) ─────
 
