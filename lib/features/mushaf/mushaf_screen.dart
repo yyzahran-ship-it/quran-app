@@ -1439,16 +1439,14 @@ class _AyahPopupBar extends ConsumerWidget {
     final barW   = (screen.width * 0.90).clamp(260.0, 420.0);
     final barLeft = (screen.width - barW) / 2;
 
-    // Vertically: prefer just above the tapped ayah; flip below if too close
-    // to the top of the safe area.
-    final bool   arrowDown = tapPos.dy - _barH - 12 > safePad.top + 8;
-    final double barTop    = arrowDown
-        ? tapPos.dy - _barH - _arrowH - 4
-        : tapPos.dy + _arrowH + 4;
+    // Always above the ayah — clamp so it never slides off the top.
+    const bool   arrowDown = true;
+    final double barTop    =
+        (tapPos.dy - _barH - _arrowH - 6).clamp(safePad.top + 4, double.infinity);
 
     // Caret X: align with ayah start (tapPos.dx), clamped inside the pill.
     final double arrowX = tapPos.dx.clamp(barLeft + 16, barLeft + barW - 16);
-    final double arrowY = arrowDown ? barTop + _barH - 1 : barTop - _arrowH + 1;
+    final double arrowY = barTop + _barH - 1;
 
     final isBookmarked = ref.watch(
         bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)));
