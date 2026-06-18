@@ -1409,8 +1409,10 @@ class _AyahPopupBar extends ConsumerWidget {
   final bool isDark;
   final Offset tapPos;
 
-  static const _barH = 58.0;
-  static const _borderW = 2.5; // gold bezel thickness
+  static const _barH    = 58.0;
+  static const _borderW = 2.5;  // gold bezel thickness
+  static const _arrowH  = 13.0; // caret triangle height
+  static const _arrowW  = 24.0; // caret triangle base width
 
   // Metallic gold gradient — mimics a bevelled luxury-watch bezel.
   static const _goldBezel = LinearGradient(
@@ -1439,9 +1441,14 @@ class _AyahPopupBar extends ConsumerWidget {
 
     // Vertically: prefer just above the tapped ayah; flip below if too close
     // to the top of the safe area.
-    final double barTop = tapPos.dy - _barH - 12 > safePad.top + 8
-        ? tapPos.dy - _barH - 12
-        : tapPos.dy + 24;
+    final bool   arrowDown = tapPos.dy - _barH - 12 > safePad.top + 8;
+    final double barTop    = arrowDown
+        ? tapPos.dy - _barH - _arrowH - 4
+        : tapPos.dy + _arrowH + 4;
+
+    // Caret X: align with ayah start (tapPos.dx), clamped inside the pill.
+    final double arrowX = tapPos.dx.clamp(barLeft + 16, barLeft + barW - 16);
+    final double arrowY = arrowDown ? barTop + _barH - 1 : barTop - _arrowH + 1;
 
     final isBookmarked = ref.watch(
         bookmarksProvider.select((bms) => bms.any((b) => b.ayahId == ayah.id)));
@@ -1459,7 +1466,16 @@ class _AyahPopupBar extends ConsumerWidget {
               child: const SizedBox.expand(),
             ),
           ),
-          // Floating toolbar — centered, no arrow/caret.
+          // Caret — points toward the start of the tapped ayah.
+          Positioned(
+            top:  arrowY,
+            left: arrowX - _arrowW / 2,
+            child: CustomPaint(
+              size: const Size(_arrowW, _arrowH),
+              painter: _CaretPainter(pointDown: arrowDown),
+            ),
+          ),
+          // Floating toolbar — centered, gold bezel pill.
           Positioned(
             top: barTop,
             left: barLeft,
@@ -1602,6 +1618,55 @@ class _PopupSep extends StatelessWidget {
       color: const Color(0x30C9A84C),
     );
   }
+}
+
+// Caret triangle for the ayah popup — gold border, dark fill.
+class _CaretPainter extends CustomPainter {
+  const _CaretPainter({required this.pointDown});
+  final bool pointDown;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gold = Paint()..color = const Color(0xFFC9A030)..style = PaintingStyle.fill;
+    final dark = Paint()..color = const Color(0xFF0A0A06)..style = PaintingStyle.fill;
+
+    final outer = Path();
+    final inner = Path();
+    const b = 2.8; // border thickness inset
+
+    if (pointDown) {
+      // Outer gold triangle — apex at bottom-center.
+      outer
+        ..moveTo(0, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width / 2, size.height)
+        ..close();
+      // Inner dark triangle — slightly smaller to leave gold edge.
+      inner
+        ..moveTo(b, 0)
+        ..lineTo(size.width - b, 0)
+        ..lineTo(size.width / 2, size.height - b * 1.6)
+        ..close();
+    } else {
+      // Outer gold triangle — apex at top-center.
+      outer
+        ..moveTo(size.width / 2, 0)
+        ..lineTo(0, size.height)
+        ..lineTo(size.width, size.height)
+        ..close();
+      inner
+        ..moveTo(size.width / 2, b)
+        ..lineTo(b, size.height)
+        ..lineTo(size.width - b, size.height)
+        ..close();
+    }
+
+    canvas.drawPath(outer, gold);
+    canvas.drawPath(inner, dark);
+  }
+
+  @override
+  bool shouldRepaint(_CaretPainter old) => old.pointDown != pointDown;
 }
 
 // Share ayah text + translation as plain text via system share sheet.
