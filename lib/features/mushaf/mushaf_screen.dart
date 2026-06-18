@@ -929,17 +929,17 @@ class _AyahHighlightPainter extends CustomPainter {
   final double yOffset;
 
   static const _kGreen  = Color(0xFF34A853);
-  static const _kOrange = Color(0xFFFF8C00);
+  static const _kGold   = Color(0xFFB8860B);
 
   @override
   void paint(Canvas canvas, Size size) {
     // ── Bookmark highlights (drawn first, under audio highlight) ────────────
     if (bookmarkRects.isNotEmpty) {
       final bkFill = Paint()
-        ..color = _kOrange.withAlpha(50)
+        ..color = Colors.white.withAlpha(60)
         ..style = PaintingStyle.fill;
       final bkBorder = Paint()
-        ..color = _kOrange.withAlpha(200)
+        ..color = _kGold.withAlpha(220)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
       for (final rs in bookmarkRects) {
