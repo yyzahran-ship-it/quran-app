@@ -42,12 +42,6 @@ const _kBuiltInReciters = <QuranicReciter>[
     qdcReciterId: 2,
   ),
   QuranicReciter(
-    id: 4, name: 'Abdul Basit (Abdul Samad)', arabicName: 'عبدالباسط عبدالصمد',
-    relativePath: 'abdulbasit_abdussamed/', style: 'Murattal',
-    islamicNetworkEdition: 'ar.abdulsamad',
-    qdcReciterId: 1,
-  ),
-  QuranicReciter(
     id: 5, name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري',
     relativePath: 'mahmoud_khalil_al_husaree/', style: 'Murattal',
     islamicNetworkEdition: 'ar.husary',
