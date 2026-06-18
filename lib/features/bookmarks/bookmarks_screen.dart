@@ -19,12 +19,17 @@ class BookmarksScreen extends ConsumerStatefulWidget {
 class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
   String? _filterTag;
 
+  static const _gold   = Color(0xFFB8860B);
+  static const _orange = Color(0xFFFF8C00);
+
   @override
   Widget build(BuildContext context) {
     final allBookmarks = ref.watch(bookmarksProvider);
-    final colors = Theme.of(context).colorScheme;
+    final pageBk       = ref.watch(pageBookmarkProvider);
+    final colors       = Theme.of(context).colorScheme;
+    final hasAnything  = allBookmarks.isNotEmpty || pageBk != null;
 
-    // Collect distinct tags.
+    // Collect distinct tags for filter chips.
     final tags = allBookmarks
         .map((b) => b.tag)
         .whereType<String>()
@@ -53,7 +58,7 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
           ],
         ],
       ),
-      body: allBookmarks.isEmpty
+      body: !hasAnything
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -74,6 +79,50 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
             )
           : Column(
               children: [
+                // ── Reading position bookmark ──────────────────────────────
+                if (pageBk != null)
+                  Dismissible(
+                    key: const ValueKey('page_bk'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      color: colors.errorContainer,
+                      child: Icon(Icons.delete_outline,
+                          color: colors.onErrorContainer),
+                    ),
+                    onDismissed: (_) => ref
+                        .read(pageBookmarkProvider.notifier)
+                        .toggle(pageBk.page, pageBk.label),
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _gold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: _gold.withValues(alpha: 0.4), width: 1),
+                        ),
+                        child: const Icon(Icons.bookmark_rounded,
+                            color: _gold, size: 20),
+                      ),
+                      title: Text(pageBk.label,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Reading position'),
+                      onTap: () {
+                        ref
+                            .read(mushafProvider.notifier)
+                            .navigateToPage(pageBk.page);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+
+                if (pageBk != null && allBookmarks.isNotEmpty)
+                  Divider(height: 1, color: colors.outlineVariant),
+
+                // ── Tag filter chips ────────────────────────────────────────
                 if (tags.isNotEmpty)
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -100,11 +149,17 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
                       ],
                     ),
                   ),
+
+                // ── Ayah bookmarks list ─────────────────────────────────────
                 Expanded(
                   child: shown.isEmpty
                       ? Center(
-                          child: Text('No bookmarks tagged "$_filterTag"',
-                              style: TextStyle(color: colors.outline)),
+                          child: Text(
+                            _filterTag != null
+                                ? 'No bookmarks tagged "$_filterTag"'
+                                : 'No ayah bookmarks yet',
+                            style: TextStyle(color: colors.outline),
+                          ),
                         )
                       : ListView.builder(
                           itemCount: shown.length,
@@ -128,14 +183,24 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
                                     );
                               },
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: colors.primaryContainer,
-                                  child: Text(
-                                    '${bm.surahNumber}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: colors.onPrimaryContainer,
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: _orange.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: _orange.withValues(alpha: 0.35),
+                                        width: 1),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${bm.surahNumber}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: _orange,
+                                      ),
                                     ),
                                   ),
                                 ),

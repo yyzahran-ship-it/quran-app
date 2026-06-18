@@ -239,7 +239,15 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                       _scrollToTop();
                     }
                   },
-                  child: _buildReader(state),
+                  child: Stack(
+                    children: [
+                      _buildReader(state),
+                      _PageRibbon(
+                        pageNumber: state.currentPage,
+                        surahLabel: _pageLabel(state),
+                      ),
+                    ],
+                  ),
                 ),
       bottomNavigationBar: state.ayahs.isEmpty
           ? null
@@ -302,6 +310,12 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     );
   }
 
+  String _pageLabel(MushafState state) {
+    final firstSurah = state.surahFor(state.ayahs.first.surahNumber);
+    if (firstSurah == null) return 'Page ${state.currentPage}';
+    return '${firstSurah.nameSimple} · ${state.currentPage}';
+  }
+
   Widget _buildErrorState() {
     final colors = Theme.of(context).colorScheme;
     return Center(
@@ -333,6 +347,77 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     );
   }
 
+}
+
+// ─── Page bookmark ribbon ─────────────────────────────────────────────────────
+// Gold tab hanging from the top-right of the reader area.
+// Tap = save/clear the current page as the reading-position bookmark.
+
+class _PageRibbon extends ConsumerWidget {
+  const _PageRibbon({required this.pageNumber, required this.surahLabel});
+
+  final int pageNumber;
+  final String surahLabel;
+
+  static const _gold = Color(0xFFB8860B);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pageBk  = ref.watch(pageBookmarkProvider);
+    final isSaved = pageBk?.page == pageNumber;
+
+    return Positioned(
+      top: 0,
+      right: 20,
+      child: Tooltip(
+        message: isSaved ? 'إزالة علامة الصفحة' : 'حفظ موضع الصفحة',
+        child: GestureDetector(
+          onTap: () {
+            ref.read(pageBookmarkProvider.notifier).toggle(pageNumber, surahLabel);
+            final msg = isSaved
+                ? 'تمت إزالة علامة الصفحة'
+                : '✓ تم حفظ موضع القراءة';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(msg, textDirection: TextDirection.rtl),
+                duration: const Duration(seconds: 2),
+                backgroundColor: const Color(0xFF1a1200),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            width: 30,
+            height: isSaved ? 54 : 42,
+            decoration: BoxDecoration(
+              color: isSaved ? _gold : const Color(0xFF1E1E1E),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(15),
+                bottomRight: Radius.circular(15),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+              size: 17,
+              color: isSaved ? Colors.black : const Color(0xFF555555),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Disk-caching Mushaf page loader ─────────────────────────────────────────
