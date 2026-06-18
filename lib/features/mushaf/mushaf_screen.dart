@@ -239,15 +239,7 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
                       _scrollToTop();
                     }
                   },
-                  child: Stack(
-                    children: [
-                      _buildReader(state),
-                      _PageRibbon(
-                        pageNumber: state.currentPage,
-                        surahLabel: _pageLabel(state),
-                      ),
-                    ],
-                  ),
+                  child: _buildReader(state),
                 ),
       bottomNavigationBar: state.ayahs.isEmpty
           ? null
@@ -310,12 +302,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     );
   }
 
-  String _pageLabel(MushafState state) {
-    final firstSurah = state.surahFor(state.ayahs.first.surahNumber);
-    if (firstSurah == null) return 'Page ${state.currentPage}';
-    return '${firstSurah.nameSimple} · ${state.currentPage}';
-  }
-
   Widget _buildErrorState() {
     final colors = Theme.of(context).colorScheme;
     return Center(
@@ -347,77 +333,6 @@ class _MushafScreenState extends ConsumerState<MushafScreen> {
     );
   }
 
-}
-
-// ─── Page bookmark ribbon ─────────────────────────────────────────────────────
-// Gold tab hanging from the top-right of the reader area.
-// Tap = save/clear the current page as the reading-position bookmark.
-
-class _PageRibbon extends ConsumerWidget {
-  const _PageRibbon({required this.pageNumber, required this.surahLabel});
-
-  final int pageNumber;
-  final String surahLabel;
-
-  static const _gold = Color(0xFFB8860B);
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pageBk  = ref.watch(pageBookmarkProvider);
-    final isSaved = pageBk?.page == pageNumber;
-
-    return Positioned(
-      top: 0,
-      right: 20,
-      child: Tooltip(
-        message: isSaved ? 'إزالة علامة الصفحة' : 'حفظ موضع الصفحة',
-        child: GestureDetector(
-          onTap: () {
-            ref.read(pageBookmarkProvider.notifier).toggle(pageNumber, surahLabel);
-            final msg = isSaved
-                ? 'تمت إزالة علامة الصفحة'
-                : '✓ تم حفظ موضع القراءة';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(msg, textDirection: TextDirection.rtl),
-                duration: const Duration(seconds: 2),
-                backgroundColor: const Color(0xFF1a1200),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-            );
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            width: 30,
-            height: isSaved ? 54 : 42,
-            decoration: BoxDecoration(
-              color: isSaved ? _gold : const Color(0xFF1E1E1E),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(15),
-                bottomRight: Radius.circular(15),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-              size: 17,
-              color: isSaved ? Colors.black : const Color(0xFF555555),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ─── Disk-caching Mushaf page loader ─────────────────────────────────────────
@@ -1003,34 +918,62 @@ class _AyahHighlightPainter extends CustomPainter {
     required this.xScale,
     required this.yScale,
     required this.yOffset,
+    this.bookmarkRects = const [],
   });
 
   final List<Rect>? rects;
+  // One list of rects per bookmarked ayah on this page.
+  final List<List<Rect>> bookmarkRects;
   final double xScale;
   final double yScale;
   final double yOffset;
 
-  static const _kGreen = Color(0xFF34A853);
+  static const _kGreen  = Color(0xFF34A853);
+  static const _kOrange = Color(0xFFFF8C00);
 
   @override
   void paint(Canvas canvas, Size size) {
+    // ── Bookmark highlights (drawn first, under audio highlight) ────────────
+    if (bookmarkRects.isNotEmpty) {
+      final bkFill = Paint()
+        ..color = _kOrange.withAlpha(50)
+        ..style = PaintingStyle.fill;
+      final bkBorder = Paint()
+        ..color = _kOrange.withAlpha(200)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      for (final rs in bookmarkRects) {
+        for (final r in rs) {
+          final scaled = Rect.fromLTWH(
+            r.left            * xScale,
+            (r.top + yOffset) * yScale,
+            r.width           * xScale,
+            r.height          * yScale,
+          );
+          final rr = RRect.fromRectAndRadius(
+              scaled.inflate(2), const Radius.circular(4));
+          canvas.drawRRect(rr, bkFill);
+          canvas.drawRRect(rr, bkBorder);
+        }
+      }
+    }
+
+    // ── Audio / tap highlight (on top, green) ────────────────────────────────
     final rs = rects;
     if (rs == null || rs.isEmpty) return;
-
     final fillPaint = Paint()
-      ..color = _kGreen.withAlpha(56)   // ~22 % — matches demo default
+      ..color = _kGreen.withAlpha(56)
       ..style = PaintingStyle.fill;
     final borderPaint = Paint()
       ..color = _kGreen.withAlpha(210)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-
     for (final r in rs) {
       final scaled = Rect.fromLTWH(
-        r.left              * xScale,
-        (r.top + yOffset)   * yScale,
-        r.width             * xScale,
-        r.height            * yScale,
+        r.left            * xScale,
+        (r.top + yOffset) * yScale,
+        r.width           * xScale,
+        r.height          * yScale,
       );
       final rr = RRect.fromRectAndRadius(scaled.inflate(2), const Radius.circular(4));
       canvas.drawRRect(rr, fillPaint);
@@ -1040,10 +983,11 @@ class _AyahHighlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AyahHighlightPainter old) =>
-      old.rects   != rects   ||
-      old.xScale  != xScale  ||
-      old.yScale  != yScale  ||
-      old.yOffset != yOffset;
+      old.rects         != rects         ||
+      old.bookmarkRects != bookmarkRects ||
+      old.xScale        != xScale        ||
+      old.yScale        != yScale        ||
+      old.yOffset       != yOffset;
 }
 
 class _AyahHighlightLayer extends ConsumerWidget {
@@ -1064,27 +1008,44 @@ class _AyahHighlightLayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Rebuilds only when the playing ayah ID changes — not every 100 ms tick.
+    // Audio highlight — rebuilds only when the playing ayah ID changes.
     final playingId = ref.watch(
         audioProvider.select((s) => s.isActive ? s.currentPlayingAyahId : null));
-    if (playingId == null) return const SizedBox.shrink();
 
-    Ayah? playingAyah;
-    for (final a in ayahs) {
-      if (a.id == playingId) { playingAyah = a; break; }
+    // Bookmark highlights — rebuilds only when bookmarked IDs change.
+    final bookmarkedIds = ref.watch(
+        bookmarksProvider.select((bms) => bms.map((b) => b.ayahId).toSet()));
+
+    // Collect coordinate rects for every bookmarked ayah on this page.
+    final bookmarkRects = <List<Rect>>[];
+    for (final ayah in ayahs) {
+      if (!bookmarkedIds.contains(ayah.id)) continue;
+      final key   = ayah.surahNumber * 10000 + ayah.ayahNumber;
+      final rects = coordsMap[key];
+      if (rects != null && rects.isNotEmpty) bookmarkRects.add(rects);
     }
-    if (playingAyah == null) return const SizedBox.shrink();
 
-    final mapKey = playingAyah.surahNumber * 10000 + playingAyah.ayahNumber;
-    final rects  = coordsMap[mapKey];
+    if (playingId == null && bookmarkRects.isEmpty) return const SizedBox.shrink();
+
+    List<Rect>? playingRects;
+    if (playingId != null) {
+      for (final a in ayahs) {
+        if (a.id == playingId) {
+          final mapKey = a.surahNumber * 10000 + a.ayahNumber;
+          playingRects = coordsMap[mapKey];
+          break;
+        }
+      }
+    }
 
     return RepaintBoundary(
       child: CustomPaint(
         painter: _AyahHighlightPainter(
-          rects:   rects,
-          xScale:  xScale,
-          yScale:  yScale,
-          yOffset: _pageYOffset(page),
+          rects:         playingRects,
+          bookmarkRects: bookmarkRects,
+          xScale:        xScale,
+          yScale:        yScale,
+          yOffset:       _pageYOffset(page),
         ),
         child: const SizedBox.expand(),
       ),
