@@ -2,12 +2,16 @@ name: Build APK
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, 'claude/**' ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout code
@@ -33,25 +37,162 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
+      - name: Ensure UthmanicHafs font is present
+        run: |
+          DEST="assets/fonts/UthmanicHafs.ttf"
+          # Scheherazade placeholder is committed; try to replace with the real
+          # KFGQPC Uthmanic Script HAFS font (freely distributable).
+          TMP="$(mktemp /tmp/font_XXXX.ttf)"
+          URLS=(
+            "https://fonts.qurancomplex.gov.sa/wp02/uploads/2019/08/UthmanicHafs1Ver18.ttf"
+            "https://www.qurancomplex.gov.sa/quran/fonts/UthmanicHafs1Ver18.ttf"
+            "https://quran.ksu.edu.sa/fonts/hafs/UthmanicHafs1Ver18.ttf"
+          )
+          for URL in "${URLS[@]}"; do
+            echo "Trying: $URL"
+            if curl -fsSL --max-time 40 "$URL" -o "$TMP" 2>/dev/null; then
+              MAGIC=$(xxd -p -l 4 "$TMP" 2>/dev/null || true)
+              if [ "$MAGIC" = "00010000" ] || [ "$MAGIC" = "4f54544f" ] || [ "$MAGIC" = "74727565" ]; then
+                cp "$TMP" "$DEST"
+                echo "KFGQPC font installed: $(stat -c%s "$DEST") bytes"
+                break
+              fi
+            fi
+          done
+          rm -f "$TMP"
+          echo "Font ready: $DEST ($(stat -c%s "$DEST") bytes)"
+
+      - name: Bundle King Fahad Mushaf page images
+        run: |
+          mkdir -p assets/quran/pages
+          # Primary: our own mushaf-pages branch (populated once by setup-mushaf-pages.yml).
+          # GitHub→GitHub raw content is always reachable from GitHub Actions.
+          PRIMARY="https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page"
+          # Fallback: public mirror (SaudiPrint 15-line WebP images, 4-digit naming).
+          FALLBACK="https://raw.githubusercontent.com/abuumairabuaamir/quran.images/main/QuranMajeed-15Lines-SaudiPrint_page-"
+
+          echo "=== Checking primary source (mushaf-pages branch) ==="
+          HTTP=$(curl -o /tmp/test_page.png -w "%{http_code}" -fsSL --max-time 20 \
+            "${PRIMARY}001.png" 2>/dev/null || echo "000")
+          SZ=$(stat -c%s /tmp/test_page.png 2>/dev/null || echo 0)
+          echo "HTTP ${HTTP}  size ${SZ}"
+
+          FAILED=0
+          if [ "$SZ" -gt 10000 ]; then
+            echo "=== Downloading 604 pages from mushaf-pages branch ==="
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i)
+              if curl -fsSL --max-time 60 "${PRIMARY}${NNN}.png" \
+                -o "assets/quran/pages/page${NNN}.png"; then
+                SZ=$(stat -c%s "assets/quran/pages/page${NNN}.png" 2>/dev/null || echo 0)
+                if [ "$SZ" -lt 5000 ]; then
+                  rm -f "assets/quran/pages/page${NNN}.png"
+                  FAILED=$((FAILED + 1))
+                fi
+              else
+                FAILED=$((FAILED + 1))
+              fi
+            done
+          else
+            echo "=== mushaf-pages branch not ready — using fallback source ==="
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i)
+              NNNN=$(printf '%04d' $i)
+              URL="${FALLBACK}${NNNN}.webp"
+              DEST="assets/quran/pages/page${NNN}.webp"
+              if curl -fsSL --max-time 60 "$URL" -o "$DEST"; then
+                SZ=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
+                if [ "$SZ" -lt 5000 ]; then
+                  rm -f "$DEST"
+                  FAILED=$((FAILED + 1))
+                fi
+              else
+                FAILED=$((FAILED + 1))
+              fi
+            done
+          fi
+
+          COUNT=$(ls assets/quran/pages/page*.png assets/quran/pages/page*.webp 2>/dev/null | wc -l)
+          echo "=== Bundled ${COUNT}/604 pages (${FAILED} failures) ==="
+          if [ "$COUNT" -lt 550 ]; then
+            echo "ERROR: Too few pages bundled — aborting build."
+            exit 1
+          fi
+
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Pre-fetch QDC word-timing data (Mishary — default reciter)
+        continue-on-error: true
+        run: |
+          pip install requests --quiet
+          # Fetch timing for Mishary Rashid Al-Afasy (qdc_id=7) — all 114 surahs.
+          # Output: assets/timings/qdc7s{1-114}.json — bundled into the APK so
+          # word highlighting works offline on first launch without network calls.
+          # ~23 seconds at 0.15s delay between calls.
+          python scripts/fetch_qdc_timings.py --reciter 7 --delay 0.15
+          COUNT=$(ls assets/timings/qdc7s*.json 2>/dev/null | wc -l)
+          echo "=== Bundled QDC timing for $COUNT/114 surahs (Mishary) ==="
+
+      - name: Generate app icons
+        run: dart run flutter_launcher_icons
 
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Flutter analyze
+        run: flutter analyze --no-fatal-infos 2>&1 | tee flutter_analyze.txt || true
+
       - name: Build debug APK (with full log)
         run: flutter build apk --debug --split-per-abi -v 2>&1 | tee build_log.txt; exit ${PIPESTATUS[0]}
+
+      - name: Commit error log to branch
+        if: failure()
+        run: |
+          {
+            echo "# CI Build Error"
+            echo "Date: $(date -u)"
+            echo "Run: $GITHUB_RUN_ID"
+            echo ""
+            echo "## flutter analyze output:"
+            echo '```'
+            cat flutter_analyze.txt 2>/dev/null || echo "(no analyze output)"
+            echo '```'
+            echo ""
+            echo "## Gradle error lines:"
+            echo '```'
+            sed 's/^\[[ +0-9ms]*\] //' build_log.txt 2>/dev/null | grep -E "^e: |FAILURE:|Execution failed for task|> What went wrong:|Caused by:|Exception in thread|java\.lang\.|error:|Error:" | head -80 || echo "(no build_log.txt — failure was before the Gradle build step)"
+            echo '```'
+            echo ""
+            echo "## Last 100 lines of build_log.txt:"
+            echo '```'
+            tail -100 build_log.txt 2>/dev/null || echo "(none)"
+            echo '```'
+          } > ci_error_latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ci_error_latest.txt
+          git commit -m "ci: save error log for debugging [skip ci]" || true
+          git push origin HEAD:"$GITHUB_REF_NAME" || true
 
       - name: Upload APK (arm64)
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: quran-app-debug
+          name: quran-app-arm64-debug
           path: build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
           retention-days: 7
 
-      - name: Upload build log (on failure)
-        if: failure()
+      - name: Upload APK (armeabi)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-app-armeabi-debug
+          path: build/app/outputs/flutter-apk/app-armeabi-v7a-debug.apk
+          retention-days: 7
+
+      - name: Upload build log (always)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-log

@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/ayah.dart';
-import '../../audio/audio_provider.dart';
 
-/// Renders one ayah in King Fahad Mushaf Complex style:
-///  • UthmanicHafs font (KFGQPC official) for Arabic text
-///  • Justified RTL text alignment — mirrors the printed Mushaf
-///  • Generous line height (2.2 em) to accommodate stacked tashkeel
-///  • Ornamental ayah-end marker with Arabic-numeral verse number
-///  • Subtle warm-cream card background matching the Madinah Mushaf palette
-///
-/// Subscribes to [audioProvider] via select() so only this tile rebuilds
-/// when its own highlight state changes — not the entire list.
-class AyahTile extends ConsumerWidget {
+// ─── Arabic-Indic numeral helper ──────────────────────────────────────────────
+// The King Fahad Mushaf uses Arabic-Indic numerals (١٢٣) inside the
+// ornamental end markers, matching the printed Mushaf exactly.
+
+String _toArabicIndic(int n) {
+  const digits = '٠١٢٣٤٥٦٧٨٩';
+  return n.toString().split('').map((c) => digits[int.parse(c)]).join();
+}
+
+/// Renders one ayah in King Fahad Mushaf complex style:
+///   • Warm cream (parchment) background with gold border
+///   • Arabic text justified RTL in UthmanicHafs, line height 2.2
+///   • Ornamental ۝ end marker with Arabic-Indic verse number
+///   • Optional English translation below
+class AyahTile extends StatelessWidget {
   const AyahTile({
     super.key,
     required this.ayah,
-    this.arabicFontSize = kDefaultArabicFontSize,
+    this.arabicFontSize = 28.0,
     this.translationText,
     this.onTap,
   });
@@ -28,158 +32,90 @@ class AyahTile extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isHighlighted = ref.watch(
-      audioProvider.select((audio) =>
-          audio.surahNumber == ayah.surahNumber &&
-          audio.currentAyahNumber == ayah.ayahNumber),
-    );
-    final colors = Theme.of(context).colorScheme;
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Mushaf-style background: warm cream in light mode, deep navy in dark
-    final cardColor = isHighlighted
-        ? colors.primaryContainer.withValues(alpha: 0.45)
-        : isDark
-            ? colors.surface
-            : const Color(0xFFFDF6E3); // warm cream page
+    final tileBg = isDark ? const Color(0xFF161E16) : kMushafahCream;
+    final borderColor = kMushafahGold;
+    const borderWidth = 0.8;
+
+    final arabicTextColor =
+        isDark ? Colors.white : const Color(0xFF1A1A1A);
+    final translationColor =
+        isDark ? Colors.white70 : const Color(0xFF4A4A4A);
+
+    final arabicWithMarker =
+        '${ayah.textUthmani} ۝${_toArabicIndic(ayah.ayahNumber)}';
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(3),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: isHighlighted
-                ? colors.primary
-                : const Color(0xFFD4AF37).withValues(alpha: 0.25), // gold border
-            width: isHighlighted ? 1.5 : 0.8,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
+          color: tileBg,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Arabic text block (RTL, justified) ──────────────────────────
-            // The UthmanicHafs font renders Uthmanic script with full Unicode
-            // diacritic support as specified by the King Fahad Quran Complex.
-            Directionality(
-              textDirection: TextDirection.rtl,
-              child: Text.rich(
-                TextSpan(
+            // ── Arabic text block ────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+              child: Text(
+                arabicWithMarker,
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.justify,
+                style: TextStyle(
+                  fontFamily: kArabicFont,
+                  fontSize: arabicFontSize,
+                  height: 2.2,
+                  color: arabicTextColor,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+
+            // ── Translation (optional) ───────────────────────────────────
+            if (translationText != null) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 1, right: 1),
+                child: Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  color: kMushafahGold.withValues(alpha: 0.4),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextSpan(
-                      text: ayah.textUthmani,
-                      style: TextStyle(
-                        fontFamily: kArabicFont,
-                        fontSize: arabicFontSize,
-                        height: kMushafahLineHeight,
-                        color: colors.onSurface,
-                        // Slight letter spacing for Mushaf-style readability
-                        letterSpacing: 0.5,
+                    Text(
+                      '${ayah.surahNumber}:${ayah.ayahNumber}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: kMushafahGreen,
                       ),
                     ),
-                    // Ornamental ayah-end marker (Unicode: ۝ U+06DD)
-                    // followed by the verse number in Arabic-Indic numerals
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: _AyahEndMarker(
-                        number: ayah.ayahNumber,
-                        colors: colors,
-                        fontSize: arabicFontSize,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        translationText!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.6,
+                          color: translationColor,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                textAlign: TextAlign.justify,
-              ),
-            ),
-            // ── Translation (optional) ───────────────────────────────────────
-            if (translationText != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.only(top: 8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(
-                      color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
-                      width: 0.5,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  translationText!,
-                  style: TextStyle(
-                    fontSize: kDefaultTranslationFontSize,
-                    height: 1.6,
-                    color: colors.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  textAlign: TextAlign.left,
-                ),
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Ornamental ayah-end marker ────────────────────────────────────────────────
-// Renders the traditional ۝ end-of-verse circle with the ayah number inside,
-// matching the King Fahad Mushaf Complex printed style.
-class _AyahEndMarker extends StatelessWidget {
-  const _AyahEndMarker({
-    required this.number,
-    required this.colors,
-    required this.fontSize,
-  });
-
-  final int number;
-  final ColorScheme colors;
-  final double fontSize;
-
-  // Convert Western digits to Arabic-Indic (Eastern Arabic) numerals
-  static String _toArabicNumerals(int n) {
-    const eastern = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    return n.toString().split('').map((d) => eastern[int.parse(d)]).join();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final markerSize = (fontSize * 1.1).clamp(24.0, 44.0);
-    return Container(
-      width: markerSize,
-      height: markerSize,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFFB8860B), // dark gold
-          width: 1.2,
-        ),
-        color: const Color(0xFFB8860B).withValues(alpha: 0.12),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        _toArabicNumerals(number),
-        style: TextStyle(
-          fontFamily: kArabicFont,
-          fontSize: markerSize * 0.38,
-          color: const Color(0xFFB8860B),
-          fontWeight: FontWeight.w600,
-          height: 1.0,
         ),
       ),
     );

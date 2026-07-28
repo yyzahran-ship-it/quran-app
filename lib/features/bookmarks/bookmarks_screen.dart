@@ -1,28 +1,64 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../mushaf/mushaf_provider.dart';
 import 'bookmarks_provider.dart';
 
-class BookmarksScreen extends ConsumerWidget {
+class BookmarksScreen extends ConsumerStatefulWidget {
   const BookmarksScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bookmarks = ref.watch(bookmarksProvider);
-    final colors = Theme.of(context).colorScheme;
+  ConsumerState<BookmarksScreen> createState() => _BookmarksScreenState();
+}
+
+class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
+  String? _filterTag;
+
+  static const _gold   = Color(0xFFB8860B);
+  static const _orange = Color(0xFFFF8C00);
+
+  @override
+  Widget build(BuildContext context) {
+    final allBookmarks = ref.watch(bookmarksProvider);
+    final pageBk       = ref.watch(pageBookmarkProvider);
+    final colors       = Theme.of(context).colorScheme;
+    final hasAnything  = allBookmarks.isNotEmpty || pageBk != null;
+
+    // Collect distinct tags for filter chips.
+    final tags = allBookmarks
+        .map((b) => b.tag)
+        .whereType<String>()
+        .toSet()
+        .toList()
+      ..sort();
+
+    final shown = _filterTag == null
+        ? allBookmarks
+        : allBookmarks.where((b) => b.tag == _filterTag).toList();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bookmarks'),
         actions: [
-          if (bookmarks.isNotEmpty)
+          if (allBookmarks.isNotEmpty) ...[
+            IconButton(
+              tooltip: 'Export bookmarks',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => _exportBookmarks(context, allBookmarks),
+            ),
             TextButton(
               onPressed: () => _confirmClearAll(context, ref),
               child: const Text('Clear all'),
             ),
+          ],
         ],
       ),
-      body: bookmarks.isEmpty
+      body: !hasAnything
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -30,80 +66,174 @@ class BookmarksScreen extends ConsumerWidget {
                   Icon(Icons.bookmark_border,
                       size: 64, color: colors.outlineVariant),
                   const SizedBox(height: 12),
-                  Text(
-                    'No bookmarks yet',
-                    style: TextStyle(color: colors.outline),
-                  ),
+                  Text('No bookmarks yet',
+                      style: TextStyle(color: colors.outline)),
                   const SizedBox(height: 4),
                   Text(
-                    'Tap any ayah and press Bookmark',
+                    'Tap any ayah to bookmark it',
                     style:
                         TextStyle(fontSize: 12, color: colors.outlineVariant),
                   ),
                 ],
               ),
             )
-          : ListView.builder(
-              itemCount: bookmarks.length,
-              itemBuilder: (context, index) {
-                final bm = bookmarks[index];
-                return Dismissible(
-                  key: ValueKey(bm.id),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    color: colors.errorContainer,
-                    child:
-                        Icon(Icons.delete_outline, color: colors.onErrorContainer),
-                  ),
-                  onDismissed: (_) {
-                    ref
-                        .read(bookmarksProvider.notifier)
-                        .toggle(
-                          ayahId: bm.ayahId,
-                          surahNumber: bm.surahNumber,
-                          ayahNumber: bm.ayahNumber,
-                        );
-                  },
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: colors.primaryContainer,
-                      child: Text(
-                        '${bm.surahNumber}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: colors.onPrimaryContainer,
+          : Column(
+              children: [
+                // ── Reading position bookmark ──────────────────────────────
+                if (pageBk != null)
+                  Dismissible(
+                    key: const ValueKey('page_bk'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      color: colors.errorContainer,
+                      child: Icon(Icons.delete_outline,
+                          color: colors.onErrorContainer),
+                    ),
+                    onDismissed: (_) => ref
+                        .read(pageBookmarkProvider.notifier)
+                        .toggle(pageBk.page, pageBk.label),
+                    child: ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _gold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: _gold.withValues(alpha: 0.4), width: 1),
                         ),
+                        child: const Icon(Icons.bookmark_rounded,
+                            color: _gold, size: 20),
                       ),
+                      title: Text(pageBk.label,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Reading position'),
+                      onTap: () {
+                        ref
+                            .read(mushafProvider.notifier)
+                            .navigateToPage(pageBk.page);
+                        Navigator.pop(context);
+                      },
                     ),
-                    title: Text(
-                      bm.verseKey,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      _formatDate(bm.createdAt),
-                      style:
-                          TextStyle(fontSize: 12, color: colors.outlineVariant),
-                    ),
-                    trailing: bm.tag != null
-                        ? Chip(
-                            label: Text(bm.tag!,
-                                style: const TextStyle(fontSize: 11)),
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                          )
-                        : null,
-                    onTap: () {
-                      ref
-                          .read(mushafProvider.notifier)
-                          .navigateToSurah(bm.surahNumber);
-                      Navigator.pop(context);
-                    },
                   ),
-                );
-              },
+
+                if (pageBk != null && allBookmarks.isNotEmpty)
+                  Divider(height: 1, color: colors.outlineVariant),
+
+                // ── Tag filter chips ────────────────────────────────────────
+                if (tags.isNotEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          label: const Text('All'),
+                          selected: _filterTag == null,
+                          onSelected: (_) =>
+                              setState(() => _filterTag = null),
+                        ),
+                        ...tags.map((tag) => Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: FilterChip(
+                                label: Text(tag),
+                                selected: _filterTag == tag,
+                                onSelected: (_) => setState(
+                                    () => _filterTag =
+                                        _filterTag == tag ? null : tag),
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+
+                // ── Ayah bookmarks list ─────────────────────────────────────
+                Expanded(
+                  child: shown.isEmpty
+                      ? Center(
+                          child: Text(
+                            _filterTag != null
+                                ? 'No bookmarks tagged "$_filterTag"'
+                                : 'No ayah bookmarks yet',
+                            style: TextStyle(color: colors.outline),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: shown.length,
+                          itemBuilder: (context, index) {
+                            final bm = shown[index];
+                            return Dismissible(
+                              key: ValueKey(bm.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                color: colors.errorContainer,
+                                child: Icon(Icons.delete_outline,
+                                    color: colors.onErrorContainer),
+                              ),
+                              onDismissed: (_) {
+                                ref.read(bookmarksProvider.notifier).toggle(
+                                      ayahId: bm.ayahId,
+                                      surahNumber: bm.surahNumber,
+                                      ayahNumber: bm.ayahNumber,
+                                    );
+                              },
+                              child: ListTile(
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: _orange.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: _orange.withValues(alpha: 0.35),
+                                        width: 1),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${bm.surahNumber}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: _orange,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                title: Text(bm.verseKey,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
+                                subtitle: Text(_formatDate(bm.createdAt),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: colors.outlineVariant)),
+                                trailing: bm.tag != null
+                                    ? Chip(
+                                        label: Text(bm.tag!,
+                                            style: const TextStyle(
+                                                fontSize: 11)),
+                                        padding: EdgeInsets.zero,
+                                        visualDensity:
+                                            VisualDensity.compact,
+                                      )
+                                    : null,
+                                onTap: () {
+                                  ref
+                                      .read(mushafProvider.notifier)
+                                      .navigateToAyah(
+                                          bm.surahNumber, bm.ayahNumber);
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
     );
   }
@@ -115,6 +245,49 @@ class BookmarksScreen extends ConsumerWidget {
     if (diff.inDays == 1) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays} days ago';
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  /// Build a date string in YYYY-MM-DD format for the JSON export.
+  String _isoDate(DateTime dt) {
+    return '${dt.year}-'
+        '${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Export all bookmarks as a JSON file and open the system share sheet.
+  Future<void> _exportBookmarks(
+      BuildContext context, List<dynamic> bookmarks) async {
+    try {
+      // Build the JSON payload.
+      final list = bookmarks.map((bm) {
+        return {
+          'verse': bm.verseKey,             // e.g. "2:255"
+          'surah': bm.surahNumber,
+          'ayah': bm.ayahNumber,
+          'tag': bm.tag ?? '',
+          'saved': _isoDate(bm.createdAt),  // e.g. "2026-05-22"
+        };
+      }).toList();
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert(list);
+
+      // Write to a temp file.
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/quran_bookmarks.json');
+      await file.writeAsString(jsonString);
+
+      // Open system share sheet.
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'application/json')],
+        subject: 'Quran Bookmarks',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _confirmClearAll(BuildContext context, WidgetRef ref) async {

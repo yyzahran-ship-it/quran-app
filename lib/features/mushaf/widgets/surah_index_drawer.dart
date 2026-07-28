@@ -93,7 +93,10 @@ class _SurahIndexDrawerState extends ConsumerState<SurahIndexDrawer> {
                         return _SurahListTile(
                           surah: surahs[index],
                           isSelected:
-                              surahs[index].id == state.currentSurah?.id,
+                              surahs[index].id ==
+                              (state.ayahs.isNotEmpty
+                                  ? state.ayahs.first.surahNumber
+                                  : null),
                           onTap: () {
                             ref
                                 .read(mushafProvider.notifier)

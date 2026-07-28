@@ -1,30 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/theme/theme_provider.dart';
-import '../audio/audio_provider.dart';
-import '../audio/audio_repository.dart';
+import '../../core/theme/dyslexia_provider.dart';
+import '../mushaf/mushaf_provider.dart';
+import '../mushaf/mushaf_download_provider.dart';
+import '../mushaf/second_translation_provider.dart';
+import '../mushaf/tafsir_repository.dart';
 
 // ─── Font size persistence ────────────────────────────────────────────────────
 
-// Persistent font size provider (syncs to SharedPreferences).
 class FontSizeNotifier extends Notifier<double> {
   static const _key = 'arabic_font_size';
+  static const _default = 26.0;
+  static const _min = 14.0; // ~50% of default
+  static const _max = 56.0; // ~200% of default
 
   @override
   double build() {
     _load();
-    return kDefaultArabicFontSize;
+    return _default;
   }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    state = prefs.getDouble(_key) ?? kDefaultArabicFontSize;
+    state = prefs.getDouble(_key) ?? _default;
   }
 
   Future<void> set(double size) async {
-    state = size.clamp(16.0, 48.0);
+    state = size.clamp(_min, _max);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_key, state);
   }
@@ -32,6 +36,35 @@ class FontSizeNotifier extends Notifier<double> {
 
 final fontSizeProvider =
     NotifierProvider<FontSizeNotifier, double>(FontSizeNotifier.new);
+
+// Translation font size is controlled independently from Arabic.
+class TranslationFontSizeNotifier extends Notifier<double> {
+  static const _key = 'translation_font_size';
+  static const _default = 13.0;
+  static const _min = 10.0;
+  static const _max = 22.0;
+
+  @override
+  double build() {
+    _load();
+    return _default;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getDouble(_key) ?? _default;
+  }
+
+  Future<void> set(double size) async {
+    state = size.clamp(_min, _max);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_key, state);
+  }
+}
+
+final translationFontSizeProvider =
+    NotifierProvider<TranslationFontSizeNotifier, double>(
+        TranslationFontSizeNotifier.new);
 
 // ─── Settings screen ──────────────────────────────────────────────────────────
 
@@ -42,33 +75,16 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(themeProvider);
     final fontSize = ref.watch(fontSizeProvider);
-    final audio = ref.watch(audioProvider);
+    final translationFontSize = ref.watch(translationFontSizeProvider);
+    final dyslexiaFont = ref.watch(dyslexiaFontProvider);
+    final secondTxId = ref.watch(secondTranslationProvider);
+    final tafsirId = ref.watch(tafsirIdProvider);
+    final mushaf = ref.watch(mushafProvider);
+    final download  = ref.watch(mushafDownloadProvider);
     final colors = Theme.of(context).colorScheme;
-    const goldColor = Color(0xFFB8860B);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: const Color(0xFF1B6B3A),
-        foregroundColor: Colors.white,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(2),
-          child: Container(
-            height: 2,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  goldColor,
-                  Color(0xFFD4AF37),
-                  goldColor,
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
           // ── Appearance ────────────────────────────────────────────────────
@@ -81,69 +97,97 @@ class SettingsScreen extends ConsumerWidget {
               underline: const SizedBox.shrink(),
               items: const [
                 DropdownMenuItem(
-                    value: AppThemeMode.light, child: Text('Light (Mushaf)')),
+                    value: AppThemeMode.light, child: Text('Light')),
                 DropdownMenuItem(
                     value: AppThemeMode.dark, child: Text('Dark')),
                 DropdownMenuItem(
                     value: AppThemeMode.inverted,
                     child: Text('Inverted (night)')),
+                DropdownMenuItem(
+                    value: AppThemeMode.highContrast,
+                    child: Text('High Contrast')),
               ],
               onChanged: (v) {
                 if (v != null) ref.read(themeProvider.notifier).setTheme(v);
               },
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.format_size),
-            title: const Text('Arabic font size'),
-            subtitle: Slider(
-              value: fontSize,
-              min: 16,
-              max: 48,
-              divisions: 16,
-              label: fontSize.round().toString(),
-              activeColor: goldColor,
-              onChanged: (v) => ref.read(fontSizeProvider.notifier).set(v),
-            ),
-            trailing: Text(
-              '${fontSize.round()}',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: colors.primary),
-            ),
+          _FontSizeTile(
+            label: 'Arabic font size',
+            value: fontSize,
+            min: FontSizeNotifier._min,
+            max: FontSizeNotifier._max,
+            defaultValue: 26.0,
+            divisions: 21,
+            colors: colors,
+            onChanged: (v) => ref.read(fontSizeProvider.notifier).set(v),
           ),
-          // Font preview tile
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFDF6E3),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: goldColor.withValues(alpha: 0.4),
-                width: 0.8,
-              ),
-            ),
-            child: Text(
-              'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
-              textDirection: TextDirection.rtl,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: kArabicFont,
-                fontSize: fontSize,
-                height: kMushafahLineHeight,
-                color: const Color(0xFF1B1B1B),
-              ),
-            ),
+          _FontSizeTile(
+            label: 'Translation font size',
+            value: translationFontSize,
+            min: TranslationFontSizeNotifier._min,
+            max: TranslationFontSizeNotifier._max,
+            defaultValue: 13.0,
+            divisions: 12,
+            colors: colors,
+            onChanged: (v) =>
+                ref.read(translationFontSizeProvider.notifier).set(v),
           ),
-          // ── Audio ─────────────────────────────────────────────────────────
-          _SectionHeader(title: 'Audio', colors: colors),
+          // Dyslexia-friendly font: monospace + extra letter spacing + tall line
+          // height for translation text. Arabic Quran text is not affected.
+          SwitchListTile(
+            secondary: const Icon(Icons.font_download_outlined),
+            title: const Text('Dyslexia-friendly translation font'),
+            subtitle: const Text(
+              'Applies monospace font with extra letter spacing and '
+              'line height to translation text only.',
+              style: TextStyle(fontSize: 12),
+            ),
+            value: dyslexiaFont,
+            onChanged: (v) =>
+                ref.read(dyslexiaFontProvider.notifier).setEnabled(enabled: v),
+          ),
+          // ── Reading ───────────────────────────────────────────────────────
+          _SectionHeader(title: 'Reading', colors: colors),
           ListTile(
-            leading: const Icon(Icons.mic_none_outlined),
-            title: const Text('Reciter'),
+            leading: const Icon(Icons.translate_outlined),
+            title: const Text('Translation language'),
+            subtitle: mushaf.availableTranslationKeys.length <= 1
+                ? const Text(
+                    'Only Sahih International available — see README to add more',
+                    style: TextStyle(fontSize: 11),
+                  )
+                : null,
             trailing: DropdownButton<String>(
-              value: audio.reciter,
+              value: mushaf.activeTranslationKey,
               underline: const SizedBox.shrink(),
-              items: AudioRepository.reciters.entries
+              items: mushaf.availableTranslationKeys
+                  .map((k) => DropdownMenuItem(
+                        value: k,
+                        child: Text(
+                          kTranslationNames[k] ?? k,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(mushafProvider.notifier).setTranslationKey(v);
+                }
+              },
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.translate),
+            title: const Text('Second translation'),
+            subtitle: const Text(
+              'Show a second language alongside the primary translation',
+              style: TextStyle(fontSize: 11),
+            ),
+            trailing: DropdownButton<int>(
+              value: secondTxId,
+              underline: const SizedBox.shrink(),
+              items: kSecondaryTranslations.entries
                   .map((e) => DropdownMenuItem(
                         value: e.key,
                         child: Text(e.value,
@@ -152,17 +196,40 @@ class SettingsScreen extends ConsumerWidget {
                   .toList(),
               onChanged: (v) {
                 if (v != null) {
-                  ref.read(audioProvider.notifier).setReciter(v);
+                  ref.read(secondTranslationProvider.notifier).set(v);
                 }
               },
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.book_outlined),
+            title: const Text('Tafsir'),
+            trailing: DropdownButton<int>(
+              value: tafsirId,
+              underline: const SizedBox.shrink(),
+              items: kTafsirs
+                  .map((t) => DropdownMenuItem(
+                        value: t.id,
+                        child: Text(
+                          '${t.name} (${t.language})',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) ref.read(tafsirIdProvider.notifier).set(v);
+              },
+            ),
+          ),
+          // ── Offline ───────────────────────────────────────────────────────
+          _SectionHeader(title: 'Offline', colors: colors),
+          _MushafDownloadTile(download: download, colors: colors),
           // ── About ─────────────────────────────────────────────────────────
           _SectionHeader(title: 'About', colors: colors),
           ListTile(
             leading: const Icon(Icons.menu_book_outlined),
             title: const Text('Quran text'),
-            subtitle: const Text('Tanzil Uthmanic script — tanzil.net'),
+            subtitle: const Text('Tanzil Uthmani script — tanzil.net'),
           ),
           ListTile(
             leading: const Icon(Icons.translate_outlined),
@@ -170,20 +237,36 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Saheeh International'),
           ),
           ListTile(
-            leading: const Icon(Icons.headphones_outlined),
-            title: const Text('Audio'),
-            subtitle: const Text(
-                'Streamed from everyayah.com — requires internet'),
-          ),
-          ListTile(
             leading: const Icon(Icons.font_download_outlined),
             title: const Text('Font'),
             subtitle: const Text(
-              'KFGQPC Uthmanic Script Hafs v8\n'
-              'King Fahad Quran Printing Complex, Madinah\n'
-              'Official Unicode Uthmanic standard font',
+              'KFGQPC Uthmanic Script Hafs v8 — King Fahad Quran Printing Complex',
             ),
-            isThreeLine: true,
+          ),
+          // Live font preview — plain white background matching the Mushaf page
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(
+                    color: const Color(0xFFCCCCCC), width: 0.8),
+              ),
+              child: const Text(
+                'بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ',
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'UthmanicHafs',
+                  fontSize: 26,
+                  height: 2.4,
+                  color: Color(0xFF0D0D0D),
+                ),
+              ),
+            ),
           ),
           // ── Privacy ───────────────────────────────────────────────────────
           _SectionHeader(title: 'Privacy', colors: colors),
@@ -193,15 +276,6 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text(
               'No analytics, no crash reporters, no third-party SDKs. '
               'Your reading habits stay on your device.',
-            ),
-            isThreeLine: true,
-          ),
-          ListTile(
-            leading: Icon(Icons.wifi_off_outlined, color: colors.primary),
-            title: const Text('Offline first'),
-            subtitle: const Text(
-              'The Quran text and translations are bundled in the app. '
-              'Internet is only used for audio streaming.',
             ),
             isThreeLine: true,
           ),
@@ -222,6 +296,124 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Mushaf page download tile ────────────────────────────────────────────────
+
+class _MushafDownloadTile extends ConsumerWidget {
+  const _MushafDownloadTile({
+    required this.download,
+    required this.colors,
+  });
+
+  final MushafDownloadState download;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(mushafDownloadProvider.notifier);
+
+    if (download.isDone) {
+      return ListTile(
+        leading: Icon(Icons.check_circle_outline, color: colors.primary),
+        title: const Text('Mushaf pages'),
+        subtitle: const Text('All 604 pages saved for offline reading'),
+      );
+    }
+
+    if (download.isRunning) {
+      return ListTile(
+        leading: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            value: download.progress,
+            strokeWidth: 2.5,
+            color: colors.primary,
+          ),
+        ),
+        title: Text(
+          'Downloading pages… ${download.cached} / $kTotalMushafPages',
+        ),
+        subtitle: LinearProgressIndicator(
+          value: download.progress,
+          minHeight: 3,
+          borderRadius: BorderRadius.circular(2),
+        ),
+        trailing: TextButton(
+          onPressed: notifier.cancel,
+          child: const Text('Cancel'),
+        ),
+      );
+    }
+
+    final cached = download.cached;
+    return ListTile(
+      leading: Icon(
+        Icons.download_outlined,
+        color: cached > 0 ? colors.primary : colors.onSurfaceVariant,
+      ),
+      title: const Text('Mushaf pages (offline)'),
+      subtitle: Text(
+        cached == 0
+            ? 'Download all 604 pages for offline reading'
+            : '$cached of $kTotalMushafPages pages saved — tap to resume',
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: FilledButton.tonal(
+        onPressed: notifier.start,
+        child: const Text('Download'),
+      ),
+    );
+  }
+}
+
+// ─── Font size tile ───────────────────────────────────────────────────────────
+
+class _FontSizeTile extends StatelessWidget {
+  const _FontSizeTile({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.defaultValue,
+    required this.divisions,
+    required this.colors,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final double defaultValue;
+  final int divisions;
+  final ColorScheme colors;
+  final ValueChanged<double> onChanged;
+
+  String get _pct =>
+      '${((value / defaultValue) * 100).round()}%';
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.format_size),
+      title: Text(label),
+      subtitle: Slider(
+        value: value,
+        min: min,
+        max: max,
+        divisions: divisions,
+        label: _pct,
+        onChanged: onChanged,
+      ),
+      trailing: Text(
+        _pct,
+        style:
+            TextStyle(fontWeight: FontWeight.bold, color: colors.primary),
       ),
     );
   }

@@ -26,20 +26,19 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Review'),
-        actions: session.hasCards && !session.done
-            ? [
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Center(
-                    child: Text(
-                      '${session.currentIndex + 1} / ${session.queue.length}',
-                      style: TextStyle(
-                          color: colors.onSurfaceVariant, fontSize: 13),
-                    ),
-                  ),
+        actions: [
+          if (session.hasCards && !session.done)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  '${session.currentIndex + 1} / ${session.queue.length}',
+                  style: TextStyle(
+                      color: colors.onSurfaceVariant, fontSize: 13),
                 ),
-              ]
-            : null,
+              ),
+            ),
+        ],
       ),
       body: _buildBody(session, colors),
     );
@@ -63,7 +62,6 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
 
     return Column(
       children: [
-        // Progress bar.
         LinearProgressIndicator(
           value: session.currentIndex / session.queue.length,
           minHeight: 3,
@@ -75,7 +73,6 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Verse reference chip.
                 Center(
                   child: Chip(
                     label: Text(
@@ -88,7 +85,6 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Arabic text card.
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -119,7 +115,6 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                // Lapse count hint.
                 if (item.card.lapses > 0)
                   Center(
                     child: Text(
@@ -132,7 +127,6 @@ class _HifzReviewScreenState extends ConsumerState<HifzReviewScreen> {
             ),
           ),
         ),
-        // Rating buttons — only visible after reveal.
         if (session.revealed)
           _RatingBar(
             onRate: (r) => ref.read(hifzProvider.notifier).rate(r),
@@ -169,7 +163,6 @@ class _HiddenAyah extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Show only the first word as a hint.
         Text(
           hint,
           textDirection: TextDirection.rtl,

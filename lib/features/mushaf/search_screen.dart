@@ -164,7 +164,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       // Navigate the reader to this surah and pop search.
                       ref
                           .read(mushafProvider.notifier)
-                          .navigateToSurah(ayah.surahNumber);
+                          .navigateToAyah(ayah.surahNumber, ayah.ayahNumber);
                       Navigator.pop(context);
                     },
                   );

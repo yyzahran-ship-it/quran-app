@@ -13,8 +13,11 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    // Flutter plugin subprojects need app to be evaluated first so they can read
+    // flutter.compileSdkVersion / flutter.minSdkVersion from the FlutterExtension.
     project.evaluationDependsOn(":app")
 }
+
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)

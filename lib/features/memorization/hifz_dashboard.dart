@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_constants.dart';
 import 'hifz_provider.dart';
 import 'hifz_review_screen.dart';
+import 'khatma_planner.dart';
 
 class HifzDashboard extends ConsumerWidget {
   const HifzDashboard({super.key});
@@ -21,35 +23,41 @@ class HifzDashboard extends ConsumerWidget {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.calendar_month_outlined),
+        label: const Text('Khatma planner'),
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => KhatmaPlannerSheet(ref: ref),
+        ),
+      ),
       body: statsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (stats) => _buildDashboard(context, ref, stats, colors),
+        data: (stats) => _buildDashboard(context, stats, colors),
       ),
     );
   }
 
   Widget _buildDashboard(
-    BuildContext context,
-    WidgetRef ref,
-    HifzStats stats,
-    ColorScheme colors,
-  ) {
+      BuildContext context, HifzStats stats, ColorScheme colors) {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        // Khatma goal banner (visible when a goal is set).
+        const KhatmaGoalBanner(),
+        const SizedBox(height: 16),
         // Due card — main CTA.
         _DueCard(stats: stats, colors: colors, context: context),
-        const SizedBox(height: 20),
-        // Stats grid.
+        const SizedBox(height: 16),
+        // Streak + stats row.
         Row(
           children: [
-            _StatCard(
-              label: 'Total cards',
-              value: '${stats.total}',
-              icon: Icons.layers_outlined,
-              colors: colors,
-            ),
+            _StreakCard(stats: stats, colors: colors),
             const SizedBox(width: 12),
             _StatCard(
               label: 'Mature',
@@ -64,22 +72,24 @@ class HifzDashboard extends ConsumerWidget {
         Row(
           children: [
             _StatCard(
+              label: 'Total cards',
+              value: '${stats.total}',
+              icon: Icons.layers_outlined,
+              colors: colors,
+            ),
+            const SizedBox(width: 12),
+            _StatCard(
               label: 'Learning',
               value: '${stats.total - stats.matureCount}',
               icon: Icons.school_outlined,
               colors: colors,
             ),
-            const SizedBox(width: 12),
-            _StatCard(
-              label: 'Due now',
-              value: '${stats.dueCount}',
-              icon: Icons.schedule_outlined,
-              colors: colors,
-            ),
           ],
         ),
-        const SizedBox(height: 32),
-        // Info text.
+        const SizedBox(height: 20),
+        // Quran progress bars.
+        if (stats.total > 0) _ProgressSection(stats: stats, colors: colors),
+        const SizedBox(height: 20),
         Text(
           'A card becomes "mature" after its interval reaches 21 days. '
           'Reviews are scheduled by the FSRS algorithm for maximum retention.',
@@ -90,6 +100,8 @@ class HifzDashboard extends ConsumerWidget {
     );
   }
 }
+
+// ─── Due card ─────────────────────────────────────────────────────────────────
 
 class _DueCard extends StatelessWidget {
   const _DueCard(
@@ -119,13 +131,17 @@ class _DueCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                hasDue ? Icons.notifications_active_outlined : Icons.check_circle_outline,
+                hasDue
+                    ? Icons.notifications_active_outlined
+                    : Icons.check_circle_outline,
                 color: hasDue ? colors.onPrimary : colors.outline,
                 size: 28,
               ),
               const SizedBox(width: 12),
               Text(
-                hasDue ? '${stats.dueCount} card${stats.dueCount > 1 ? 's' : ''} due' : 'All caught up!',
+                hasDue
+                    ? '${stats.dueCount} card${stats.dueCount > 1 ? 's' : ''} due'
+                    : 'All caught up!',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -175,6 +191,178 @@ class _DueCard extends StatelessWidget {
     );
   }
 }
+
+// ─── Streak card ──────────────────────────────────────────────────────────────
+
+class _StreakCard extends StatelessWidget {
+  const _StreakCard({required this.stats, required this.colors});
+  final HifzStats stats;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final streak = stats.currentStreak;
+    final hasStreak = streak > 0;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: hasStreak
+              ? Colors.orange.shade50.withValues(alpha: 0.6)
+              : colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+          border: hasStreak
+              ? Border.all(
+                  color: Colors.orange.shade300.withValues(alpha: 0.5))
+              : null,
+        ),
+        child: Row(
+          children: [
+            Text(
+              hasStreak ? '🔥' : '💤',
+              style: const TextStyle(fontSize: 22),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasStreak ? '$streak day${streak == 1 ? '' : 's'}' : 'No streak',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: hasStreak
+                        ? Colors.orange.shade700
+                        : colors.onSurface,
+                  ),
+                ),
+                Text(
+                  hasStreak
+                      ? 'Best: ${stats.longestStreak}d'
+                      : 'Review daily',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: hasStreak
+                        ? Colors.orange.shade600
+                        : colors.outline,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Progress section ─────────────────────────────────────────────────────────
+
+class _ProgressSection extends StatelessWidget {
+  const _ProgressSection({required this.stats, required this.colors});
+  final HifzStats stats;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final addedPct = (stats.quranProgress * 100).toStringAsFixed(1);
+    final maturePct = (stats.quranMatureProgress * 100).toStringAsFixed(1);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Progress toward full Quran',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ProgressRow(
+            label: 'Added to Hifz',
+            value: stats.total,
+            total: kTotalAyahs,
+            pct: addedPct,
+            color: colors.primary,
+            colors: colors,
+          ),
+          const SizedBox(height: 10),
+          _ProgressRow(
+            label: 'Mature (≥21 days)',
+            value: stats.matureCount,
+            total: kTotalAyahs,
+            pct: maturePct,
+            color: Colors.green.shade600,
+            colors: colors,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressRow extends StatelessWidget {
+  const _ProgressRow({
+    required this.label,
+    required this.value,
+    required this.total,
+    required this.pct,
+    required this.color,
+    required this.colors,
+  });
+  final String label;
+  final int value;
+  final int total;
+  final String pct;
+  final Color color;
+  final ColorScheme colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label,
+                style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
+            Text(
+              '$value / $total  ($pct%)',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colors.onSurface),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Semantics(
+          label: '$label: $value of $total ($pct%)',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value / total,
+              minHeight: 8,
+              backgroundColor: colors.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Generic stat card ────────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
   const _StatCard({

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ayah TTS Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    min-height: 100vh;
+  }
+
+  .phone {
+    width: 390px;
+    background: #fff;
+    border-radius: 40px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 844px;
+  }
+
+  /* App bar */
+  .appbar {
+    background: #fff;
+    padding: 52px 16px 12px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .appbar-title { font-size: 17px; font-weight: 700; color: #1a1a1a; }
+  .appbar-sub { font-size: 13px; color: #757575; font-family: serif; }
+  .reciter-btn {
+    font-size: 12px; color: #1a73e8; background: none; border: none;
+    cursor: pointer; display: flex; align-items: center; gap: 4px;
+  }
+
+  /* TTS mode toggle */
+  .tts-banner {
+    background: #E8F5E9;
+    border-bottom: 1px solid #C8E6C9;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #2E7D32;
+    font-weight: 600;
+  }
+  .tts-banner label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .switch {
+    width: 40px; height: 22px; background: #34A853; border-radius: 11px;
+    position: relative; cursor: pointer; transition: background .2s;
+  }
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 20px; width: 18px; height: 18px;
+    background: white; border-radius: 50%; transition: left .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .switch.off { background: #ccc; }
+  .switch.off::after { left: 2px; }
+
+  /* Ayah list */
+  .ayah-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 8px;
+  }
+
+  .ayah-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background .25s, border-left .25s;
+    border-left: 3px solid transparent;
+    cursor: default;
+  }
+  .ayah-row.active {
+    background: #E6F4EA;
+    border-left-color: #34A853;
+    padding-left: 13px;
+  }
+  .ayah-row.speaking {
+    background: #E6F4EA;
+    border-left-color: #34A853;
+    padding-left: 13px;
+  }
+
+  /* Badge / speak button */
+  .badge {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #f0f0f0; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px; font-weight: 600; color: #555;
+    transition: background .2s, color .2s;
+    position: relative;
+  }
+  .badge.active { background: #34A853; color: white; }
+  .badge.loading { background: #34A853; }
+  .badge .ripple {
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid #34A853;
+    animation: ripple 1.2s infinite;
+    opacity: 0;
+  }
+  @keyframes ripple {
+    0%   { transform: scale(0.85); opacity: .7; }
+    100% { transform: scale(1.3);  opacity: 0;  }
+  }
+
+  .ayah-content { flex: 1; margin-left: 14px; }
+
+  /* Arabic text */
+  .arabic {
+    font-family: 'Traditional Arabic', 'Scheherazade New', 'Amiri', serif;
+    font-size: 22px;
+    line-height: 1.9;
+    color: #1a1a1a;
+    text-align: right;
+    direction: rtl;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .word {
+    display: inline-block;
+    padding: 2px 4px;
+    border-radius: 5px;
+    transition: background .15s, color .15s;
+    cursor: default;
+  }
+  .word.spoken { color: #8D6E1A; }
+  .word.current {
+    background: #34A853;
+    color: white;
+    padding: 2px 7px;
+  }
+
+  /* Translation */
+  .translation {
+    font-size: 13px;
+    color: #757575;
+    margin-top: 4px;
+    text-align: left;
+    direction: ltr;
+    line-height: 1.5;
+  }
+
+  /* Player bar */
+  .player-bar {
+    border-top: 1px solid #e0e0e0;
+    background: #fafafa;
+    padding: 10px 16px 24px;
+  }
+  .player-row {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .player-label {
+    flex: 1; font-size: 13px; color: #555; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .player-label.active { color: #34A853; font-weight: 600; }
+  .ctrl-btn {
+    width: 40px; height: 40px; background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; color: #9e9e9e;
+    font-size: 20px;
+  }
+  .ctrl-btn.active { color: #34A853; }
+  .play-btn {
+    width: 50px; height: 50px; background: #34A853; border: none; cursor: pointer;
+    border-radius: 50%; color: white; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(52,168,83,.4);
+  }
+  .play-btn.idle { background: #1a73e8; box-shadow: 0 2px 8px rgba(26,115,232,.4); }
+
+  /* Waveform animation */
+  .waveform {
+    display: flex; align-items: center; gap: 3px; height: 20px;
+  }
+  .bar {
+    width: 3px; background: #34A853; border-radius: 2px;
+    animation: wave 1s ease-in-out infinite;
+  }
+  .bar:nth-child(1) { animation-delay: 0s;    height: 6px; }
+  .bar:nth-child(2) { animation-delay: .1s;   height: 12px; }
+  .bar:nth-child(3) { animation-delay: .2s;   height: 18px; }
+  .bar:nth-child(4) { animation-delay: .3s;   height: 12px; }
+  .bar:nth-child(5) { animation-delay: .4s;   height: 6px;  }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(1);   }
+    50%       { transform: scaleY(1.8); }
+  }
+
+  .tts-note {
+    font-size: 10px; color: #aaa; text-align: center;
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- App bar -->
+  <div class="appbar">
+    <div>
+      <div class="appbar-title">Al-Fatiha</div>
+      <div class="appbar-sub">الفاتحة</div>
+    </div>
+    <button class="reciter-btn">🎙 Alafasy</button>
+  </div>
+
+  <!-- TTS toggle banner -->
+  <div class="tts-banner">
+    <span>🔊 TTS Playback</span>
+    <label>
+      <span id="tts-label">ON</span>
+      <div class="switch" id="tts-switch" onclick="toggleTTS()"></div>
+    </label>
+  </div>
+
+  <!-- Ayah list -->
+  <div class="ayah-list" id="ayah-list"></div>
+
+  <!-- Player bar -->
+  <div class="player-bar">
+    <div class="player-row">
+      <div class="player-label" id="player-label">Tap any ayah to speak it</div>
+      <button class="ctrl-btn active" onclick="prevAyah()" title="Previous">⏮</button>
+      <button class="play-btn idle" id="play-btn" onclick="togglePlay()">▶</button>
+      <button class="ctrl-btn active" onclick="nextAyah()" title="Next">⏭</button>
+      <button class="ctrl-btn" id="stop-btn" onclick="stopSpeaking()" title="Stop">⏹</button>
+    </div>
+    <div class="tts-note" id="tts-note">Using device TTS engine · Arabic (ar-SA)</div>
+  </div>
+
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const ayahs = [
+  {
+    n: 1, ar: 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ',
+    en: 'In the name of Allah, the Entirely Merciful, the Especially Merciful.'
+  },
+  {
+    n: 2, ar: 'ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَـٰلَمِينَ',
+    en: 'All praise is due to Allah, Lord of the worlds.'
+  },
+  {
+    n: 3, ar: 'ٱلرَّحۡمَـٰنِ ٱلرَّحِيمِ',
+    en: 'The Entirely Merciful, the Especially Merciful.'
+  },
+  {
+    n: 4, ar: 'مَـٰلِكِ يَوۡمِ ٱلدِّينِ',
+    en: 'Sovereign of the Day of Recompense.'
+  },
+  {
+    n: 5, ar: 'إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ',
+    en: 'It is You we worship and You we ask for help.'
+  },
+  {
+    n: 6, ar: 'ٱهۡدِنَا ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ',
+    en: 'Guide us to the straight path.'
+  },
+  {
+    n: 7, ar: 'صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ غَيۡرِ ٱلۡمَغۡضُوبِ عَلَيۡهِمۡ وَلَا ٱلضَّآلِّينَ',
+    en: 'The path of those upon whom You have bestowed favor, not of those who have evoked anger or of those who are astray.'
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentAyah   = null;   // 1-based ayah number currently selected
+let isSpeaking    = false;
+let ttsEnabled    = true;
+let wordTimer     = null;
+let currentWordIdx = -1;
+let currentWords   = [];
+
+// ── Build UI ──────────────────────────────────────────────────────────────────
+const list = document.getElementById('ayah-list');
+
+function buildList() {
+  list.innerHTML = '';
+  ayahs.forEach(a => {
+    const words = a.ar.split(/\s+/).filter(Boolean);
+    const row = document.createElement('div');
+    row.className = 'ayah-row';
+    row.id = `row-${a.n}`;
+    row.innerHTML = `
+      <button class="badge" id="badge-${a.n}" onclick="speakAyah(${a.n})">
+        ${a.n}
+      </button>
+      <div class="ayah-content">
+        <div class="arabic" id="arabic-${a.n}">
+          ${words.map((w, i) => `<span class="word" id="w-${a.n}-${i}">${w}</span>`).join('')}
+        </div>
+        <div class="translation">${a.en}</div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+buildList();
+
+// ── TTS toggle ────────────────────────────────────────────────────────────────
+function toggleTTS() {
+  ttsEnabled = !ttsEnabled;
+  const sw = document.getElementById('tts-switch');
+  const lbl = document.getElementById('tts-label');
+  sw.className = 'switch' + (ttsEnabled ? '' : ' off');
+  lbl.textContent = ttsEnabled ? 'ON' : 'OFF';
+  if (!ttsEnabled) stopSpeaking();
+}
+
+// ── Speak ─────────────────────────────────────────────────────────────────────
+function speakAyah(n) {
+  if (!ttsEnabled) return;
+  stopSpeaking();
+  currentAyah = n;
+  updateRowHighlight();
+  updatePlayerBar();
+
+  const ayah = ayahs.find(a => a.n === n);
+  if (!ayah) return;
+
+  currentWords = ayah.ar.split(/\s+/).filter(Boolean);
+  currentWordIdx = -1;
+
+  if ('speechSynthesis' in window) {
+    const utt = new SpeechSynthesisUtterance(ayah.ar);
+    utt.lang = 'ar-SA';
+    utt.rate = 0.85;
+    utt.pitch = 1.0;
+
+    utt.onstart = () => {
+      isSpeaking = true;
+      updateBadge(n, true);
+      document.getElementById('play-btn').innerHTML = '⏸';
+      document.getElementById('play-btn').classList.remove('idle');
+      // Start word simulation (boundary events have limited browser support)
+      simulateWordProgress(n, currentWords, utt);
+    };
+
+    utt.onend = () => {
+      isSpeaking = false;
+      clearWordHighlights(n);
+      updateBadge(n, false);
+      document.getElementById('play-btn').innerHTML = '▶';
+      // Auto-advance to next ayah
+      if (currentAyah === n && n < ayahs.length) {
+        setTimeout(() => speakAyah(n + 1), 300);
+      } else if (n >= ayahs.length) {
+        currentAyah = null;
+        updateRowHighlight();
+        updatePlayerBar();
+        document.getElementById('play-btn').classList.add('idle');
+      }
+    };
+
+    utt.onerror = () => {
+      isSpeaking = false;
+      document.getElementById('tts-note').textContent =
+        '⚠ Arabic TTS not available on this device. Install Arabic voice in Settings.';
+    };
+
+    // Word boundary events (Chrome/Edge support)
+    utt.onboundary = (e) => {
+      if (e.name !== 'word') return;
+      const spoken = ayah.ar.substring(0, e.charIndex + e.charLength);
+      const idx = spoken.trim().split(/\s+/).length - 1;
+      highlightWord(n, idx);
+    };
+
+    window.speechSynthesis.speak(utt);
+  } else {
+    // Fallback: just animate without audio
+    isSpeaking = true;
+    document.getElementById('play-btn').innerHTML = '⏸';
+    document.getElementById('play-btn').classList.remove('idle');
+    simulateWordProgress(n, currentWords, null);
+    document.getElementById('tts-note').textContent =
+      '⚠ speechSynthesis not supported — visual demo only';
+  }
+}
+
+// Simulates word-by-word progress for browsers without onboundary support
+function simulateWordProgress(n, words, utt) {
+  clearInterval(wordTimer);
+  let idx = 0;
+  // ~300ms per word, adjust by word length
+  function step() {
+    if (!isSpeaking && utt) return;
+    highlightWord(n, idx);
+    idx++;
+    if (idx < words.length) {
+      const delay = 280 + words[idx - 1].length * 40;
+      wordTimer = setTimeout(step, delay);
+    }
+  }
+  wordTimer = setTimeout(step, 200);
+}
+
+function highlightWord(ayahN, idx) {
+  const words = (ayahs.find(a => a.n === ayahN)?.ar || '').split(/\s+/).filter(Boolean);
+  words.forEach((_, i) => {
+    const el = document.getElementById(`w-${ayahN}-${i}`);
+    if (!el) return;
+    el.className = 'word' + (i === idx ? ' current' : i < idx ? ' spoken' : '');
+  });
+  currentWordIdx = idx;
+}
+
+function clearWordHighlights(n) {
+  clearInterval(wordTimer);
+  clearTimeout(wordTimer);
+  const words = (ayahs.find(a => a.n === n)?.ar || '').split(/\s+/).filter(Boolean);
+  words.forEach((_, i) => {
+    const el = document.getElementById(`w-${n}-${i}`);
+    if (el) el.className = 'word';
+  });
+}
+
+function stopSpeaking() {
+  clearTimeout(wordTimer);
+  clearInterval(wordTimer);
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (currentAyah) {
+    clearWordHighlights(currentAyah);
+    updateBadge(currentAyah, false);
+  }
+  isSpeaking = false;
+  document.getElementById('play-btn').innerHTML = '▶';
+  document.getElementById('play-btn').classList.add('idle');
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+function togglePlay() {
+  if (!currentAyah) { speakAyah(1); return; }
+  if (isSpeaking) {
+    stopSpeaking();
+    updateRowHighlight();
+    updatePlayerBar();
+  } else {
+    speakAyah(currentAyah);
+  }
+}
+
+function prevAyah() {
+  const n = currentAyah ? Math.max(1, currentAyah - 1) : 1;
+  speakAyah(n);
+}
+
+function nextAyah() {
+  const n = currentAyah ? Math.min(ayahs.length, currentAyah + 1) : 1;
+  speakAyah(n);
+}
+
+// ── Visual state ──────────────────────────────────────────────────────────────
+function updateBadge(n, active) {
+  const badge = document.getElementById(`badge-${n}`);
+  if (!badge) return;
+  if (active) {
+    badge.className = 'badge active';
+    badge.innerHTML = `<span class="waveform">
+      <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+      <span class="bar"></span><span class="bar"></span>
+    </span>`;
+  } else {
+    badge.className = 'badge';
+    badge.innerHTML = n;
+  }
+}
+
+function updateRowHighlight() {
+  ayahs.forEach(a => {
+    const row = document.getElementById(`row-${a.n}`);
+    if (row) row.className = 'ayah-row' + (a.n === currentAyah ? ' active' : '');
+  });
+}
+
+function updatePlayerBar() {
+  const lbl = document.getElementById('player-label');
+  const stop = document.getElementById('stop-btn');
+  if (currentAyah) {
+    lbl.textContent = `Ayah ${currentAyah} of ${ayahs.length}`;
+    lbl.className = 'player-label active';
+    stop.className = 'ctrl-btn active';
+  } else {
+    lbl.textContent = 'Tap any ayah to speak it';
+    lbl.className = 'player-label';
+    stop.className = 'ctrl-btn';
+  }
+}
+
+// Auto-speak first ayah on load so user sees it working immediately
+setTimeout(() => speakAyah(1), 600);
+</script>
+</body>
+</html>

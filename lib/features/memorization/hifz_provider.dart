@@ -1,8 +1,48 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants/app_constants.dart';
 import '../../data/repositories/quran_repository.dart';
 import '../../domain/entities/ayah.dart';
 import '../../domain/entities/hifz_card.dart';
 import 'fsrs.dart';
+
+// ─── Streak helpers ───────────────────────────────────────────────────────────
+
+const _kLastReviewDay = 'hifz_last_review_day';
+const _kCurrentStreak = 'hifz_current_streak';
+const _kLongestStreak = 'hifz_longest_streak';
+
+String _todayKey() {
+  final n = DateTime.now();
+  return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+}
+
+Future<void> updateStreakOnCompletion() async {
+  final prefs = await SharedPreferences.getInstance();
+  final today = _todayKey();
+  final last = prefs.getString(_kLastReviewDay);
+  if (last == today) return; // already counted today
+
+  int current = prefs.getInt(_kCurrentStreak) ?? 0;
+  final yesterday = DateTime.now().subtract(const Duration(days: 1));
+  final yKey =
+      '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+
+  current = (last == yKey) ? current + 1 : 1;
+  final longest = prefs.getInt(_kLongestStreak) ?? 0;
+
+  await prefs.setString(_kLastReviewDay, today);
+  await prefs.setInt(_kCurrentStreak, current);
+  if (current > longest) await prefs.setInt(_kLongestStreak, current);
+}
+
+Future<({int current, int longest})> readStreak() async {
+  final prefs = await SharedPreferences.getInstance();
+  return (
+    current: prefs.getInt(_kCurrentStreak) ?? 0,
+    longest: prefs.getInt(_kLongestStreak) ?? 0,
+  );
+}
 
 // ─── Session state ────────────────────────────────────────────────────────────
 
@@ -118,6 +158,7 @@ class HifzNotifier extends Notifier<HifzSession> {
     }
 
     if (nextIndex >= newQueue.length) {
+      await updateStreakOnCompletion();
       state = state.copyWith(
           queue: newQueue, currentIndex: nextIndex, done: true, revealed: false);
     } else {
@@ -137,20 +178,42 @@ class HifzStats {
     required this.dueCount,
     required this.total,
     required this.matureCount,
+    this.currentStreak = 0,
+    this.longestStreak = 0,
   });
   final int dueCount;
   final int total;
   final int matureCount;
+  final int currentStreak;
+  final int longestStreak;
+
+  /// Fraction of the full Quran (6236 ayahs) added to Hifz.
+  double get quranProgress => total / kTotalAyahs;
+
+  /// Fraction of the full Quran that is "mature" (interval ≥ 21 days).
+  double get quranMatureProgress => matureCount / kTotalAyahs;
 }
 
 final hifzStatsProvider = FutureProvider<HifzStats>((ref) async {
   // Depend on hifzProvider so stats refresh after a review session.
   ref.watch(hifzProvider);
   final repo = ref.read(quranRepositoryProvider);
-  final all = await repo.getAllHifzCards();
-  final due = await repo.getDueCount();
+  final results = await Future.wait<dynamic>([
+    repo.getAllHifzCards(),
+    repo.getDueCount(),
+    readStreak(),
+  ]);
+  final all = results[0] as List<HifzCard>;
+  final due = results[1] as int;
+  final streak = results[2] as ({int current, int longest});
   final mature = all.where((c) => c.isMature).length;
-  return HifzStats(dueCount: due, total: all.length, matureCount: mature);
+  return HifzStats(
+    dueCount: due,
+    total: all.length,
+    matureCount: mature,
+    currentStreak: streak.current,
+    longestStreak: streak.longest,
+  );
 });
 
 // Per-ayah in-hifz check (refreshes when hifzProvider changes).
