@@ -268,9 +268,12 @@ jobs:
               curl -fsSL --max-time 60 "${FALLBACK}${NNNN}.webp" -o "assets/quran/pages/page${NNN}.webp" || FAILED=$((FAILED+1))
             done
           fi
-          COUNT=$(ls assets/quran/pages/page*.{png,webp} 2>/dev/null | wc -l)
+          COUNT=$(ls assets/quran/pages/page*.{png,webp} 2>/dev/null | wc -l || echo 0)
           echo "Bundled ${COUNT}/604 pages"
-          [ "$COUNT" -lt 550 ] && echo "ERROR: too few pages" && exit 1
+          if [ "$COUNT" -lt 550 ]; then
+            echo "ERROR: too few pages bundled"
+            exit 1
+          fi
 
       - name: Get dependencies
         run: flutter pub get
