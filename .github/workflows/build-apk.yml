@@ -198,3 +198,117 @@ jobs:
           name: build-log
           path: build_log.txt
           retention-days: 3
+
+  release:
+    name: Build release AAB (Play Store)
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Android NDK
+        run: |
+          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;27.0.12077973"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Ensure UthmanicHafs font is present
+        run: |
+          DEST="assets/fonts/UthmanicHafs.ttf"
+          TMP="$(mktemp /tmp/font_XXXX.ttf)"
+          URLS=(
+            "https://fonts.qurancomplex.gov.sa/wp02/uploads/2019/08/UthmanicHafs1Ver18.ttf"
+            "https://www.qurancomplex.gov.sa/quran/fonts/UthmanicHafs1Ver18.ttf"
+            "https://quran.ksu.edu.sa/fonts/hafs/UthmanicHafs1Ver18.ttf"
+          )
+          for URL in "${URLS[@]}"; do
+            if curl -fsSL --max-time 40 "$URL" -o "$TMP" 2>/dev/null; then
+              MAGIC=$(xxd -p -l 4 "$TMP" 2>/dev/null || true)
+              if [ "$MAGIC" = "00010000" ] || [ "$MAGIC" = "4f54544f" ] || [ "$MAGIC" = "74727565" ]; then
+                cp "$TMP" "$DEST"
+                echo "Font installed: $(stat -c%s "$DEST") bytes"
+                break
+              fi
+            fi
+          done
+          rm -f "$TMP"
+
+      - name: Bundle Mushaf page images
+        run: |
+          mkdir -p assets/quran/pages
+          PRIMARY="https://raw.githubusercontent.com/yyzahran-ship-it/quran-app/mushaf-pages/pages/page"
+          FALLBACK="https://raw.githubusercontent.com/abuumairabuaamir/quran.images/main/QuranMajeed-15Lines-SaudiPrint_page-"
+          HTTP=$(curl -o /tmp/test_page.png -w "%{http_code}" -fsSL --max-time 20 "${PRIMARY}001.png" 2>/dev/null || echo "000")
+          SZ=$(stat -c%s /tmp/test_page.png 2>/dev/null || echo 0)
+          FAILED=0
+          if [ "$SZ" -gt 10000 ]; then
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i)
+              curl -fsSL --max-time 60 "${PRIMARY}${NNN}.png" -o "assets/quran/pages/page${NNN}.png" || FAILED=$((FAILED+1))
+            done
+          else
+            for i in $(seq 1 604); do
+              NNN=$(printf '%03d' $i); NNNN=$(printf '%04d' $i)
+              curl -fsSL --max-time 60 "${FALLBACK}${NNNN}.webp" -o "assets/quran/pages/page${NNN}.webp" || FAILED=$((FAILED+1))
+            done
+          fi
+          COUNT=$(ls assets/quran/pages/page*.{png,webp} 2>/dev/null | wc -l)
+          echo "Bundled ${COUNT}/604 pages"
+          [ "$COUNT" -lt 550 ] && echo "ERROR: too few pages" && exit 1
+
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
+          cat > android/key.properties << EOF
+          storePassword=${KEY_STORE_PASSWORD}
+          keyPassword=${KEY_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          storeFile=$(pwd)/android/upload-keystore.jks
+          EOF
+          echo "Keystore: $(stat -c%s android/upload-keystore.jks) bytes"
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Pre-fetch QDC word-timing data
+        continue-on-error: true
+        run: |
+          pip install requests --quiet
+          python scripts/fetch_qdc_timings.py --reciter 7 --delay 0.15
+
+      - name: Generate app icons
+        run: dart run flutter_launcher_icons
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build release AAB
+        run: flutter build appbundle --release
+
+      - name: Upload release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-app-release
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
