@@ -274,10 +274,10 @@ jobs:
 
       - name: Set up release signing
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTOREBASE64 }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEYPASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEYALIAS }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
           cat > android/key.properties << EOF
