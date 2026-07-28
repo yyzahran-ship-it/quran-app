@@ -293,9 +293,20 @@ jobs:
       - name: Build unsigned release AAB
         run: flutter build appbundle --release --no-tree-shake-icons
 
+      - name: Sign release AAB
+        run: |
+          jarsigner \
+            -verbose \
+            -keystore android/upload-keystore.jks \
+            -storepass "QuranApp@2025#Secure" \
+            -keypass  "QuranApp@2025#Secure" \
+            -signedjar build/app/outputs/bundle/release/app-release-signed.aab \
+            build/app/outputs/bundle/release/app-release.aab \
+            upload
+
       - name: Upload release AAB
         uses: actions/upload-artifact@v4
         with:
           name: quran-app-release
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: build/app/outputs/bundle/release/app-release-signed.aab
           retention-days: 30
