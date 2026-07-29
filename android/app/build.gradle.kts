@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.quranapp.quran_app"
+        applicationId = "holY.quran"
         minSdk = 21        // Android 5.0 — covers 99%+ of active devices
         targetSdk = 35     // Required by Google Play for apps updated in 2025
         versionCode = flutter.versionCode
