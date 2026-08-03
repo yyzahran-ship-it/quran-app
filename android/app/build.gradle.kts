@@ -16,7 +16,7 @@ if (keyPropertiesFile.exists()) {
 
 android {
     namespace = "com.quranapp.quran_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -30,7 +30,7 @@ android {
     defaultConfig {
         applicationId = "holY.quran"
         minSdk = 21        // Android 5.0 — covers 99%+ of active devices
-        targetSdk = 35     // Required by Google Play for apps updated in 2025
+        targetSdk = 36     // Required by Google Play for apps updated in 2026
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
