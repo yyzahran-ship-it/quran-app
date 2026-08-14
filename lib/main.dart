@@ -5,6 +5,7 @@ import 'core/theme/theme_provider.dart';
 import 'data/repositories/quran_repository.dart';
 import 'data/sources/local/quran_seeder.dart';
 import 'features/home/home_screen.dart';
+import 'features/streak/prayer_reminder_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +56,7 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
       await Future.wait([
         QuranSeeder(db).seedIfNeeded(),
         ArabicFontService.tryLoadCached(),
+        PrayerReminderService.init(),
       ]);
       if (mounted) setState(() => _ready = true);
     } catch (_) {

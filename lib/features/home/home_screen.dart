@@ -11,6 +11,8 @@ import '../mushaf/mushaf_provider.dart';
 import '../mushaf/mushaf_screen.dart';
 import '../mushaf/search_screen.dart';
 import '../settings/settings_screen.dart';
+import '../streak/streak_card.dart';
+import '../streak/streak_screen.dart';
 
 // ─── Juz list provider ────────────────────────────────────────────────────────
 
@@ -20,7 +22,7 @@ final juzsProvider = FutureProvider<List<Juz>>((ref) {
 
 // ─── Home screen ──────────────────────────────────────────────────────────────
 
-enum _MenuAction { hifz, settings }
+enum _MenuAction { streak, hifz, settings }
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -49,6 +51,9 @@ class HomeScreen extends ConsumerWidget {
               tooltip: 'More',
               onSelected: (action) {
                 switch (action) {
+                  case _MenuAction.streak:
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const StreakScreen()));
                   case _MenuAction.hifz:
                     Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const HifzDashboard()));
@@ -58,6 +63,14 @@ class HomeScreen extends ConsumerWidget {
                 }
               },
               itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: _MenuAction.streak,
+                  child: ListTile(
+                    leading: Icon(Icons.local_fire_department_outlined),
+                    title: Text('Reading Streak'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
                 PopupMenuItem(
                   value: _MenuAction.hifz,
                   child: ListTile(
@@ -151,9 +164,10 @@ class _SurahListView extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
 
     return ListView.builder(
-      itemCount: items.length,
+      itemCount: items.length + 1, // +1 for the streak card header
       itemBuilder: (context, i) {
-        final item = items[i];
+        if (i == 0) return const StreakCard();
+        final item = items[i - 1];
         if (item is Juz) {
           return _JuzSeparatorRow(juz: item, colors: colors);
         }
