@@ -56,7 +56,7 @@ dependencies:
   share_plus: ^10.1.4
 
   # Streak feature: prayer times, notifications, location
-  adhan: ^1.1.1
+  adhan: ^2.0.0+1
   flutter_local_notifications: ^17.2.4
   geolocator: ^13.0.2
   timezone: ^0.9.4
