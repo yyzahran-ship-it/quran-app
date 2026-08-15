@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Sat Aug 15 19:03:41 UTC 2026
-Run: 31902429434
+Date: Sat Aug 15 19:16:39 UTC 2026
+Run: 31903066680
 
 ## flutter analyze output:
 ```
@@ -39,7 +39,7 @@ warning • The declaration '_GoldCheckTile' isn't referenced. Try removing the 
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:81:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-32 issues found. (ran in 12.9s)
+32 issues found. (ran in 12.4s)
 ```
 
 ## Gradle error lines:
@@ -55,7 +55,6 @@ Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project
 
 ## Last 100 lines of build_log.txt:
 ```
-[        ] 	at org.gradle.launcher.daemon.server.DaemonStateCoordinator.lambda$runCommand$0(DaemonStateCoordinator.java:321)
 [        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 [        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
 [        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
@@ -65,7 +64,7 @@ Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.doApply(DefaultPluginManager.java:176)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.apply(DefaultPluginManager.java:139)
 [        ] 	at org.gradle.plugin.use.resolve.internal.ClassPathPluginResolution.applyTo(ClassPathPluginResolution.java:50)
-[        ] 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator$ApplyAction.apply(DefaultPluginRequestApplicator.java:160)
+[   +1 ms] 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator$ApplyAction.apply(DefaultPluginRequestApplicator.java:160)
 [        ] 	... 254 more
 [        ] Caused by: org.gradle.internal.operations.BuildOperationInvocationException: Error: Your project's Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0. Please upgrade your Gradle version. 
 [        ] Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
@@ -92,15 +91,16 @@ Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project
 [        ] 	at com.flutter.gradle.FlutterPlugin.apply(FlutterPlugin.kt:36)
 [        ] 	at org.gradle.api.internal.plugins.ImperativeOnlyPluginTarget.applyImperative(ImperativeOnlyPluginTarget.java:54)
 [        ] 	at org.gradle.api.internal.plugins.RuleBasedPluginTarget.applyImperative(RuleBasedPluginTarget.java:51)
-[   +3 ms] 	at org.gradle.api.internal.plugins.DefaultPluginManager.addPlugin(DefaultPluginManager.java:190)
+[   +1 ms] 	at org.gradle.api.internal.plugins.DefaultPluginManager.addPlugin(DefaultPluginManager.java:190)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.access$100(DefaultPluginManager.java:54)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager$AddPluginBuildOperation.run(DefaultPluginManager.java:285)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
 [        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
 [        ] 	... 264 more
-[        ] BUILD FAILED in 1m 43s
-[ +487 ms] Running Gradle task 'assembleDebug'... (completed in 104.5s)
+[        ] BUILD FAILED in 1m 44s
+[        ] 4 actionable tasks: 4 executed
+[ +464 ms] Running Gradle task 'assembleDebug'... (completed in 105.1s)
 [   +3 ms] 
            ┌─ Flutter Fix ────────────────────────────────────────────────────────────────────────┐
            │ [!] Starting AGP 9+, only the new DSL interface will be read.                        │
@@ -116,11 +116,11 @@ Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project
            └──────────────────────────────────────────────────────────────────────────────────────┘
 
 [   +1 ms] executing: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
-[  +38 ms] Exit code 0 from: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
+[  +40 ms] Exit code 0 from: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
 [        ] openjdk 17.0.20 2026-07-21
            OpenJDK Runtime Environment Temurin-17.0.20+8 (build 17.0.20+8)
            OpenJDK 64-Bit Server VM Temurin-17.0.20+8 (build 17.0.20+8, mixed mode, sharing)
-[   +3 ms] "flutter apk" took 105,183ms.
+[   +3 ms] "flutter apk" took 105,704ms.
 [   +2 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
@@ -154,5 +154,5 @@ Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project
 
 [        ] Running 1 shutdown hook
 [        ] Shutdown hooks complete
-[        ] exiting with code 1
+[   +1 ms] exiting with code 1
 ```
