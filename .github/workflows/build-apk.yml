@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
@@ -28,6 +29,14 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Cache build_runner output
+        uses: actions/cache@v4
+        with:
+          path: .dart_tool/build
+          key: build-runner-${{ runner.os }}-${{ hashFiles('pubspec.yaml', 'lib/**/*.dart') }}
+          restore-keys: |
+            build-runner-${{ runner.os }}-
 
       - name: Install Android NDK
         run: |
@@ -138,6 +147,7 @@ jobs:
         run: dart run flutter_launcher_icons
 
       - name: Generate code (build_runner)
+        timeout-minutes: 20
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Flutter analyze
@@ -202,6 +212,7 @@ jobs:
   release:
     name: Build release AAB (Play Store)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: build
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     permissions:
@@ -222,6 +233,14 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Cache build_runner output
+        uses: actions/cache@v4
+        with:
+          path: .dart_tool/build
+          key: build-runner-${{ runner.os }}-${{ hashFiles('pubspec.yaml', 'lib/**/*.dart') }}
+          restore-keys: |
+            build-runner-${{ runner.os }}-
 
       - name: Install Android NDK
         run: |
@@ -288,6 +307,7 @@ jobs:
         run: dart run flutter_launcher_icons
 
       - name: Generate code
+        timeout-minutes: 20
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build unsigned release AAB
