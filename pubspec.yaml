@@ -32,7 +32,6 @@ dependencies:
 
   # State management
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
 
   # Local database (SQLite, type-safe)
   drift: ^2.23.1
@@ -67,7 +66,6 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   drift_dev: ^2.23.1
   build_runner: ^2.4.15
-  riverpod_generator: ^2.6.5
   flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
