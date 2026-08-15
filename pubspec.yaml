@@ -36,7 +36,7 @@ dependencies:
   # Local database (SQLite, type-safe)
   drift: ^2.34.0
   drift_flutter: ^0.3.0
-  sqlite3: ^2.9.4
+  sqlite3: ^3.5.1
   sqlite3_flutter_libs: ^0.6.0
 
   # HTTP client with retry + caching
