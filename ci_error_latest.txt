@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Sun Aug 16 04:27:35 UTC 2026
-Run: 31926276643
+Date: Sun Aug 16 04:45:58 UTC 2026
+Run: 31927065178
 
 ## flutter analyze output:
 ```
@@ -25,29 +25,25 @@ warning • The declaration '_showAyahActions' isn't referenced. Try removing th
    info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1767:7 • deprecated_member_use
    info • 'parent' is deprecated and shouldn't be used. Will be removed in 3.0.0. See https://github.com/rrousselGit/riverpod/issues/3261#issuecomment-1973514033. Try replacing the use of the deprecated member with the replacement • lib/features/mushaf/mushaf_screen.dart:1870:25 • deprecated_member_use
 warning • The declaration '_GoldCheckTile' isn't referenced. Try removing the declaration of '_GoldCheckTile' • lib/features/mushaf/mushaf_screen.dart:2795:7 • unused_element
-  error • The method 'muslimWorldLeague' isn't defined for the type 'CalculationMethod'. Try correcting the name to the name of an existing method, or defining a method named 'muslimWorldLeague' • lib/features/streak/prayer_reminder_service.dart:52:39 • undefined_method
-  error • The named parameter 'uiLocalNotificationDateInterpretation' is required, but there's no corresponding argument. Try adding the required argument • lib/features/streak/prayer_reminder_service.dart:66:19 • missing_required_argument
+  error • There's no constant named 'muslimWorldLeague' in 'CalculationMethod'. Try correcting the name to the name of an existing constant, or defining a constant named 'muslimWorldLeague' • lib/features/streak/prayer_reminder_service.dart:52:39 • undefined_enum_constant
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_card.dart:41:38 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_card.dart:42:37 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_screen.dart:133:51 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_screen.dart:222:23 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_screen.dart:223:27 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_screen.dart:249:53 • deprecated_member_use
-  error • '_StatCard.build' ('Widget Function(BuildContext, WidgetRef)') isn't a valid override of 'StatelessWidget.build' ('Widget Function(BuildContext)') • lib/features/streak/streak_screen.dart:291:10 • invalid_override
    info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_screen.dart:368:17 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/features/streak/streak_screen.dart:386:48 • deprecated_member_use
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:81:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-32 issues found. (ran in 9.8s)
+30 issues found. (ran in 12.5s)
 ```
 
 ## Gradle error lines:
 ```
 Starting process 'Gradle build daemon'. Working directory: /home/runner/.gradle/daemon/8.14 Command: /usr/lib/jvm/temurin-17-jdk-amd64/bin/java --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=256m -Xmx4g -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -cp /home/runner/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/gradle-daemon-main-8.14.jar -javaagent:/home/runner/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/agents/gradle-instrumentation-agent-8.14.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.14
-[ +360 ms] lib/features/streak/streak_screen.dart:291:10: Error: The method '_StatCard.build' has more required arguments than those of overridden method 'StatelessWidget.build'.
-[ +583 ms] lib/features/streak/prayer_reminder_service.dart:52:39: Error: Enums can't be instantiated.
-[        ] lib/features/streak/prayer_reminder_service.dart:66:32: Error: Required named parameter 'uiLocalNotificationDateInterpretation' must be provided.
+[  +14 ms] lib/features/streak/prayer_reminder_service.dart:52:39: Error: Member not found: 'muslimWorldLeague'.
 FAILURE: Build failed with an exception.
 Execution failed for task ':app:compileFlutterBuildDebug'.
 org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileFlutterBuildDebug'.
@@ -59,12 +55,6 @@ Caused by: org.gradle.process.internal.ExecException: Process 'command '/opt/hos
 
 ## Last 100 lines of build_log.txt:
 ```
-[        ] 	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
-[        ] 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
-[        ] 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
-[        ] 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
-[        ] 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
-[        ] 	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
 [        ] 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
 [        ] 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
 [        ] 	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
@@ -113,19 +103,25 @@ Caused by: org.gradle.process.internal.ExecException: Process 'command '/opt/hos
 [        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
 [        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 [        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
-[        ] BUILD FAILED in 3m 11s
+[        ] BUILD FAILED in 3m 2s
+[        ] [   +1 ms] "flutter assemble" took 13,454ms.
+[        ] [        ] Running 1 shutdown hook
+[        ] [        ] Shutdown hooks complete
+[        ] [        ] exiting with code 1
+[        ] > Task :app:compileFlutterBuildDebug FAILED
+[        ] [Incubating] Problems report is available at: file:///home/runner/work/quran-app/quran-app/build/reports/problems/problems-report.html
 [        ] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
 [        ] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
 [        ] For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 [        ] 17 actionable tasks: 16 executed, 1 up-to-date
-[ +417 ms] Running Gradle task 'assembleDebug'... (completed in 191.8s)
+[ +470 ms] Running Gradle task 'assembleDebug'... (completed in 183.0s)
 [   +1 ms] executing: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
-[  +32 ms] Exit code 0 from: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
+[  +35 ms] Exit code 0 from: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
 [        ] openjdk 17.0.20 2026-07-21
            OpenJDK Runtime Environment Temurin-17.0.20+8 (build 17.0.20+8)
            OpenJDK 64-Bit Server VM Temurin-17.0.20+8 (build 17.0.20+8, mixed mode, sharing)
-[   +3 ms] "flutter apk" took 192,348ms.
-[   +1 ms] Gradle task assembleDebug failed with exit code 1
+[   +4 ms] "flutter apk" took 183,644ms.
+[   +2 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
            #1      AndroidGradleBuilder.buildGradleApp (package:flutter_tools/src/android/gradle.dart:653:7)
