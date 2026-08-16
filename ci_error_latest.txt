@@ -1,6 +1,6 @@
 # CI Build Error
-Date: Sat Aug 15 19:16:39 UTC 2026
-Run: 31903066680
+Date: Sun Aug 16 01:49:20 UTC 2026
+Run: 31920136998
 
 ## flutter analyze output:
 ```
@@ -39,68 +39,68 @@ warning • The declaration '_GoldCheckTile' isn't referenced. Try removing the 
 warning • The value of the local variable 'colors' isn't used. Try removing the variable or using it • lib/main.dart:81:11 • unused_local_variable
    info • Dangling library doc comment. Add a 'library' directive after the library comment • scripts/download_translations.dart:1:1 • dangling_library_doc_comments
 
-32 issues found. (ran in 12.4s)
+32 issues found. (ran in 11.8s)
 ```
 
 ## Gradle error lines:
 ```
-Starting process 'Gradle build daemon'. Working directory: /home/runner/.gradle/daemon/8.12 Command: /usr/lib/jvm/temurin-17-jdk-amd64/bin/java --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=256m -Xmx4g -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -cp /home/runner/.gradle/wrapper/dists/gradle-8.12-all/ejduaidbjup3bmmkhw3rie4zb/gradle-8.12/lib/gradle-daemon-main-8.12.jar -javaagent:/home/runner/.gradle/wrapper/dists/gradle-8.12-all/ejduaidbjup3bmmkhw3rie4zb/gradle-8.12/lib/agents/gradle-instrumentation-agent-8.12.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.12
+Starting process 'Gradle build daemon'. Working directory: /home/runner/.gradle/daemon/8.14 Command: /usr/lib/jvm/temurin-17-jdk-amd64/bin/java --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -XX:MaxMetaspaceSize=512m -XX:ReservedCodeCacheSize=256m -Xmx4g -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -cp /home/runner/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/gradle-daemon-main-8.14.jar -javaagent:/home/runner/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14/lib/agents/gradle-instrumentation-agent-8.14.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.14
 FAILURE: Build failed with an exception.
-   > Error: Your project's Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0. Please upgrade your Gradle version. 
+   > Error: Your project's Android Gradle Plugin version (Android Gradle Plugin version 8.7.3) is lower than Flutter's minimum supported version of Android Gradle Plugin version 8.11.1. Please upgrade your Android Gradle Plugin version. 
 	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: org.gradle.api.internal.plugins.PluginApplicationException: Failed to apply plugin 'dev.flutter.flutter-gradle-plugin'.
-Caused by: org.gradle.internal.operations.BuildOperationInvocationException: Error: Your project's Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0. Please upgrade your Gradle version. 
-Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project's Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0. Please upgrade your Gradle version. 
+Caused by: org.gradle.internal.operations.BuildOperationInvocationException: Error: Your project's Android Gradle Plugin version (Android Gradle Plugin version 8.7.3) is lower than Flutter's minimum supported version of Android Gradle Plugin version 8.11.1. Please upgrade your Android Gradle Plugin version. 
+Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project's Android Gradle Plugin version (Android Gradle Plugin version 8.7.3) is lower than Flutter's minimum supported version of Android Gradle Plugin version 8.11.1. Please upgrade your Android Gradle Plugin version. 
 ```
 
 ## Last 100 lines of build_log.txt:
 ```
-[        ] 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
-[        ] 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
-[        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
 [        ] 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 [        ] 	at java.base/java.lang.Thread.run(Thread.java:840)
 [        ] Caused by: org.gradle.api.internal.plugins.PluginApplicationException: Failed to apply plugin 'dev.flutter.flutter-gradle-plugin'.
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.doApply(DefaultPluginManager.java:176)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.apply(DefaultPluginManager.java:139)
 [        ] 	at org.gradle.plugin.use.resolve.internal.ClassPathPluginResolution.applyTo(ClassPathPluginResolution.java:50)
-[   +1 ms] 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator$ApplyAction.apply(DefaultPluginRequestApplicator.java:160)
+[        ] 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator$ApplyAction.apply(DefaultPluginRequestApplicator.java:160)
 [        ] 	... 254 more
-[        ] Caused by: org.gradle.internal.operations.BuildOperationInvocationException: Error: Your project's Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0. Please upgrade your Gradle version. 
+[        ] Caused by: org.gradle.internal.operations.BuildOperationInvocationException: Error: Your project's Android Gradle Plugin version (Android Gradle Plugin version 8.7.3) is lower than Flutter's minimum supported version of Android Gradle Plugin version 8.11.1. Please upgrade your Android Gradle Plugin version. 
 [        ] Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
-[        ] Potential fix: Your project's gradle version is typically defined in the gradle wrapper file. By default, this can be found at /home/runner/work/quran-app/quran-app/android/gradle/wrapper/gradle-wrapper.properties. 
-[        ] For more information, see https://docs.gradle.org/current/userguide/gradle_wrapper.html.
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.throwAsBuildOperationInvocationException(DefaultBuildOperationRunner.java:197)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.access$100(DefaultBuildOperationRunner.java:24)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:75)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+[        ] Potential fix: Your project's AGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/quran-app/quran-app/android/settings.gradle), by a plugin with the id of com.android.application. 
+[        ] If you don't see a plugins block, your project was likely created with an older template version. In this case it is most likely defined in the top-level build.gradle file (/home/runner/work/quran-app/quran-app/android/build.gradle) by the following line in the dependencies block of the buildscript: "classpath 'com.android.tools.build:gradle:<version>'".
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.throwAsBuildOperationInvocationException(DefaultBuildOperationRunner.java:198)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.access$100(DefaultBuildOperationRunner.java:25)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:76)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.lambda$doApply$0(DefaultPluginManager.java:170)
 [        ] 	at org.gradle.internal.code.DefaultUserCodeApplicationContext.apply(DefaultUserCodeApplicationContext.java:44)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.doApply(DefaultPluginManager.java:169)
 [        ] 	... 257 more
-[        ] Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project's Gradle version (8.12.0) is lower than Flutter's minimum supported version of 8.14.0. Please upgrade your Gradle version. 
+[        ] Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project's Android Gradle Plugin version (Android Gradle Plugin version 8.7.3) is lower than Flutter's minimum supported version of Android Gradle Plugin version 8.11.1. Please upgrade your Android Gradle Plugin version. 
 [        ] Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
-[        ] Potential fix: Your project's gradle version is typically defined in the gradle wrapper file. By default, this can be found at /home/runner/work/quran-app/quran-app/android/gradle/wrapper/gradle-wrapper.properties. 
-[        ] For more information, see https://docs.gradle.org/current/userguide/gradle_wrapper.html.
-[        ] 	at com.flutter.gradle.DependencyVersionChecker.checkGradleVersion$gradle(DependencyVersionChecker.kt:230)
-[        ] 	at com.flutter.gradle.DependencyVersionChecker.checkDependencyVersions(DependencyVersionChecker.kt:127)
+[   +4 ms] Potential fix: Your project's AGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/quran-app/quran-app/android/settings.gradle), by a plugin with the id of com.android.application. 
+[        ] If you don't see a plugins block, your project was likely created with an older template version. In this case it is most likely defined in the top-level build.gradle file (/home/runner/work/quran-app/quran-app/android/build.gradle) by the following line in the dependencies block of the buildscript: "classpath 'com.android.tools.build:gradle:<version>'".
+[        ] 	at com.flutter.gradle.DependencyVersionChecker.checkAGPVersion$gradle(DependencyVersionChecker.kt:282)
+[        ] 	at com.flutter.gradle.DependencyVersionChecker.checkDependencyVersions(DependencyVersionChecker.kt:134)
 [        ] 	at com.flutter.gradle.FlutterPlugin.apply(FlutterPlugin.kt:176)
 [        ] 	at com.flutter.gradle.FlutterPlugin.apply(FlutterPlugin.kt:36)
-[        ] 	at org.gradle.api.internal.plugins.ImperativeOnlyPluginTarget.applyImperative(ImperativeOnlyPluginTarget.java:54)
+[        ] 	at org.gradle.api.internal.plugins.ImperativeOnlyPluginTarget.applyImperative(ImperativeOnlyPluginTarget.java:55)
 [        ] 	at org.gradle.api.internal.plugins.RuleBasedPluginTarget.applyImperative(RuleBasedPluginTarget.java:51)
-[   +1 ms] 	at org.gradle.api.internal.plugins.DefaultPluginManager.addPlugin(DefaultPluginManager.java:190)
+[        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.addPlugin(DefaultPluginManager.java:190)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager.access$100(DefaultPluginManager.java:54)
 [        ] 	at org.gradle.api.internal.plugins.DefaultPluginManager$AddPluginBuildOperation.run(DefaultPluginManager.java:285)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
-[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+[        ] 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
 [        ] 	... 264 more
-[        ] BUILD FAILED in 1m 44s
+[        ] BUILD FAILED in 1m 27s
+[        ] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+[        ] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+[        ] For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 [        ] 4 actionable tasks: 4 executed
-[ +464 ms] Running Gradle task 'assembleDebug'... (completed in 105.1s)
+[ +436 ms] Running Gradle task 'assembleDebug'... (completed in 88.5s)
 [   +3 ms] 
            ┌─ Flutter Fix ────────────────────────────────────────────────────────────────────────┐
            │ [!] Starting AGP 9+, only the new DSL interface will be read.                        │
@@ -116,11 +116,11 @@ Caused by: com.flutter.gradle.DependencyValidationException: Error: Your project
            └──────────────────────────────────────────────────────────────────────────────────────┘
 
 [   +1 ms] executing: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
-[  +40 ms] Exit code 0 from: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
+[  +41 ms] Exit code 0 from: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java --version
 [        ] openjdk 17.0.20 2026-07-21
            OpenJDK Runtime Environment Temurin-17.0.20+8 (build 17.0.20+8)
            OpenJDK 64-Bit Server VM Temurin-17.0.20+8 (build 17.0.20+8, mixed mode, sharing)
-[   +3 ms] "flutter apk" took 105,704ms.
+[   +4 ms] "flutter apk" took 89,196ms.
 [   +2 ms] Gradle task assembleDebug failed with exit code 1
 [        ] 
            #0      throwToolExit (package:flutter_tools/src/base/common.dart:34:3)
