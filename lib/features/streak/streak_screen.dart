@@ -288,7 +288,7 @@ class _StatCard extends StatelessWidget {
   final bool gold;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isDark  = Theme.of(context).brightness == Brightness.dark;
     final surface = isDark ? const Color(0xFF1C1C19) : Colors.white;
     final border  = isDark ? const Color(0xFF2C2C28) : const Color(0xFFE0D9CC);

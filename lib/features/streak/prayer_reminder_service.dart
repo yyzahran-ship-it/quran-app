@@ -49,7 +49,7 @@ class PrayerReminderService {
     }
 
     final coords = Coordinates(pos.latitude, pos.longitude);
-    final params  = CalculationMethod.muslimWorldLeague().getParameters();
+    final params  = CalculationMethod.muslimWorldLeague.getParameters();
 
     DateTime? target = _prayerTime(prayer, DateTime.now(), coords, params);
     if (target == null) return;
@@ -80,6 +80,8 @@ class PrayerReminderService {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
