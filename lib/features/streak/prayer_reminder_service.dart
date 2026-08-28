@@ -49,7 +49,7 @@ class PrayerReminderService {
     }
 
     final coords = Coordinates(pos.latitude, pos.longitude);
-    final params  = CalculationMethod.muslimWorldLeague.getParameters();
+    final params  = CalculationParameters(fajrAngle: 18, ishaAngle: 17);
 
     DateTime? target = _prayerTime(prayer, DateTime.now(), coords, params);
     if (target == null) return;
