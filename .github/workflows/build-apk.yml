@@ -310,23 +310,22 @@ jobs:
         timeout-minutes: 20
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build unsigned release AAB
-        run: flutter build appbundle --release --no-tree-shake-icons
-
-      - name: Sign release AAB
+      - name: Write signing config
         run: |
-          jarsigner \
-            -verbose \
-            -keystore android/upload-keystore.jks \
-            -storepass "QuranApp@2025#Secure" \
-            -keypass  "QuranApp@2025#Secure" \
-            -signedjar build/app/outputs/bundle/release/app-release-signed.aab \
-            build/app/outputs/bundle/release/app-release.aab \
-            upload
+          cat > android/key.properties <<'EOF'
+          keyAlias=upload
+          keyPassword=QuranApp@2025#Secure
+          storeFile=../upload-keystore.jks
+          storePassword=QuranApp@2025#Secure
+          EOF
+
+      - name: Build signed release AAB
+        run: flutter build appbundle --release --no-tree-shake-icons
 
       - name: Upload release AAB
         uses: actions/upload-artifact@v4
         with:
           name: quran-app-release
-          path: build/app/outputs/bundle/release/app-release-signed.aab
+          path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
+          if-no-files-found: error
