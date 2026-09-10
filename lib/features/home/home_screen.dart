@@ -11,7 +11,6 @@ import '../mushaf/mushaf_provider.dart';
 import '../mushaf/mushaf_screen.dart';
 import '../mushaf/search_screen.dart';
 import '../settings/settings_screen.dart';
-import '../streak/streak_card.dart';
 import '../streak/streak_screen.dart';
 
 // ─── Juz list provider ────────────────────────────────────────────────────────
@@ -164,10 +163,9 @@ class _SurahListView extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
 
     return ListView.builder(
-      itemCount: items.length + 1, // +1 for the streak card header
+      itemCount: items.length,
       itemBuilder: (context, i) {
-        if (i == 0) return const StreakCard();
-        final item = items[i - 1];
+        final item = items[i];
         if (item is Juz) {
           return _JuzSeparatorRow(juz: item, colors: colors);
         }
